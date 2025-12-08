@@ -48,11 +48,11 @@ public class HTKLineConfigManager {
     public Boolean drawIsLock = false;
 
     // Text annotation defaults
-    public int textColor = Color.WHITE;
+    public int drawTextColor = Color.WHITE;
 
-    public int textBackgroundColor = Color.argb(153, 0, 0, 0); // ~60% black
+    public int drawTextBackgroundColor = Color.argb(153, 0, 0, 0); // ~60% black
 
-    public float textCornerRadius = 8;
+    public float drawTextCornerRadius = 8;
 
     public int shouldReloadDrawItemIndex = HTDrawState.none;
 
@@ -330,15 +330,15 @@ public class HTKLineConfigManager {
             // Optional text styling for text annotations
             Number textColorValue = (Number) drawList.get("textColor");
             if (textColorValue != null) {
-                this.textColor = textColorValue.intValue();
+                this.drawTextColor = textColorValue.intValue();
             }
             Number textBackgroundColorValue = (Number) drawList.get("textBackgroundColor");
             if (textBackgroundColorValue != null) {
-                this.textBackgroundColor = textBackgroundColorValue.intValue();
+                this.drawTextBackgroundColor = textBackgroundColorValue.intValue();
             }
             Number textCornerRadiusValue = (Number) drawList.get("textCornerRadius");
             if (textCornerRadiusValue != null) {
-                this.textCornerRadius = textCornerRadiusValue.floatValue();
+                this.drawTextCornerRadius = textCornerRadiusValue.floatValue();
             }
 
             // Optional: pre-defined drawing items from React Native

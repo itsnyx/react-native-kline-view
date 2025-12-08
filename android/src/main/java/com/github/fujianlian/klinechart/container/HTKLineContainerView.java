@@ -297,19 +297,19 @@ public class HTKLineContainerView extends RelativeLayout {
                 if (textColorObject instanceof Number) {
                     drawItem.textColor = ((Number) textColorObject).intValue();
                 } else {
-                    drawItem.textColor = configManager.textColor;
+                    drawItem.textColor = configManager.drawTextColor;
                 }
                 Object textBackgroundColorObject = itemMap.get("textBackgroundColor");
                 if (textBackgroundColorObject instanceof Number) {
                     drawItem.textBackgroundColor = ((Number) textBackgroundColorObject).intValue();
                 } else {
-                    drawItem.textBackgroundColor = configManager.textBackgroundColor;
+                    drawItem.textBackgroundColor = configManager.drawTextBackgroundColor;
                 }
                 Object textCornerRadiusObject = itemMap.get("textCornerRadius");
                 if (textCornerRadiusObject instanceof Number) {
                     drawItem.textCornerRadius = ((Number) textCornerRadiusObject).floatValue();
                 } else {
-                    drawItem.textCornerRadius = configManager.textCornerRadius;
+                    drawItem.textCornerRadius = configManager.drawTextCornerRadius;
                 }
 
                 klineView.drawContext.drawItemList.add(drawItem);

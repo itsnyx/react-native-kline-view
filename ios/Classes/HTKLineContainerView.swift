@@ -235,18 +235,18 @@ class HTKLineContainerView: UIView {
                    let textColor = RCTConvert.uiColor(textColorInt) {
                     drawItem.textColor = textColor
                 } else {
-                    drawItem.textColor = configManager.textColor
+                    drawItem.textColor = configManager.drawTextColor
                 }
                 if let textBackgroundColorInt = item["textBackgroundColor"] as? Int,
                    let textBackgroundColor = RCTConvert.uiColor(textBackgroundColorInt) {
                     drawItem.textBackgroundColor = textBackgroundColor
                 } else {
-                    drawItem.textBackgroundColor = configManager.textBackgroundColor
+                    drawItem.textBackgroundColor = configManager.drawTextBackgroundColor
                 }
                 if let textCornerRadius = item["textCornerRadius"] as? CGFloat {
                     drawItem.textCornerRadius = textCornerRadius
                 } else {
-                    drawItem.textCornerRadius = configManager.textCornerRadius
+                    drawItem.textCornerRadius = configManager.drawTextCornerRadius
                 }
 
                 klineView.drawContext.drawItemList.append(drawItem)

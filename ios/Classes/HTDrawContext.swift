@@ -109,9 +109,9 @@ class HTDrawContext {
                 drawItem.drawLineHeight = configManager.drawLineHeight
                 drawItem.drawDashWidth = configManager.drawDashWidth
                 drawItem.drawDashSpace = configManager.drawDashSpace
-                drawItem.textColor = configManager.textColor
-                drawItem.textBackgroundColor = configManager.textBackgroundColor
-                drawItem.textCornerRadius = configManager.textCornerRadius
+                drawItem.textColor = configManager.drawTextColor
+                drawItem.textBackgroundColor = configManager.drawTextBackgroundColor
+                drawItem.textCornerRadius = configManager.drawTextCornerRadius
                 
                 drawItemList.append(drawItem)
                 configManager.onDrawItemDidTouch?(drawItem, drawItemList.count - 1)

@@ -79,9 +79,9 @@ public class HTDrawContext {
                 drawItem.drawDashWidth = configManager.drawDashWidth;
                 drawItem.drawDashSpace = configManager.drawDashSpace;
                 // Apply text defaults (used when drawType == text)
-                drawItem.textColor = configManager.textColor;
-                drawItem.textBackgroundColor = configManager.textBackgroundColor;
-                drawItem.textCornerRadius = configManager.textCornerRadius;
+                drawItem.textColor = configManager.drawTextColor;
+                drawItem.textBackgroundColor = configManager.drawTextBackgroundColor;
+                drawItem.textCornerRadius = configManager.drawTextCornerRadius;
                 drawItemList.add(drawItem);
                 configManager.onDrawItemDidTouch.invoke(drawItem, drawItemList.size() - 1);
             } else {
