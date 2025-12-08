@@ -135,7 +135,10 @@ class HTKLineContainerView: UIView {
                 "drawDashSpace": drawItem.drawDashSpace,
                 "drawIsLock": drawItem.drawIsLock,
                 "pointList": pointArray,
-                "text": drawItem.text
+                "text": drawItem.text,
+                "textColor": colorToInt(drawItem.textColor),
+                "textBackgroundColor": colorToInt(drawItem.textBackgroundColor),
+                "textCornerRadius": drawItem.textCornerRadius
             ])
         }
         configManager.onDrawPointComplete = { [weak self] (drawItem, drawItemIndex) in
@@ -226,6 +229,24 @@ class HTKLineContainerView: UIView {
 
                 if let text = item["text"] as? String {
                     drawItem.text = text
+                }
+
+                if let textColorInt = item["textColor"] as? Int,
+                   let textColor = RCTConvert.uiColor(textColorInt) {
+                    drawItem.textColor = textColor
+                } else {
+                    drawItem.textColor = configManager.textColor
+                }
+                if let textBackgroundColorInt = item["textBackgroundColor"] as? Int,
+                   let textBackgroundColor = RCTConvert.uiColor(textBackgroundColorInt) {
+                    drawItem.textBackgroundColor = textBackgroundColor
+                } else {
+                    drawItem.textBackgroundColor = configManager.textBackgroundColor
+                }
+                if let textCornerRadius = item["textCornerRadius"] as? CGFloat {
+                    drawItem.textCornerRadius = textCornerRadius
+                } else {
+                    drawItem.textCornerRadius = configManager.textCornerRadius
                 }
 
                 klineView.drawContext.drawItemList.append(drawItem)

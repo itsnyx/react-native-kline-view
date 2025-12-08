@@ -61,6 +61,13 @@ class HTDrawItem: NSObject {
     // Optional text for text-annotation draw type
     var text: String = ""
     
+    // Text styling
+    var textColor = UIColor.white
+    
+    var textBackgroundColor = UIColor.black.withAlphaComponent(0.6)
+    
+    var textCornerRadius: CGFloat = 8
+    
     var pointList = [CGPoint]()
     
     var touchMoveIndexList = [Int]()

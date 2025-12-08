@@ -316,8 +316,10 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         KLineEntity firstItem = getItem(0);
         KLineEntity lastItem = getItem(mItemCount - 1);
         float scale = (lastItem.id - firstItem.id) / (configManager.itemWidth * (mItemCount - 1));
-        float x = (value - firstItem.id) / scale + configManager.itemWidth / 2.0f - mScrollX;
-        return x;
+        // Base scroll-space coordinate (same space as getItemMiddleScrollX)
+        float scrollX = (value - firstItem.id) / scale + configManager.itemWidth / 2.0f;
+        // Convert scroll-space to view-space, honoring scroll and horizontal zoom
+        return scrollXtoViewX(scrollX);
     }
 
     public float valueFromX(float x) {
@@ -327,7 +329,9 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         KLineEntity firstItem = getItem(0);
         KLineEntity lastItem = getItem(mItemCount - 1);
         float scale = (lastItem.id - firstItem.id) / (configManager.itemWidth * (mItemCount - 1));
-        float value = scale * (x + mScrollX - configManager.itemWidth / 2.0f) + firstItem.id;
+        // Invert scrollXtoViewX to recover scroll-space from view-space
+        float scrollX = x / mScaleX + mScrollX;
+        float value = scale * (scrollX - configManager.itemWidth / 2.0f) + firstItem.id;
         return value;
     }
 

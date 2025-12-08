@@ -133,6 +133,9 @@ public class HTKLineContainerView extends RelativeLayout {
                     map.putDouble("drawDashSpace", drawItem.drawDashSpace);
                     map.putBoolean("drawIsLock", drawItem.drawIsLock);
                     map.putString("text", drawItem.text);
+                    map.putInt("textColor", drawItem.textColor);
+                    map.putInt("textBackgroundColor", drawItem.textBackgroundColor);
+                    map.putDouble("textCornerRadius", drawItem.textCornerRadius);
 
                     WritableArray pointArray = Arguments.createArray();
                     for (HTPoint point : drawItem.pointList) {
@@ -288,6 +291,25 @@ public class HTKLineContainerView extends RelativeLayout {
                 Object textObject = itemMap.get("text");
                 if (textObject instanceof String) {
                     drawItem.text = (String) textObject;
+                }
+
+                Object textColorObject = itemMap.get("textColor");
+                if (textColorObject instanceof Number) {
+                    drawItem.textColor = ((Number) textColorObject).intValue();
+                } else {
+                    drawItem.textColor = configManager.textColor;
+                }
+                Object textBackgroundColorObject = itemMap.get("textBackgroundColor");
+                if (textBackgroundColorObject instanceof Number) {
+                    drawItem.textBackgroundColor = ((Number) textBackgroundColorObject).intValue();
+                } else {
+                    drawItem.textBackgroundColor = configManager.textBackgroundColor;
+                }
+                Object textCornerRadiusObject = itemMap.get("textCornerRadius");
+                if (textCornerRadiusObject instanceof Number) {
+                    drawItem.textCornerRadius = ((Number) textCornerRadiusObject).floatValue();
+                } else {
+                    drawItem.textCornerRadius = configManager.textCornerRadius;
                 }
 
                 klineView.drawContext.drawItemList.add(drawItem);

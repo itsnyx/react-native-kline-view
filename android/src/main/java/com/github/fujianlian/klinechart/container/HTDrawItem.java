@@ -28,6 +28,13 @@ public class HTDrawItem {
     // Optional text for text-annotation draw type
     public String text = "";
 
+    // Text styling
+    public int textColor = Color.WHITE;
+
+    public int textBackgroundColor = Color.argb(153, 0, 0, 0);
+
+    public float textCornerRadius = 8;
+
     public List<HTPoint> pointList = new ArrayList<>();
 
     private List<Integer> touchMoveIndexList = new ArrayList<>();

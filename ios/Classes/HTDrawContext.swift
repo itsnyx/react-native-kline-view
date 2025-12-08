@@ -109,6 +109,9 @@ class HTDrawContext {
                 drawItem.drawLineHeight = configManager.drawLineHeight
                 drawItem.drawDashWidth = configManager.drawDashWidth
                 drawItem.drawDashSpace = configManager.drawDashSpace
+                drawItem.textColor = configManager.textColor
+                drawItem.textBackgroundColor = configManager.textBackgroundColor
+                drawItem.textCornerRadius = configManager.textCornerRadius
                 
                 drawItemList.append(drawItem)
                 configManager.onDrawItemDidTouch?(drawItem, drawItemList.count - 1)
@@ -177,16 +180,34 @@ class HTDrawContext {
         }
         let point = drawItem.pointList[index]
 
-        // Special handling for text annotations: draw text at the anchor point instead of lines.
+        // Special handling for text annotations: draw text at the anchor point with background.
         if case .text = drawItem.drawType {
             let viewPoint = klineView.viewPointFromValuePoint(point)
             let font = configManager.createFont(configManager.candleTextFontSize)
-            let attributes: [NSAttributedString.Key: Any] = [
-                .font: font,
-                .foregroundColor: drawItem.drawColor
-            ]
+            let text = drawItem.text as NSString
             if !drawItem.text.isEmpty {
-                (drawItem.text as NSString).draw(at: viewPoint, withAttributes: attributes)
+                let paddingH: CGFloat = 12
+                let paddingV: CGFloat = 6
+                let attributes: [NSAttributedString.Key: Any] = [
+                    .font: font,
+                    .foregroundColor: drawItem.textColor
+                ]
+                let textSize = text.size(withAttributes: attributes)
+                let rect = CGRect(
+                    x: viewPoint.x,
+                    y: viewPoint.y,
+                    width: textSize.width + paddingH * 2,
+                    height: textSize.height + paddingV * 2
+                )
+
+                context.setFillColor(drawItem.textBackgroundColor.cgColor)
+                let radius = drawItem.textCornerRadius
+                let path = UIBezierPath(roundedRect: rect, cornerRadius: radius)
+                context.addPath(path.cgPath)
+                context.drawPath(using: .fill)
+
+                let textPoint = CGPoint(x: viewPoint.x + paddingH, y: viewPoint.y + paddingV)
+                text.draw(at: textPoint, withAttributes: attributes)
             }
 
             if itemIndex == configManager.shouldReloadDrawItemIndex {

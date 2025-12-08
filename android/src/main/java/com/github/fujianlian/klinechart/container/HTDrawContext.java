@@ -78,6 +78,10 @@ public class HTDrawContext {
                 drawItem.drawLineHeight = configManager.drawLineHeight;
                 drawItem.drawDashWidth = configManager.drawDashWidth;
                 drawItem.drawDashSpace = configManager.drawDashSpace;
+                // Apply text defaults (used when drawType == text)
+                drawItem.textColor = configManager.textColor;
+                drawItem.textBackgroundColor = configManager.textBackgroundColor;
+                drawItem.textCornerRadius = configManager.textCornerRadius;
                 drawItemList.add(drawItem);
                 configManager.onDrawItemDidTouch.invoke(drawItem, drawItemList.size() - 1);
             } else {
@@ -149,16 +153,39 @@ public class HTDrawContext {
     public void drawMapper(Canvas canvas, HTDrawItem drawItem, int index, int itemIndex) {
         HTPoint point = drawItem.pointList.get(index);
 
-        // Special handling for text annotations: draw text at the anchor point instead of lines.
+        // Special handling for text annotations: draw text at the anchor point with background.
         if (drawItem.drawType == HTDrawType.text) {
             HTPoint viewPoint = klineView.viewPointFromValuePoint(point);
-            paint.setColor(drawItem.drawColor);
             paint.setPathEffect(null);
-            paint.setStyle(Paint.Style.FILL);
             paint.setStrokeWidth(0);
             paint.setTextSize(configManager.candleTextFontSize);
+
             if (drawItem.text != null && drawItem.text.length() > 0) {
-                canvas.drawText(drawItem.text, viewPoint.x, viewPoint.y, paint);
+                String text = drawItem.text;
+                float paddingH = 12f;
+                float paddingV = 6f;
+
+                Paint.FontMetrics fm = paint.getFontMetrics();
+                float textHeight = fm.bottom - fm.top;
+                float textWidth = paint.measureText(text);
+
+                float left = viewPoint.x;
+                float top = viewPoint.y + fm.top - paddingV;
+                float right = left + textWidth + paddingH * 2;
+                float bottom = viewPoint.y + fm.bottom + paddingV;
+
+                float radius = drawItem.textCornerRadius > 0 ? drawItem.textCornerRadius : configManager.textCornerRadius;
+
+                // Background
+                paint.setColor(drawItem.textBackgroundColor != 0 ? drawItem.textBackgroundColor : configManager.textBackgroundColor);
+                paint.setStyle(Paint.Style.FILL);
+                android.graphics.RectF rect = new android.graphics.RectF(left, top, right, bottom);
+                canvas.drawRoundRect(rect, radius, radius, paint);
+
+                // Text
+                paint.setColor(drawItem.textColor != 0 ? drawItem.textColor : configManager.textColor);
+                paint.setStyle(Paint.Style.FILL);
+                canvas.drawText(text, left + paddingH, viewPoint.y, paint);
             }
 
             if (itemIndex == configManager.shouldReloadDrawItemIndex) {

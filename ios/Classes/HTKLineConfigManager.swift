@@ -263,6 +263,13 @@ class HTKLineConfigManager: NSObject {
     
     var drawShouldTrash = false
     
+    // Text annotation defaults
+    var textColor = UIColor.white
+    
+    var textBackgroundColor = UIColor.black.withAlphaComponent(0.6)
+    
+    var textCornerRadius: CGFloat = 8
+    
     // Optional serialized drawing list from React Native (optionList.drawList.drawItemList)
     // This will later be converted into real HTDrawItem instances in HTKLineContainerView.
     var drawItemList: [[String: Any]]?
@@ -382,6 +389,19 @@ class HTKLineConfigManager: NSObject {
             }
             if let drawShouldTrash = drawList["drawShouldTrash"] as? Bool {
                 self.drawShouldTrash = drawShouldTrash
+            }
+
+            // Optional text styling for text annotations
+            if let textColorValue = drawList["textColor"] as? Int,
+               let textColor = RCTConvert.uiColor(textColorValue) {
+                self.textColor = textColor
+            }
+            if let textBackgroundColorValue = drawList["textBackgroundColor"] as? Int,
+               let textBackgroundColor = RCTConvert.uiColor(textBackgroundColorValue) {
+                self.textBackgroundColor = textBackgroundColor
+            }
+            if let textCornerRadius = drawList["textCornerRadius"] as? CGFloat {
+                self.textCornerRadius = textCornerRadius
             }
 
             // Optional: pre-defined drawing items from React Native
