@@ -12,6 +12,8 @@ import com.github.fujianlian.klinechart.HTKLineConfigManager;
 import com.github.fujianlian.klinechart.KLineChartView;
 import com.github.fujianlian.klinechart.RNKLineView;
 import com.github.fujianlian.klinechart.formatter.DateFormatter;
+import java.util.List;
+import java.util.Map;
 
 
 public class HTKLineContainerView extends RelativeLayout {
@@ -111,10 +113,39 @@ public class HTKLineContainerView extends RelativeLayout {
         configManager.onDrawItemComplete = new Callback() {
             @Override
             public void invoke(Object... args) {
+                HTDrawItem drawItem = null;
+                int drawItemIndex = -1;
+                if (args != null && args.length >= 2) {
+                    try {
+                        drawItem = (HTDrawItem) args[0];
+                        drawItemIndex = (int) args[1];
+                    } catch (ClassCastException ignored) {
+                    }
+                }
+
+                WritableMap map = Arguments.createMap();
+                if (drawItem != null) {
+                    map.putInt("index", drawItemIndex);
+                    map.putInt("drawType", drawItem.drawType.rawValue());
+                    map.putInt("drawColor", drawItem.drawColor);
+                    map.putDouble("drawLineHeight", drawItem.drawLineHeight);
+                    map.putDouble("drawDashWidth", drawItem.drawDashWidth);
+                    map.putDouble("drawDashSpace", drawItem.drawDashSpace);
+                    map.putBoolean("drawIsLock", drawItem.drawIsLock);
+
+                    WritableArray pointArray = Arguments.createArray();
+                    for (HTPoint point : drawItem.pointList) {
+                        WritableMap pointMap = Arguments.createMap();
+                        pointMap.putDouble("x", point.x);
+                        pointMap.putDouble("y", point.y);
+                        pointArray.pushMap(pointMap);
+                    }
+                    map.putArray("pointList", pointArray);
+                }
                 reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
                         id,
                         RNKLineView.onDrawItemCompleteKey,
-                        Arguments.createMap()
+                        map
                 );
             }
         };
@@ -157,6 +188,105 @@ public class HTKLineContainerView extends RelativeLayout {
             configManager.shouldReloadDrawItemIndex = HTDrawState.none;
             configManager.shouldClearDraw = false;
             klineView.drawContext.clearDrawItemList();
+        }
+
+        // If a serialized drawing list was provided from React Native,
+        // rebuild the native drawItemList from it (pre-insert drawings).
+        if (configManager.drawItemList != null) {
+            klineView.drawContext.clearDrawItemList();
+            for (Object itemObject : configManager.drawItemList) {
+                if (!(itemObject instanceof Map)) {
+                    continue;
+                }
+                Map itemMap = (Map) itemObject;
+                Object pointListObject = itemMap.get("pointList");
+                if (!(pointListObject instanceof List)) {
+                    continue;
+                }
+                List pointList = (List) pointListObject;
+                if (pointList.size() == 0) {
+                    continue;
+                }
+
+                // Draw type
+                int rawType = 0;
+                Object drawTypeObject = itemMap.get("drawType");
+                if (drawTypeObject instanceof Number) {
+                    rawType = ((Number) drawTypeObject).intValue();
+                }
+                HTDrawType drawType = HTDrawType.drawTypeFromRawValue(rawType);
+
+                // First point (required)
+                Object firstPointObject = pointList.get(0);
+                if (!(firstPointObject instanceof Map)) {
+                    continue;
+                }
+                Map firstPointMap = (Map) firstPointObject;
+                Object xObject = firstPointMap.get("x");
+                Object yObject = firstPointMap.get("y");
+                if (!(xObject instanceof Number) || !(yObject instanceof Number)) {
+                    continue;
+                }
+                HTPoint startPoint = new HTPoint(
+                        ((Number) xObject).floatValue(),
+                        ((Number) yObject).floatValue()
+                );
+
+                HTDrawItem drawItem = new HTDrawItem(drawType, startPoint);
+
+                // Remaining points (optional)
+                for (int i = 1; i < pointList.size(); i++) {
+                    Object pointObject = pointList.get(i);
+                    if (!(pointObject instanceof Map)) {
+                        continue;
+                    }
+                    Map pointMap = (Map) pointObject;
+                    Object pxObject = pointMap.get("x");
+                    Object pyObject = pointMap.get("y");
+                    if (!(pxObject instanceof Number) || !(pyObject instanceof Number)) {
+                        continue;
+                    }
+                    drawItem.pointList.add(new HTPoint(
+                            ((Number) pxObject).floatValue(),
+                            ((Number) pyObject).floatValue()
+                    ));
+                }
+
+                // Style properties: fall back to global drawList config when not provided
+                Object colorObject = itemMap.get("drawColor");
+                if (colorObject instanceof Number) {
+                    drawItem.drawColor = ((Number) colorObject).intValue();
+                } else {
+                    drawItem.drawColor = configManager.drawColor;
+                }
+                Object lineHeightObject = itemMap.get("drawLineHeight");
+                if (lineHeightObject instanceof Number) {
+                    drawItem.drawLineHeight = ((Number) lineHeightObject).floatValue();
+                } else {
+                    drawItem.drawLineHeight = configManager.drawLineHeight;
+                }
+                Object dashWidthObject = itemMap.get("drawDashWidth");
+                if (dashWidthObject instanceof Number) {
+                    drawItem.drawDashWidth = ((Number) dashWidthObject).floatValue();
+                } else {
+                    drawItem.drawDashWidth = configManager.drawDashWidth;
+                }
+                Object dashSpaceObject = itemMap.get("drawDashSpace");
+                if (dashSpaceObject instanceof Number) {
+                    drawItem.drawDashSpace = ((Number) dashSpaceObject).floatValue();
+                } else {
+                    drawItem.drawDashSpace = configManager.drawDashSpace;
+                }
+                Object isLockObject = itemMap.get("drawIsLock");
+                if (isLockObject instanceof Boolean) {
+                    drawItem.drawIsLock = (Boolean) isLockObject;
+                } else {
+                    drawItem.drawIsLock = configManager.drawIsLock;
+                }
+
+                klineView.drawContext.drawItemList.add(drawItem);
+            }
+            klineView.drawContext.invalidate();
         }
 
     }

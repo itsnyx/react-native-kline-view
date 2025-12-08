@@ -164,6 +164,10 @@ public class HTKLineConfigManager {
 
     public static Typeface font = null;
 
+    // Optional serialized drawing list coming from React Native (optionList.drawList.drawItemList)
+    // This is later converted into real HTDrawItem instances inside HTKLineContainerView.
+    public List<Map> drawItemList = null;
+
     public static Typeface findFont(Context context, String fontFamily) {
         if (font != null) {
             return font;
@@ -241,6 +245,9 @@ public class HTKLineConfigManager {
 
     public void reloadOptionList(Map optionList) {
 
+        // Reset optional serialized drawing list each time we reload
+        this.drawItemList = null;
+
     	List modelArray = (List)optionList.get("modelArray");
     	if (modelArray != null) {
     		this.modelArray = this.packModelList(modelArray);
@@ -311,6 +318,12 @@ public class HTKLineConfigManager {
             Boolean drawShouldTrash = (Boolean) drawList.get("drawShouldTrash");
             if (drawShouldTrash != null) {
                 this.drawShouldTrash = drawShouldTrash;
+            }
+
+            // Optional: pre-defined drawing items from React Native
+            List drawItemList = (List) drawList.get("drawItemList");
+            if (drawItemList != null) {
+                this.drawItemList = drawItemList;
             }
         }
 

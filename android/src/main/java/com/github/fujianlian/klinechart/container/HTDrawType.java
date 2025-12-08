@@ -57,4 +57,37 @@ public enum HTDrawType {
         return 1;
     }
 
+    /**
+     * Convert enum case to the integer code used across the JS bridge.
+     * This must stay in sync with {@link #drawTypeFromRawValue(int)}.
+     */
+    public int rawValue() {
+        switch (this) {
+            case line: {
+                return 1;
+            }
+            case horizontalLine: {
+                return 2;
+            }
+            case verticalLine: {
+                return 3;
+            }
+            case halfLine: {
+                return 4;
+            }
+            case parallelLine: {
+                return 5;
+            }
+            case rectangle: {
+                return 101;
+            }
+            case parallelogram: {
+                return 102;
+            }
+            default: {
+                return 0;
+            }
+        }
+    }
+
 }

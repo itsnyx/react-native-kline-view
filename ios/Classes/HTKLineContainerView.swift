@@ -100,7 +100,42 @@ class HTKLineContainerView: UIView {
             ])
         }
         configManager.onDrawItemComplete = { [weak self] (drawItem, drawItemIndex) in
-            self?.onDrawItemComplete?([AnyHashable: Any].init())
+            guard let this = self, let drawItem = drawItem else {
+                self?.onDrawItemComplete?([AnyHashable: Any].init())
+                return
+            }
+
+            func colorToInt(_ color: UIColor) -> Int {
+                var r: CGFloat = 0
+                var g: CGFloat = 0
+                var b: CGFloat = 0
+                var a: CGFloat = 0
+                color.getRed(&r, &g, &b, &a)
+                let ai = Int(a * 255.0) << 24
+                let ri = Int(r * 255.0) << 16
+                let gi = Int(g * 255.0) << 8
+                let bi = Int(b * 255.0)
+                return ai | ri | gi | bi
+            }
+
+            var pointArray = [[String: Any]]()
+            for point in drawItem.pointList {
+                pointArray.append([
+                    "x": point.x,
+                    "y": point.y
+                ])
+            }
+
+            this.onDrawItemComplete?([
+                "index": drawItemIndex,
+                "drawType": drawItem.drawType.rawValue,
+                "drawColor": colorToInt(drawItem.drawColor),
+                "drawLineHeight": drawItem.drawLineHeight,
+                "drawDashWidth": drawItem.drawDashWidth,
+                "drawDashSpace": drawItem.drawDashSpace,
+                "drawIsLock": drawItem.drawIsLock,
+                "pointList": pointArray
+            ])
         }
         configManager.onDrawPointComplete = { [weak self] (drawItem, drawItemIndex) in
             guard let drawItem = drawItem else {
@@ -126,7 +161,73 @@ class HTKLineContainerView: UIView {
             }
             klineView.drawContext.setNeedsDisplay()
         }
-        
+
+        // If a serialized drawing list was provided from React Native,
+        // rebuild the native drawItemList from it (pre-insert drawings).
+        if let rawList = configManager.drawItemList {
+            klineView.drawContext.clearDrawItemList()
+            for item in rawList {
+                guard let points = item["pointList"] as? [[String: Any]],
+                      points.count > 0,
+                      let firstPoint = points.first,
+                      let x = firstPoint["x"] as? CGFloat,
+                      let y = firstPoint["y"] as? CGFloat
+                else {
+                    continue
+                }
+
+                let rawType = (item["drawType"] as? Int) ?? 0
+                guard let drawType = HTDrawType(rawValue: rawType) else {
+                    continue
+                }
+
+                let drawItem = HTDrawItem(drawType, CGPoint(x: x, y: y))
+
+                // Remaining points
+                if points.count > 1 {
+                    for pointDict in points.dropFirst() {
+                        guard let px = pointDict["x"] as? CGFloat,
+                              let py = pointDict["y"] as? CGFloat
+                        else {
+                            continue
+                        }
+                        drawItem.pointList.append(CGPoint(x: px, y: py))
+                    }
+                }
+
+                // Style properties, with fallback to global draw config
+                if let colorInt = item["drawColor"] as? Int,
+                   let uiColor = RCTConvert.uiColor(colorInt) {
+                    drawItem.drawColor = uiColor
+                } else {
+                    drawItem.drawColor = configManager.drawColor
+                }
+                if let lineHeight = item["drawLineHeight"] as? CGFloat {
+                    drawItem.drawLineHeight = lineHeight
+                } else {
+                    drawItem.drawLineHeight = configManager.drawLineHeight
+                }
+                if let dashWidth = item["drawDashWidth"] as? CGFloat {
+                    drawItem.drawDashWidth = dashWidth
+                } else {
+                    drawItem.drawDashWidth = configManager.drawDashWidth
+                }
+                if let dashSpace = item["drawDashSpace"] as? CGFloat {
+                    drawItem.drawDashSpace = dashSpace
+                } else {
+                    drawItem.drawDashSpace = configManager.drawDashSpace
+                }
+                if let isLock = item["drawIsLock"] as? Bool {
+                    drawItem.drawIsLock = isLock
+                } else {
+                    drawItem.drawIsLock = configManager.drawIsLock
+                }
+
+                klineView.drawContext.drawItemList.append(drawItem)
+            }
+            klineView.drawContext.setNeedsDisplay()
+        }
+
         klineView.reloadConfigManager(configManager)
         shotView.shotColor = configManager.shotBackgroundColor
         if configManager.shouldFixDraw {

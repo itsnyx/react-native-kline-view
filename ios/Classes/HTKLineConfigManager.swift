@@ -263,6 +263,10 @@ class HTKLineConfigManager: NSObject {
     
     var drawShouldTrash = false
     
+    // Optional serialized drawing list from React Native (optionList.drawList.drawItemList)
+    // This will later be converted into real HTDrawItem instances in HTKLineContainerView.
+    var drawItemList: [[String: Any]]?
+    
     
     
 
@@ -319,6 +323,8 @@ class HTKLineConfigManager: NSObject {
     }
 
     func reloadOptionList(_ optionList: [String: Any]) {
+        // Reset serialized drawing list each reload; only use it when explicitly provided.
+        drawItemList = nil
         if let modelList = optionList["modelArray"] as? [[String: Any]] {
             modelArray = HTKLineModel.packModelArray(modelList)
         }
@@ -377,7 +383,11 @@ class HTKLineConfigManager: NSObject {
             if let drawShouldTrash = drawList["drawShouldTrash"] as? Bool {
                 self.drawShouldTrash = drawShouldTrash
             }
-            
+
+            // Optional: pre-defined drawing items from React Native
+            if let rawDrawItemList = drawList["drawItemList"] as? [[String: Any]] {
+                self.drawItemList = rawDrawItemList
+            }
         }
 
         if let shouldScrollToEnd = optionList["shouldScrollToEnd"] as? Bool {
