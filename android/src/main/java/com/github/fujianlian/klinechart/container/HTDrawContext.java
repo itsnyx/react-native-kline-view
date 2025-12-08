@@ -174,16 +174,16 @@ public class HTDrawContext {
                 float right = left + textWidth + paddingH * 2;
                 float bottom = viewPoint.y + fm.bottom + paddingV;
 
-                float radius = drawItem.textCornerRadius > 0 ? drawItem.textCornerRadius : configManager.textCornerRadius;
+                float radius = drawItem.textCornerRadius > 0 ? drawItem.textCornerRadius : configManager.drawTextCornerRadius;
 
                 // Background
-                paint.setColor(drawItem.textBackgroundColor != 0 ? drawItem.textBackgroundColor : configManager.textBackgroundColor);
+                paint.setColor(drawItem.textBackgroundColor != 0 ? drawItem.textBackgroundColor : configManager.drawTextBackgroundColor);
                 paint.setStyle(Paint.Style.FILL);
                 android.graphics.RectF rect = new android.graphics.RectF(left, top, right, bottom);
                 canvas.drawRoundRect(rect, radius, radius, paint);
 
                 // Text
-                paint.setColor(drawItem.textColor != 0 ? drawItem.textColor : configManager.textColor);
+                paint.setColor(drawItem.textColor != 0 ? drawItem.textColor : configManager.drawTextColor);
                 paint.setStyle(Paint.Style.FILL);
                 canvas.drawText(text, left + paddingH, viewPoint.y, paint);
             }
