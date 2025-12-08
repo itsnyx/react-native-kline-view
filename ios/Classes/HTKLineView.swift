@@ -11,6 +11,7 @@ import Lottie
 
 class HTKLineView: UIScrollView {
         
+    weak var containerView: HTKLineContainerView?
     var configManager: HTKLineConfigManager
     
     lazy var drawContext: HTDrawContext = {
@@ -609,6 +610,11 @@ extension HTKLineView: UIScrollViewDelegate {
         visibleEndIndex = min(max(0, visibleEndIndex), configManager.modelArray.count - 1)
         visibleRange = visibleStartIndex...visibleEndIndex
         self.setNeedsDisplay()
+
+        // When scrolled to the very left, notify JS to load older candles
+        if contentOffsetX <= 0 {
+            containerView?.onEndReached?([:])
+        }
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {

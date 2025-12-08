@@ -35,6 +35,20 @@ public class HTKLineContainerView extends RelativeLayout {
         klineView.setChildDraw(0);
         klineView.setDateTimeFormatter(new DateFormatter());
         klineView.configManager = configManager;
+        // When scrolling to the left edge, request more historical candles from JS
+        klineView.setRefreshListener(new KLineChartView.KChartRefreshListener() {
+            @Override
+            public void onLoadMoreBegin(KLineChartView chart) {
+                int id = HTKLineContainerView.this.getId();
+                reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
+                        id,
+                        RNKLineView.onEndReachedKey,
+                        Arguments.createMap()
+                );
+                // Immediately end loading state so scrolling isn't locked
+                chart.refreshComplete();
+            }
+        });
         addView(klineView, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     }
 

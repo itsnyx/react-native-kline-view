@@ -13,12 +13,21 @@ class RNKLineView: RCTViewManager {
 
     static let queue = DispatchQueue.init(label: "com.hublot.klinedata")
 
+    // Event name for when user scrolls to the left edge (request older candles)
+    static let onEndReachedKey = "onEndReached"
+
     override func view() -> UIView! {
         return HTKLineContainerView()
     }
 
     override class func requiresMainQueueSetup() -> Bool {
         return true
+    }
+
+    override func constantsToExport() -> [AnyHashable : Any]! {
+        return [
+            "onEndReached": RNKLineView.onEndReachedKey
+        ]
     }
 
 

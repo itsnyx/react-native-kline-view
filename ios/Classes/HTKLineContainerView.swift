@@ -17,6 +17,9 @@ class HTKLineContainerView: UIView {
     
     @objc var onDrawPointComplete: RCTBubblingEventBlock?
     
+    // Called when user scrolls to the left edge (request older candles)
+    @objc var onEndReached: RCTBubblingEventBlock?
+    
     @objc var optionList: String? {
         didSet {
             guard let optionList = optionList else {
@@ -41,8 +44,36 @@ class HTKLineContainerView: UIView {
         }
     }
 
+    // Lightweight data-only update: replace modelArray without reloading full optionList.
+    // Accepts the same modelArray JSON you normally embed inside optionList.
+    @objc var modelArray: String? {
+        didSet {
+            guard let modelArray = modelArray else {
+                return
+            }
+            
+            RNKLineView.queue.async { [weak self] in
+                do {
+                    guard let data = modelArray.data(using: .utf8),
+                          let list = try JSONSerialization.jsonObject(with: data, options: .allowFragments) as? [[String: Any]] else {
+                        return
+                    }
+                    self?.configManager.modelArray = HTKLineModel.packModelArray(list)
+                    DispatchQueue.main.async {
+                        guard let self = self else { return }
+                        self.klineView.reloadContentSize()
+                        self.klineView.scrollViewDidScroll(self.klineView)
+                    }
+                } catch {
+                    print("Error parsing modelArray: \(error)")
+                }
+            }
+        }
+    }
+
     lazy var klineView: HTKLineView = {
         let klineView = HTKLineView.init(CGRect.zero, configManager)
+        klineView.containerView = self
         return klineView
     }()
     

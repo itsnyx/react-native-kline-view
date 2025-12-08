@@ -1208,6 +1208,13 @@ class App extends Component {
     }
   };
 
+  // Reached left edge: load older candles
+  onEndReached = () => {
+    console.log('Reached start of data, should load older candles');
+    // In a real app, trigger your WSS/history request here and prepend data,
+    // then call reloadKLineData() or update modelArray via the new prop.
+  };
+
   render() {
     const theme = ThemeManager.getCurrentTheme(this.state.isDarkTheme);
     const styles = this.getStyles(theme);
@@ -1259,6 +1266,7 @@ class App extends Component {
         onDrawItemDidTouch={this.onDrawItemDidTouch}
         onDrawItemComplete={this.onDrawItemComplete}
         onDrawPointComplete={this.onDrawPointComplete}
+        onEndReached={this.onEndReached}
       />
     );
     if (global?.nativeFabricUIManager && Platform.OS == 'ios') {

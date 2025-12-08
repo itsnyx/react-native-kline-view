@@ -29,6 +29,9 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
 
 	public static String onDrawPointCompleteKey = "onDrawPointComplete";
 
+    // Fired when user scrolls to the left edge (older candles requested)
+    public static String onEndReachedKey = "onEndReached";
+
     @Nonnull
     @Override
     public String getName() {
@@ -47,7 +50,8 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
 		return MapBuilder.of(
 				onDrawItemDidTouchKey, MapBuilder.of("registrationName", onDrawItemDidTouchKey),
 				onDrawItemCompleteKey, MapBuilder.of("registrationName", onDrawItemCompleteKey),
-				onDrawPointCompleteKey, MapBuilder.of("registrationName", onDrawPointCompleteKey)
+				onDrawPointCompleteKey, MapBuilder.of("registrationName", onDrawPointCompleteKey),
+                onEndReachedKey, MapBuilder.of("registrationName", onEndReachedKey)
 		);
 	}
 
@@ -77,6 +81,41 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
         }).start();
     }
 
+    /**
+     * Lightweight data-only update: replace modelArray without reloading full optionList.
+     * Accepts the same modelArray JSON you normally embed inside optionList.
+     */
+    @ReactProp(name = "modelArray")
+    public void setModelArray(final HTKLineContainerView containerView, String modelArrayJson) {
+        if (modelArrayJson == null) {
+            return;
+        }
 
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                int disableDecimalFeature = JSON.DEFAULT_PARSER_FEATURE & ~Feature.UseBigDecimal.getMask();
+                Object parsed = JSON.parse(modelArrayJson, disableDecimalFeature);
+                if (!(parsed instanceof List)) {
+                    return;
+                }
+                List modelArray = (List) parsed;
+                // Reuse existing packModelList logic
+                containerView.configManager.modelArray =
+                        containerView.configManager.packModelList(modelArray);
+                containerView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Only notify data change, keep config/drawings as-is
+                        boolean isEnd = containerView.klineView.getScrollOffset() >= containerView.klineView.getMaxScrollX();
+                        containerView.klineView.notifyChanged();
+                        if (isEnd || containerView.configManager.shouldScrollToEnd) {
+                            containerView.klineView.setScrollX(containerView.klineView.getMaxScrollX());
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
 
 }
