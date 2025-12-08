@@ -24,6 +24,9 @@ enum HTDrawType: Int {
     case rectangle = 101
 
     case parallelogram = 102
+
+    // Text annotation at a single anchor point
+    case text = 201
     
     // 最多可以有多少个点, 超过就直接跳到下一次绘画
     var count: Int {
@@ -32,8 +35,9 @@ enum HTDrawType: Int {
             return 2
         case .parallelLine, .parallelogram:
             return 3
+        // text & other types use a single anchor point
         default:
-            return 0
+            return 1
         }
     }
     
@@ -53,6 +57,9 @@ class HTDrawItem: NSObject {
     var drawDashSpace: CGFloat = 1
     
     var drawIsLock = false
+
+    // Optional text for text-annotation draw type
+    var text: String = ""
     
     var pointList = [CGPoint]()
     

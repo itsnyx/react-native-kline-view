@@ -148,6 +148,35 @@ public class HTDrawContext {
 
     public void drawMapper(Canvas canvas, HTDrawItem drawItem, int index, int itemIndex) {
         HTPoint point = drawItem.pointList.get(index);
+
+        // Special handling for text annotations: draw text at the anchor point instead of lines.
+        if (drawItem.drawType == HTDrawType.text) {
+            HTPoint viewPoint = klineView.viewPointFromValuePoint(point);
+            paint.setColor(drawItem.drawColor);
+            paint.setPathEffect(null);
+            paint.setStyle(Paint.Style.FILL);
+            paint.setStrokeWidth(0);
+            paint.setTextSize(configManager.candleTextFontSize);
+            if (drawItem.text != null && drawItem.text.length() > 0) {
+                canvas.drawText(drawItem.text, viewPoint.x, viewPoint.y, paint);
+            }
+
+            if (itemIndex == configManager.shouldReloadDrawItemIndex) {
+                Path path = new Path();
+                paint.setStyle(Paint.Style.FILL);
+                path.addCircle(viewPoint.x, viewPoint.y, 20, Path.Direction.CW);
+                paint.setColor(colorWithAlphaComponent(drawItem.drawColor, 0.5));
+                canvas.drawPath(path, paint);
+
+                path = new Path();
+                paint.setStyle(Paint.Style.FILL);
+                path.addCircle(viewPoint.x, viewPoint.y, 8, Path.Direction.CW);
+                paint.setColor(drawItem.drawColor);
+                canvas.drawPath(path, paint);
+            }
+            return;
+        }
+
         List<List<HTPoint>> lineList = HTDrawItem.lineListWithIndex(drawItem, index, klineView);
         if (index == 2 && drawItem.drawType == HTDrawType.parallelLine) {
             List<HTPoint> firstLine = lineList.get(0);

@@ -175,6 +175,30 @@ class HTDrawContext {
         guard let klineView = klineView else {
             return
         }
+        let point = drawItem.pointList[index]
+
+        // Special handling for text annotations: draw text at the anchor point instead of lines.
+        if case .text = drawItem.drawType {
+            let viewPoint = klineView.viewPointFromValuePoint(point)
+            let font = configManager.createFont(configManager.candleTextFontSize)
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: drawItem.drawColor
+            ]
+            if !drawItem.text.isEmpty {
+                (drawItem.text as NSString).draw(at: viewPoint, withAttributes: attributes)
+            }
+
+            if itemIndex == configManager.shouldReloadDrawItemIndex {
+                context.addArc(center: viewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
+                context.setFillColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
+                context.drawPath(using: .fill)
+                context.addArc(center: viewPoint, radius: 4, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
+                context.setFillColor(drawItem.drawColor.cgColor)
+                context.drawPath(using: .fill)
+            }
+            return
+        }
         let lineList = HTDrawItem.lineListWithIndex(drawItem, index, klineView)
         if index == 2, case .parallelLine = drawItem.drawType, let (startPoint, endPoint) = lineList.first {
             let firstPoint = drawItem.pointList[0]
@@ -198,8 +222,7 @@ class HTDrawContext {
         for (startPoint, endPoint) in lineList {
             drawLine(context, drawItem, klineView.viewPointFromValuePoint(startPoint), klineView.viewPointFromValuePoint(endPoint))
         }
-        let point = drawItem.pointList[index]
-        
+
         if (itemIndex != configManager.shouldReloadDrawItemIndex) {
             return
         }

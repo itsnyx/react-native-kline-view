@@ -132,6 +132,7 @@ public class HTKLineContainerView extends RelativeLayout {
                     map.putDouble("drawDashWidth", drawItem.drawDashWidth);
                     map.putDouble("drawDashSpace", drawItem.drawDashSpace);
                     map.putBoolean("drawIsLock", drawItem.drawIsLock);
+                    map.putString("text", drawItem.text);
 
                     WritableArray pointArray = Arguments.createArray();
                     for (HTPoint point : drawItem.pointList) {
@@ -282,6 +283,11 @@ public class HTKLineContainerView extends RelativeLayout {
                     drawItem.drawIsLock = (Boolean) isLockObject;
                 } else {
                     drawItem.drawIsLock = configManager.drawIsLock;
+                }
+
+                Object textObject = itemMap.get("text");
+                if (textObject instanceof String) {
+                    drawItem.text = (String) textObject;
                 }
 
                 klineView.drawContext.drawItemList.add(drawItem);

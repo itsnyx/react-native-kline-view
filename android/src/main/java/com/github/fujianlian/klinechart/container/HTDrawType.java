@@ -16,7 +16,10 @@ public enum HTDrawType {
 
     rectangle,
 
-    parallelogram;
+    parallelogram,
+
+    // Text annotation at a single anchor point
+    text;
 
     public static HTDrawType drawTypeFromRawValue(int value) {
         switch (value) {
@@ -34,6 +37,9 @@ public enum HTDrawType {
             }
             case 5: {
                 return parallelLine;
+            }
+            case 201: {
+                return text;
             }
             case 101: {
                 return rectangle;
@@ -54,6 +60,7 @@ public enum HTDrawType {
         if (this == parallelLine || this == parallelogram) {
             return 3;
         }
+        // text & other types use a single anchor point
         return 1;
     }
 
@@ -77,6 +84,9 @@ public enum HTDrawType {
             }
             case parallelLine: {
                 return 5;
+            }
+            case text: {
+                return 201;
             }
             case rectangle: {
                 return 101;

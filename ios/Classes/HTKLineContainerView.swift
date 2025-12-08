@@ -134,7 +134,8 @@ class HTKLineContainerView: UIView {
                 "drawDashWidth": drawItem.drawDashWidth,
                 "drawDashSpace": drawItem.drawDashSpace,
                 "drawIsLock": drawItem.drawIsLock,
-                "pointList": pointArray
+                "pointList": pointArray,
+                "text": drawItem.text
             ])
         }
         configManager.onDrawPointComplete = { [weak self] (drawItem, drawItemIndex) in
@@ -221,6 +222,10 @@ class HTKLineContainerView: UIView {
                     drawItem.drawIsLock = isLock
                 } else {
                     drawItem.drawIsLock = configManager.drawIsLock
+                }
+
+                if let text = item["text"] as? String {
+                    drawItem.text = text
                 }
 
                 klineView.drawContext.drawItemList.append(drawItem)

@@ -25,6 +25,9 @@ public class HTDrawItem {
 
     public Boolean drawIsLock = false;
 
+    // Optional text for text-annotation draw type
+    public String text = "";
+
     public List<HTPoint> pointList = new ArrayList<>();
 
     private List<Integer> touchMoveIndexList = new ArrayList<>();
