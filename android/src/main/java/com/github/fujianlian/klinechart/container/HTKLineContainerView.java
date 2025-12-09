@@ -115,6 +115,8 @@ public class HTKLineContainerView extends RelativeLayout {
                     map.putDouble("drawDashSpace", drawItem.drawDashSpace);
                     map.putBoolean("drawIsLock", drawItem.drawIsLock);
                 }
+                // Expose the index of the touched drawing item to React Native.
+                map.putInt("index", drawItemIndex);
                 map.putInt("shouldReloadDrawItemIndex", drawItemIndex);
                 reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
                         id,

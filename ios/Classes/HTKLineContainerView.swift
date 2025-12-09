@@ -121,11 +121,13 @@ class HTKLineContainerView: UIView {
             self?.configManager.shouldReloadDrawItemIndex = drawItemIndex
             guard let drawItem = drawItem, let colorList = drawItem.drawColor.cgColor.components else {
                 self?.onDrawItemDidTouch?([
+                    "index": drawItemIndex,
                     "shouldReloadDrawItemIndex": drawItemIndex,
                 ])
                 return
             }
             self?.onDrawItemDidTouch?([
+                "index": drawItemIndex,
                 "shouldReloadDrawItemIndex": drawItemIndex,
                 "drawColor": colorList,
                 "drawLineHeight": drawItem.drawLineHeight,
