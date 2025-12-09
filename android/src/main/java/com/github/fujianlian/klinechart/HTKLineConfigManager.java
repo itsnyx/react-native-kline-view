@@ -255,11 +255,6 @@ public class HTKLineConfigManager {
         // Reset optional serialized drawing list each time we reload
         this.drawItemList = null;
 
-    	List modelArray = (List)optionList.get("modelArray");
-    	if (modelArray != null) {
-    		this.modelArray = this.packModelList(modelArray);
-    	}
-
     	Map targetList = (Map)optionList.get("targetList");
     	if (targetList != null) {
     		this.maList = HTKLineTargetItem.packModelArray((List) targetList.get("maList"));

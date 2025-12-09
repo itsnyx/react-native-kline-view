@@ -444,6 +444,7 @@ class App extends Component {
       klineData: this.generateMockData(),
       drawShouldContinue: true,
       optionList: null,
+      modelArrayJson: null, // data-only payload for native
       savedDrawings: [], // persist all drawings including text
     };
   }
@@ -590,8 +591,11 @@ class App extends Component {
     }
 
     const processedData = this.processKLineData(this.state.klineData);
-    const optionList = this.packOptionList(processedData);
-    this.setOptionList(optionList);
+    const optionList = this.packOptionList();
+    this.setState({
+      optionList: JSON.stringify(optionList),
+      modelArrayJson: JSON.stringify(processedData),
+    });
   };
 
   // Process K-line data, add technical indicator calculation
@@ -679,8 +683,8 @@ class App extends Component {
     });
   };
 
-  // Pack Option List
-  packOptionList = modelArray => {
+  // Pack Option List (configuration only, without modelArray)
+  packOptionList = () => {
     const theme = ThemeManager.getCurrentTheme(this.state.isDarkTheme);
 
     // Basic Configuration
@@ -805,7 +809,6 @@ class App extends Component {
     };
 
     return {
-      modelArray: modelArray,
       shouldScrollToEnd: true,
       targetList: targetList,
       price: 2, // Price precision
@@ -1263,6 +1266,7 @@ class App extends Component {
         }}
         style={styles.chart}
         optionList={this.state.optionList}
+        modelArray={this.state.modelArrayJson}
         onDrawItemDidTouch={this.onDrawItemDidTouch}
         onDrawItemComplete={this.onDrawItemComplete}
         onDrawPointComplete={this.onDrawPointComplete}
