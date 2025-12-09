@@ -68,6 +68,10 @@ class HTDrawItem: NSObject {
     
     var textCornerRadius: CGFloat = 8
     
+    // Optional per-item font size for text annotations.
+    // When 0, the renderer will fall back to configManager.candleTextFontSize.
+    var textFontSize: CGFloat = 0
+    
     var pointList = [CGPoint]()
     
     var touchMoveIndexList = [Int]()

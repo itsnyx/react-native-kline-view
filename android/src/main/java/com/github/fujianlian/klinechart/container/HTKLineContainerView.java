@@ -151,6 +151,9 @@ public class HTKLineContainerView extends RelativeLayout {
                     map.putInt("textColor", drawItem.textColor);
                     map.putInt("textBackgroundColor", drawItem.textBackgroundColor);
                     map.putDouble("textCornerRadius", drawItem.textCornerRadius);
+                    // Expose per-item text font size (falls back to candleTextFontSize when 0 on native).
+                    map.putDouble("fontSize",
+                            drawItem.textFontSize > 0 ? drawItem.textFontSize : configManager.candleTextFontSize);
 
                     WritableArray pointArray = Arguments.createArray();
                     for (HTPoint point : drawItem.pointList) {
@@ -363,6 +366,13 @@ public class HTKLineContainerView extends RelativeLayout {
                     drawItem.textCornerRadius = ((Number) textCornerRadiusObject).floatValue();
                 } else {
                     drawItem.textCornerRadius = configManager.drawTextCornerRadius;
+                }
+                // Optional per-item font size for text annotations
+                Object fontSizeObject = itemMap.get("fontSize");
+                if (fontSizeObject instanceof Number) {
+                    drawItem.textFontSize = ((Number) fontSizeObject).floatValue();
+                } else {
+                    drawItem.textFontSize = configManager.candleTextFontSize;
                 }
 
                 klineView.drawContext.drawItemList.add(drawItem);

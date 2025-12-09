@@ -175,7 +175,9 @@ class HTKLineContainerView: UIView {
                 "text": drawItem.text,
                 "textColor": colorToInt(drawItem.textColor),
                 "textBackgroundColor": colorToInt(drawItem.textBackgroundColor),
-                "textCornerRadius": drawItem.textCornerRadius
+                "textCornerRadius": drawItem.textCornerRadius,
+                // Expose per-item text font size (falls back to candleTextFontSize when 0 on native).
+                "fontSize": drawItem.textFontSize > 0 ? drawItem.textFontSize : configManager.candleTextFontSize
             ])
         }
         configManager.onDrawItemMove = { [weak self] (drawItem, drawItemIndex) in
@@ -304,6 +306,12 @@ class HTKLineContainerView: UIView {
                     drawItem.textCornerRadius = textCornerRadius
                 } else {
                     drawItem.textCornerRadius = configManager.drawTextCornerRadius
+                }
+                // Optional per-item font size for text annotations
+                if let fontSize = item["fontSize"] as? CGFloat {
+                    drawItem.textFontSize = fontSize
+                } else {
+                    drawItem.textFontSize = configManager.candleTextFontSize
                 }
 
                 klineView.drawContext.drawItemList.append(drawItem)

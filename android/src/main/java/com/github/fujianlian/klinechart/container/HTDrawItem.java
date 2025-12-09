@@ -34,6 +34,10 @@ public class HTDrawItem {
     public int textBackgroundColor = Color.argb(153, 0, 0, 0);
 
     public float textCornerRadius = 8;
+    
+    // Optional per-item font size for text annotations.
+    // When 0, the renderer will fall back to configManager.candleTextFontSize.
+    public float textFontSize = 0;
 
     public List<HTPoint> pointList = new ArrayList<>();
 

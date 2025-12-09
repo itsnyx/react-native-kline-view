@@ -98,6 +98,8 @@ public class HTDrawContext {
                     drawItem.textColor = configManager.drawTextColor;
                     drawItem.textBackgroundColor = configManager.drawTextBackgroundColor;
                     drawItem.textCornerRadius = configManager.drawTextCornerRadius;
+                    // Initialize per-item text font size from the current global candle text size.
+                    drawItem.textFontSize = configManager.candleTextFontSize;
                     drawItemList.add(drawItem);
                     if (configManager.onDrawItemDidTouch != null) {
                         configManager.onDrawItemDidTouch.invoke(drawItem, drawItemList.size() - 1);
@@ -184,7 +186,9 @@ public class HTDrawContext {
             HTPoint viewPoint = klineView.viewPointFromValuePoint(point);
             paint.setPathEffect(null);
             paint.setStrokeWidth(0);
-            paint.setTextSize(configManager.candleTextFontSize);
+            // Use per-item font size when provided; otherwise fall back to the global candleTextFontSize.
+            float fontSize = drawItem.textFontSize > 0 ? drawItem.textFontSize : configManager.candleTextFontSize;
+            paint.setTextSize(fontSize);
 
             if (drawItem.text != null && drawItem.text.length() > 0) {
                 String text = drawItem.text;

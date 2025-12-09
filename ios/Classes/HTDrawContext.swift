@@ -128,6 +128,8 @@ class HTDrawContext {
                 drawItem.textColor = configManager.drawTextColor
                 drawItem.textBackgroundColor = configManager.drawTextBackgroundColor
                 drawItem.textCornerRadius = configManager.drawTextCornerRadius
+                // Initialize per-item text font size from the current global candle text size.
+                drawItem.textFontSize = configManager.candleTextFontSize
                 
                 drawItemList.append(drawItem)
                 configManager.onDrawItemDidTouch?(drawItem, drawItemList.count - 1)
@@ -201,7 +203,9 @@ class HTDrawContext {
         // Special handling for text annotations: draw text at the anchor point with background.
         if case .text = drawItem.drawType {
             let viewPoint = klineView.viewPointFromValuePoint(point)
-            let font = configManager.createFont(configManager.candleTextFontSize)
+            // Use per-item font size when provided; otherwise fall back to the global candleTextFontSize.
+            let fontSize = drawItem.textFontSize > 0 ? drawItem.textFontSize : configManager.candleTextFontSize
+            let font = configManager.createFont(fontSize)
             let text = drawItem.text as NSString
             if !drawItem.text.isEmpty {
                 let paddingH: CGFloat = 12
