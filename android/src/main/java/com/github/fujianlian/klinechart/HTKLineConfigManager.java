@@ -211,7 +211,17 @@ public class HTKLineConfigManager {
 
     public KLineEntity packModel(Map<String, Object> keyValue) {
     	KLineEntity entity = new KLineEntity();
-    	entity.id = ((Number)keyValue.get("id")).intValue();
+        // IMPORTANT:
+        // Use the full numeric value coming from JS for `id` (usually a millisecond
+        // timestamp). Previously this used intValue(), which overflowed for large
+        // timestamps and produced truncated values like 24762752. That broke the
+        // mapping between candle ids, drawing pointList.x, and JS data, and caused
+        // drawings to shift or appear at the wrong time when reloaded.
+        //
+        // We keep it as a float internally (KLineEntity.id is float), but convert
+        // directly from the JS number to float to preserve as much precision as
+        // possible without 32‑bit integer overflow.
+    	entity.id = ((Number)keyValue.get("id")).floatValue();
         entity.Date = keyValue.get("dateString").toString();
         entity.Open = ((Number)keyValue.get("open")).floatValue();
         entity.High = ((Number)keyValue.get("high")).floatValue();
