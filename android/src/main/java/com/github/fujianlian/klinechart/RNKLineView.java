@@ -27,6 +27,8 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
 
 	public static String onDrawItemCompleteKey = "onDrawItemComplete";
 
+    public static String onDrawItemMoveKey = "onDrawItemMove";
+
 	public static String onDrawPointCompleteKey = "onDrawPointComplete";
 
     // Fired when user scrolls to the left edge (older candles requested)
@@ -47,12 +49,13 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
 
 	@Override
 	public Map getExportedCustomDirectEventTypeConstants() {
-		return MapBuilder.of(
-				onDrawItemDidTouchKey, MapBuilder.of("registrationName", onDrawItemDidTouchKey),
-				onDrawItemCompleteKey, MapBuilder.of("registrationName", onDrawItemCompleteKey),
-				onDrawPointCompleteKey, MapBuilder.of("registrationName", onDrawPointCompleteKey),
-                onEndReachedKey, MapBuilder.of("registrationName", onEndReachedKey)
-		);
+        MapBuilder.Builder builder = MapBuilder.builder();
+        builder.put(onDrawItemDidTouchKey, MapBuilder.of("registrationName", onDrawItemDidTouchKey));
+        builder.put(onDrawItemCompleteKey, MapBuilder.of("registrationName", onDrawItemCompleteKey));
+        builder.put(onDrawPointCompleteKey, MapBuilder.of("registrationName", onDrawPointCompleteKey));
+        builder.put(onEndReachedKey, MapBuilder.of("registrationName", onEndReachedKey));
+        builder.put(onDrawItemMoveKey, MapBuilder.of("registrationName", onDrawItemMoveKey));
+        return builder.build();
 	}
 
 

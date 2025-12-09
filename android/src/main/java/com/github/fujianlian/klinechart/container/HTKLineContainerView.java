@@ -87,7 +87,6 @@ public class HTKLineContainerView extends RelativeLayout {
             klineView.setScrollX(klineView.getMaxScrollX());
         }
 
-
         final int id = this.getId();
         configManager.onDrawItemDidTouch = new Callback() {
             @Override
@@ -163,6 +162,44 @@ public class HTKLineContainerView extends RelativeLayout {
                 reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
                         id,
                         RNKLineView.onDrawItemCompleteKey,
+                        map
+                );
+            }
+        };
+        configManager.onDrawItemMove = new Callback() {
+            @Override
+            public void invoke(Object... args) {
+                HTDrawItem drawItem = null;
+                int drawItemIndex = -1;
+                if (args != null && args.length >= 2) {
+                    try {
+                        drawItem = (HTDrawItem) args[0];
+                        drawItemIndex = (int) args[1];
+                    } catch (ClassCastException ignored) {
+                    }
+                }
+
+                if (drawItem == null) {
+                    return;
+                }
+
+                WritableMap map = Arguments.createMap();
+                map.putInt("index", drawItemIndex);
+                map.putInt("drawType", drawItem.drawType.rawValue());
+                map.putString("text", drawItem.text);
+
+                WritableArray pointArray = Arguments.createArray();
+                for (HTPoint point : drawItem.pointList) {
+                    WritableMap pointMap = Arguments.createMap();
+                    pointMap.putDouble("x", point.x);
+                    pointMap.putDouble("y", point.y);
+                    pointArray.pushMap(pointMap);
+                }
+                map.putArray("pointList", pointArray);
+
+                reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
+                        id,
+                        RNKLineView.onDrawItemMoveKey,
                         map
                 );
             }

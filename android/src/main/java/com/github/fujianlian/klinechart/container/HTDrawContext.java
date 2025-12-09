@@ -55,9 +55,15 @@ public class HTDrawContext {
         if (HTDrawItem.canResponseTouch(drawItemList, location, translation, state, klineView)) {
             if (state == MotionEvent.ACTION_DOWN) {
                 HTDrawItem moveItem = HTDrawItem.findTouchMoveItem(drawItemList);
-                if (moveItem != null) {
+                if (moveItem != null && configManager.onDrawItemDidTouch != null) {
                     int moveItemIndex = drawItemList.indexOf(moveItem);
                     configManager.onDrawItemDidTouch.invoke(moveItem, moveItemIndex);
+                }
+            } else if (state == MotionEvent.ACTION_MOVE && configManager.onDrawItemMove != null) {
+                HTDrawItem moveItem = HTDrawItem.findTouchMoveItem(drawItemList);
+                if (moveItem != null) {
+                    int moveItemIndex = drawItemList.indexOf(moveItem);
+                    configManager.onDrawItemMove.invoke(moveItem, moveItemIndex);
                 }
             }
             invalidate();
@@ -72,41 +78,51 @@ public class HTDrawContext {
         HTDrawItem drawItem = size > 0 ? drawItemList.get(size - 1) : null;
         switch (state) {
             case MotionEvent.ACTION_DOWN:
-            if (drawItem == null || (drawItem.pointList.size() >= drawItem.drawType.count())) {
-                drawItem = new HTDrawItem(configManager.drawType, location);
-                drawItem.drawColor = configManager.drawColor;
-                drawItem.drawLineHeight = configManager.drawLineHeight;
-                drawItem.drawDashWidth = configManager.drawDashWidth;
-                drawItem.drawDashSpace = configManager.drawDashSpace;
-                // Apply text defaults (used when drawType == text)
-                drawItem.textColor = configManager.drawTextColor;
-                drawItem.textBackgroundColor = configManager.drawTextBackgroundColor;
-                drawItem.textCornerRadius = configManager.drawTextCornerRadius;
-                drawItemList.add(drawItem);
-                configManager.onDrawItemDidTouch.invoke(drawItem, drawItemList.size() - 1);
-            } else {
-                drawItem.pointList.add(location);
-            }
-            case MotionEvent.ACTION_MOVE: {
-
-            }
+                if (drawItem == null || (drawItem.pointList.size() >= drawItem.drawType.count())) {
+                    drawItem = new HTDrawItem(configManager.drawType, location);
+                    drawItem.drawColor = configManager.drawColor;
+                    drawItem.drawLineHeight = configManager.drawLineHeight;
+                    drawItem.drawDashWidth = configManager.drawDashWidth;
+                    drawItem.drawDashSpace = configManager.drawDashSpace;
+                    // Apply text defaults (used when drawType == text)
+                    drawItem.textColor = configManager.drawTextColor;
+                    drawItem.textBackgroundColor = configManager.drawTextBackgroundColor;
+                    drawItem.textCornerRadius = configManager.drawTextCornerRadius;
+                    drawItemList.add(drawItem);
+                    if (configManager.onDrawItemDidTouch != null) {
+                        configManager.onDrawItemDidTouch.invoke(drawItem, drawItemList.size() - 1);
+                    }
+                } else {
+                    drawItem.pointList.add(location);
+                }
+                // fall through to MOVE/UP handling so the first point is positioned correctly
+            case MotionEvent.ACTION_MOVE:
             case MotionEvent.ACTION_UP:
-                int length = drawItem.pointList.size();
-                if (length >= 1) {
-                int index = length - 1;
-                drawItem.pointList.set(index, location);
-                if (state == MotionEvent.ACTION_UP) {
-                    configManager.onDrawPointComplete.invoke(drawItem, drawItemList.size() - 1);
-                    if (index == drawItem.drawType.count() - 1) {
-                        configManager.onDrawItemComplete.invoke(drawItem, drawItemList.size() - 1);
-                        if (configManager.drawShouldContinue) {
-                            configManager.shouldReloadDrawItemIndex = HTDrawState.showContext;
-                        } else {
-                            configManager.drawType = HTDrawType.none;
+                if (drawItem != null) {
+                    int length = drawItem.pointList.size();
+                    if (length >= 1) {
+                        int index = length - 1;
+                        drawItem.pointList.set(index, location);
+
+                        if (state == MotionEvent.ACTION_MOVE && configManager.onDrawItemMove != null) {
+                            // While creating a new drawing, report updated point positions during the drag.
+                            configManager.onDrawItemMove.invoke(drawItem, drawItemList.size() - 1);
+                        }
+
+                        if (state == MotionEvent.ACTION_UP && configManager.onDrawPointComplete != null) {
+                            configManager.onDrawPointComplete.invoke(drawItem, drawItemList.size() - 1);
+                            if (index == drawItem.drawType.count() - 1 && configManager.onDrawItemComplete != null) {
+                                configManager.onDrawItemComplete.invoke(drawItem, drawItemList.size() - 1);
+                                if (configManager.drawShouldContinue) {
+                                    configManager.shouldReloadDrawItemIndex = HTDrawState.showContext;
+                                } else {
+                                    configManager.drawType = HTDrawType.none;
+                                }
+                            }
                         }
                     }
                 }
-            }
+                break;
             default:
                 break;
         }

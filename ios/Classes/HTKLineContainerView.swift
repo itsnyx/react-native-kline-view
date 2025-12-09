@@ -14,6 +14,10 @@ class HTKLineContainerView: UIView {
     @objc var onDrawItemDidTouch: RCTBubblingEventBlock?
     
     @objc var onDrawItemComplete: RCTBubblingEventBlock?
+
+    // Continuously fired while a drawing (line/text/etc.) is being moved.
+    // JS receives the current index, drawType, pointList, and text (if any).
+    @objc var onDrawItemMove: RCTBubblingEventBlock?
     
     @objc var onDrawPointComplete: RCTBubblingEventBlock?
     
@@ -170,6 +174,26 @@ class HTKLineContainerView: UIView {
                 "textColor": colorToInt(drawItem.textColor),
                 "textBackgroundColor": colorToInt(drawItem.textBackgroundColor),
                 "textCornerRadius": drawItem.textCornerRadius
+            ])
+        }
+        configManager.onDrawItemMove = { [weak self] (drawItem, drawItemIndex) in
+            guard let drawItem = drawItem else {
+                return
+            }
+
+            var pointArray = [[String: Any]]()
+            for point in drawItem.pointList {
+                pointArray.append([
+                    "x": point.x,
+                    "y": point.y
+                ])
+            }
+
+            self?.onDrawItemMove?([
+                "index": drawItemIndex,
+                "drawType": drawItem.drawType.rawValue,
+                "pointList": pointArray,
+                "text": drawItem.text
             ])
         }
         configManager.onDrawPointComplete = { [weak self] (drawItem, drawItemIndex) in

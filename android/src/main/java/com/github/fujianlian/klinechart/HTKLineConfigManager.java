@@ -60,6 +60,10 @@ public class HTKLineConfigManager {
 
     public Callback onDrawItemComplete;
 
+    // Fired continuously while a drawing (line/text/etc.) is being moved/dragged.
+    // JS can use this to keep its copy of pointList in sync with native.
+    public Callback onDrawItemMove;
+
     public Callback onDrawItemDidTouch;
 
     public Callback onDrawPointComplete;

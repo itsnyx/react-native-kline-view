@@ -1174,6 +1174,25 @@ class App extends Component {
     console.log('Drawing item touched:', nativeEvent);
   };
 
+  // Drawing Item Move Event (lines/text being dragged)
+  onDrawItemMove = event => {
+    const { nativeEvent } = event;
+    // nativeEvent: { index, drawType, pointList: [{x, y}, ...], text? }
+    console.log('Drawing item moved:', nativeEvent);
+
+    // Example: if you keep drawings in state, you can update the moved one here
+    // this.setState(prev => {
+    //   const saved = [...prev.savedDrawings];
+    //   if (nativeEvent.index >= 0 && nativeEvent.index < saved.length) {
+    //     saved[nativeEvent.index] = {
+    //       ...saved[nativeEvent.index],
+    //       ...nativeEvent,
+    //     };
+    //   }
+    //   return { savedDrawings: saved };
+    // });
+  };
+
   // Drawing Item Complete Event
   onDrawItemComplete = event => {
     const { nativeEvent } = event;
@@ -1268,6 +1287,7 @@ class App extends Component {
         optionList={this.state.optionList}
         modelArray={this.state.modelArrayJson}
         onDrawItemDidTouch={this.onDrawItemDidTouch}
+        onDrawItemMove={this.onDrawItemMove}
         onDrawItemComplete={this.onDrawItemComplete}
         onDrawPointComplete={this.onDrawPointComplete}
         onEndReached={this.onEndReached}

@@ -70,8 +70,15 @@ class HTDrawContext {
             break
         }
         if HTDrawItem.canResponseTouch(drawItemList, location, translation, state, klineView) {
-            if state == .began, let moveItem = HTDrawItem.findTouchMoveItem(drawItemList), let moveItemIndex = drawItemList.index(of: moveItem) {
+            if state == .began,
+               let moveItem = HTDrawItem.findTouchMoveItem(drawItemList),
+               let moveItemIndex = drawItemList.index(of: moveItem) {
                 configManager.onDrawItemDidTouch?(moveItem, moveItemIndex)
+            } else if state == .changed,
+                      let moveItem = HTDrawItem.findTouchMoveItem(drawItemList),
+                      let moveItemIndex = drawItemList.index(of: moveItem) {
+                // While dragging an existing drawing, continuously report its new position.
+                configManager.onDrawItemMove?(moveItem, moveItemIndex)
             }
             setNeedsDisplay()
             return
@@ -123,6 +130,12 @@ class HTDrawContext {
             if length >= 1 {
                 let index = length - 1
                 drawItem?.pointList[index] = location
+
+                if case .changed = state, let drawItem = drawItem {
+                    // While creating a new drawing, report updated point positions during the drag.
+                    configManager.onDrawItemMove?(drawItem, drawItemList.count - 1)
+                }
+
                 // 最后一个点起笔
                 if case .ended = state, let drawItem = drawItem {
                     configManager.onDrawPointComplete?(drawItem, drawItemList.count - 1)

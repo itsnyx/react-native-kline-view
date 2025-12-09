@@ -253,6 +253,10 @@ class HTKLineConfigManager: NSObject {
     var drawIsLock = false
     
     var onDrawItemDidTouch: HTKLineDrawItemBlock?
+
+    // Fired continuously while a drawing (line/text/etc.) is being moved/dragged.
+    // Use this to keep JS-side state in sync with the latest point positions.
+    var onDrawItemMove: HTKLineDrawItemBlock?
     
     var onDrawItemComplete: HTKLineDrawItemBlock?
     
