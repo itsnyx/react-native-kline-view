@@ -879,12 +879,6 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         super.onScaleChanged(scale, oldScale);
     }
 
-    @Override
-    protected boolean onVerticalDragOnRightAxis(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-        // Vertical zooming disabled – fall back to normal horizontal scroll behavior.
-        return false;
-    }
-
     /**
      * 计算当前的显示区域
      */
