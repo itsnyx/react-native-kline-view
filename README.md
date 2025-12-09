@@ -23,6 +23,7 @@ Perfect for cryptocurrency exchanges, stock trading apps, financial dashboards, 
 
 - ✅ **Ultra-smooth scrolling** with native performance optimization
 - ✅ **Pinch-to-zoom** with fluid gesture recognition
+- ✅ **Vertical price zoom** by panning on the right price axis
 - ✅ **Long-press details** with animated info panels
 - ✅ **Real-time updates** with efficient data management
 - ✅ **Multiple timeframes** (1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w)
@@ -41,7 +42,7 @@ Perfect for cryptocurrency exchanges, stock trading apps, financial dashboards, 
 - ✅ **Horizontal Lines** - Price level marking
 - ✅ **Vertical Lines** - Time-based event marking
 - ✅ **Rectangles** - Range highlighting
-- ✅ **Text Annotations** - Custom labels and notes
+- ✅ **Text Annotations** - Custom labels and notes with background and border radius
 - ✅ **Drawing persistence** with touch-to-edit functionality
 
 ### 🎨 **Visual Excellence**
@@ -106,20 +107,23 @@ The example app demonstrates:
 
 ### Core Properties
 
-| Property              | Type     | Required | Default | Description                                             |
-| --------------------- | -------- | -------- | ------- | ------------------------------------------------------- |
-| `optionList`          | string   | ✅       | -       | JSON string containing all chart configuration and data |
-| `onDrawItemDidTouch`  | function | ❌       | -       | Callback when a drawing item is touched                 |
-| `onDrawItemComplete`  | function | ❌       | -       | Callback when a drawing item is completed               |
-| `onDrawPointComplete` | function | ❌       | -       | Callback when drawing point is completed                |
+| Property              | Type     | Required | Default | Description                                                              |
+| --------------------- | -------- | -------- | ------- | ------------------------------------------------------------------------ |
+| `optionList`          | string   | ✅       | -       | JSON string containing all chart configuration and initial data          |
+| `modelArray`          | string   | ❌       | -       | JSON string of the data array only (for efficient real-time/WSS updates) |
+| `onDrawItemDidTouch`  | function | ❌       | -       | Callback when a drawing item is touched                                  |
+| `onDrawItemComplete`  | function | ❌       | -       | Callback when a drawing item is completed                                |
+| `onDrawPointComplete` | function | ❌       | -       | Callback when drawing point is completed                                 |
+| `onEndReached`        | function | ❌       | -       | Called when user scrolls to the left edge to request older candles       |
 
 ### Event Callbacks Detail
 
-| Callback              | Parameters                                                                                           | Description                                                                                  |
-| --------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `onDrawItemDidTouch`  | `{ shouldReloadDrawItemIndex, drawColor, drawLineHeight, drawDashWidth, drawDashSpace, drawIsLock }` | Triggered when user touches an existing drawing item. Returns drawing properties for editing |
-| `onDrawItemComplete`  | `{}`                                                                                                 | Triggered when user completes creating a new drawing item                                    |
-| `onDrawPointComplete` | `{ pointCount }`                                                                                     | Triggered when user completes adding points to a drawing (useful for multi-point drawings)   |
+| Callback              | Parameters                                                                                                                                                        | Description                                                                                              |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `onDrawItemDidTouch`  | `{ shouldReloadDrawItemIndex, drawColor, drawLineHeight, drawDashWidth, drawDashSpace, drawIsLock }`                                                              | Triggered when user touches an existing drawing item. Returns drawing properties for editing             |
+| `onDrawItemComplete`  | `{ index, drawType, drawColor, drawLineHeight, drawDashWidth, drawDashSpace, drawIsLock, pointList, text?, textColor?, textBackgroundColor?, textCornerRadius? }` | Triggered when user completes creating a new drawing item. Returns full drawing metadata for persistence |
+| `onDrawPointComplete` | `{ pointCount }`                                                                                                                                                  | Triggered when user completes adding points to a drawing (useful for multi-point drawings)               |
+| `onEndReached`        | `{}`                                                                                                                                                              | Triggered when user scrolls to the left edge so you can load older candles (infinite scroll/WS history)  |
 
 ## 🔧 OptionList Configuration
 
@@ -127,13 +131,13 @@ The `optionList` is a JSON string containing all chart configuration. Here's the
 
 ### Main Configuration
 
-| Property            | Type    | Default | Description                                  |
-| ------------------- | ------- | ------- | -------------------------------------------- |
-| `modelArray`        | Array   | `[]`    | K-line data array (see Data Format below)    |
-| `shouldScrollToEnd` | Boolean | `true`  | Whether to scroll to the latest data on load |
-| `targetList`        | Object  | `{}`    | Technical indicator parameters               |
-| `configList`        | Object  | `{}`    | Visual styling configuration                 |
-| `drawList`          | Object  | `{}`    | Drawing tools configuration                  |
+| Property            | Type    | Default | Description                                       |
+| ------------------- | ------- | ------- | ------------------------------------------------- |
+| `modelArray`        | Array   | `[]`    | Initial K-line data array (see Data Format below) |
+| `shouldScrollToEnd` | Boolean | `true`  | Whether to scroll to the latest data on load      |
+| `targetList`        | Object  | `{}`    | Technical indicator parameters                    |
+| `configList`        | Object  | `{}`    | Visual styling configuration                      |
+| `drawList`          | Object  | `{}`    | Drawing tools configuration                       |
 
 ### Data Format (modelArray)
 
@@ -151,7 +155,7 @@ Each data point should contain the following fields:
 - `maVolumeList`: Volume moving average data
 - Various technical indicator data (MACD, KDJ, RSI, etc.)
 
-**For complete data structure examples, see [example/App.js](./example/App.js)**
+**For complete data structure examples, see [example/App.tsx](./example/App.tsx)**
 
 ### Visual Configuration (configList)
 
@@ -182,14 +186,18 @@ Each data point should contain the following fields:
 
 ### Drawing Configuration (drawList)
 
-| Property                    | Type    | Description                                                     |
-| --------------------------- | ------- | --------------------------------------------------------------- |
-| `drawType`                  | Number  | Current drawing tool type (0=none, 1=trend, 2=horizontal, etc.) |
-| `shouldReloadDrawItemIndex` | Number  | Drawing state management                                        |
-| `drawShouldContinue`        | Boolean | Whether to continue drawing after completing one item           |
-| `shouldClearDraw`           | Boolean | Flag to clear all drawings                                      |
-| `shouldFixDraw`             | Boolean | Flag to finalize current drawing                                |
-| `shotBackgroundColor`       | Color   | Drawing overlay background color                                |
+| Property                    | Type    | Description                                                                                                                        |
+| --------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `drawType`                  | Number  | Current drawing tool type (0=none, 1=trend, 2=horizontal, 3=vertical, 4=ray, 5=channel, 101=rect, 102=parallelogram, **201=text**) |
+| `shouldReloadDrawItemIndex` | Number  | Drawing state management                                                                                                           |
+| `drawShouldContinue`        | Boolean | Whether to continue drawing after completing one item                                                                              |
+| `shouldClearDraw`           | Boolean | Flag to clear all drawings                                                                                                         |
+| `shouldFixDraw`             | Boolean | Flag to finalize current drawing                                                                                                   |
+| `shotBackgroundColor`       | Color   | Drawing overlay background color                                                                                                   |
+| `drawItemList`              | Array   | Optional list of pre-defined drawings to render (see “Drawing Persistence” below)                                                  |
+| `textColor`                 | Color   | Default text color for text annotations                                                                                            |
+| `textBackgroundColor`       | Color   | Default background color for text annotation labels                                                                                |
+| `textCornerRadius`          | Number  | Default border-radius for text annotation backgrounds                                                                              |
 
 ### Technical Indicators (targetList)
 
@@ -222,7 +230,80 @@ Contains parameter settings for various technical indicators:
 - `rsiList`: RSI configuration array
 - `wrList`: WR configuration array
 
-**For complete configuration examples, see [example/App.js](./example/App.js)**
+**For complete configuration examples, see [example/App.tsx](./example/App.tsx)**
+
+## 🔁 Real-time Data & Drawing Persistence
+
+### Streaming data with WebSocket / polling
+
+To avoid re-sending the full `optionList` on every tick, you can:
+
+- Use `optionList` for **static config** (theme, indicators, drawing config, etc.)
+- Use `modelArray` prop for **data-only updates**:
+
+```tsx
+<RNKLineView
+  optionList={initialOptionListJson}
+  modelArray={JSON.stringify(modelArray)} // update this string when your data changes
+/>
+```
+
+Under the hood, the native views replace only the data array and refresh the chart, without reloading all options.
+
+### Loading older candles (`onEndReached`)
+
+When the user scrolls to the **left edge** of the chart, `onEndReached` is fired:
+
+```tsx
+<RNKLineView
+  // ...
+  onEndReached={() => {
+    // Load older history here (e.g. via REST or WSS),
+    // prepend it to your modelArray, and update the chart.
+  }}
+/>
+```
+
+This lets you implement infinite scroll / lazy-loading for historical candles.
+
+### Drawing persistence & restoring drawings
+
+Every time a drawing is completed, `onDrawItemComplete` returns a full drawing object:
+
+```ts
+{
+  index: number,
+  drawType: number,
+  drawColor: number,
+  drawLineHeight: number,
+  drawDashWidth: number,
+  drawDashSpace: number,
+  drawIsLock: boolean,
+  pointList: { x: number; y: number }[],
+  // for text annotations (drawType === 201)
+  text?: string,
+  textColor?: number,
+  textBackgroundColor?: number,
+  textCornerRadius?: number,
+}
+```
+
+You can:
+
+- Save this object (e.g. to state, AsyncStorage, or your backend)
+- Later pass it back via `drawList.drawItemList`:
+
+```js
+const optionList = {
+  // ...
+  drawList: {
+    drawType: currentTool,
+    drawItemList: savedDrawings,
+  },
+};
+```
+
+The native layers rebuild all drawing items (including text annotations) from `drawItemList` on both iOS and Android.
 
 ## 📄 License
 
