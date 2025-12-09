@@ -881,35 +881,8 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
     @Override
     protected boolean onVerticalDragOnRightAxis(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-        if (mItemCount <= 0) {
-            return false;
-        }
-        // Initialize fixed range on first vertical zoom
-        if (!mIsMainScaleFixed) {
-            mIsMainScaleFixed = true;
-            mFixedMainMaxValue = mMainMaxValue;
-            mFixedMainMinValue = mMainMinValue;
-        }
-        float range = mFixedMainMaxValue - mFixedMainMinValue;
-        if (range <= 0) {
-            return false;
-        }
-
-        // Drag down (distanceY > 0) => increase range (zoom out)
-        float scaleChange = 1.0f + (distanceY / getHeight());
-        scaleChange = Math.max(0.2f, Math.min(5.0f, scaleChange));
-
-        float center = (mFixedMainMaxValue + mFixedMainMinValue) / 2.0f;
-        float newRange = range * scaleChange;
-        float minRange = range * 0.1f;
-        float maxRange = range * 10.0f;
-        newRange = Math.max(minRange, Math.min(maxRange, newRange));
-
-        mFixedMainMaxValue = center + newRange / 2.0f;
-        mFixedMainMinValue = center - newRange / 2.0f;
-
-        invalidate();
-        return true;
+        // Vertical zooming disabled – fall back to normal horizontal scroll behavior.
+        return false;
     }
 
     /**

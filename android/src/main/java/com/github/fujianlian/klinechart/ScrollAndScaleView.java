@@ -86,26 +86,9 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
     @Override
     public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
         if (!isLongPress && !isMultipleTouch()) {
-            float x = e2.getX();
-            float y = e2.getY();
-            // If user is dragging in the right price-axis area with mostly vertical movement,
-            // let subclass handle vertical scaling instead of horizontal scrolling.
-            if (x > getWidth() - ViewUtil.Dp2Px(getContext(), 40)
-                    && Math.abs(distanceY) > Math.abs(distanceX)
-                    && onVerticalDragOnRightAxis(e1, e2, distanceX, distanceY)) {
-                return true;
-            }
             scrollBy(-Math.round(distanceX), 0);
             return true;
         }
-        return false;
-    }
-
-    /**
-     * Optional hook for subclasses to handle vertical drag on the right edge (e.g. vertical zoom).
-     * Return true to consume the event.
-     */
-    protected boolean onVerticalDragOnRightAxis(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
         return false;
     }
 
