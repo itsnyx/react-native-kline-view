@@ -56,12 +56,14 @@ public class HTDrawContext {
             if (state == MotionEvent.ACTION_DOWN) {
                 HTDrawItem moveItem = HTDrawItem.findTouchMoveItem(drawItemList);
                 if (moveItem != null && configManager.onDrawItemDidTouch != null) {
+                    // User started interacting with an existing drawing.
                     int moveItemIndex = drawItemList.indexOf(moveItem);
                     configManager.onDrawItemDidTouch.invoke(moveItem, moveItemIndex);
                 }
-            } else if (state == MotionEvent.ACTION_MOVE && configManager.onDrawItemMove != null) {
+            } else if (state == MotionEvent.ACTION_UP && configManager.onDrawItemMove != null) {
                 HTDrawItem moveItem = HTDrawItem.findTouchMoveItem(drawItemList);
                 if (moveItem != null) {
+                    // Only fire move callback once, after the user finishes moving the item.
                     int moveItemIndex = drawItemList.indexOf(moveItem);
                     configManager.onDrawItemMove.invoke(moveItem, moveItemIndex);
                 }
@@ -103,14 +105,14 @@ public class HTDrawContext {
                     if (length >= 1) {
                         int index = length - 1;
                         drawItem.pointList.set(index, location);
-
-                        if (state == MotionEvent.ACTION_MOVE && configManager.onDrawItemMove != null) {
-                            // While creating a new drawing, report updated point positions during the drag.
-                            configManager.onDrawItemMove.invoke(drawItem, drawItemList.size() - 1);
-                        }
-
-                        if (state == MotionEvent.ACTION_UP && configManager.onDrawPointComplete != null) {
-                            configManager.onDrawPointComplete.invoke(drawItem, drawItemList.size() - 1);
+                        if (state == MotionEvent.ACTION_UP) {
+                            // When finishing a drag while creating/editing a drawing, report the final position once.
+                            if (configManager.onDrawItemMove != null) {
+                                configManager.onDrawItemMove.invoke(drawItem, drawItemList.size() - 1);
+                            }
+                            if (configManager.onDrawPointComplete != null) {
+                                configManager.onDrawPointComplete.invoke(drawItem, drawItemList.size() - 1);
+                            }
                             if (index == drawItem.drawType.count() - 1 && configManager.onDrawItemComplete != null) {
                                 configManager.onDrawItemComplete.invoke(drawItem, drawItemList.size() - 1);
                                 if (configManager.drawShouldContinue) {

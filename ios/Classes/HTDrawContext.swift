@@ -73,11 +73,12 @@ class HTDrawContext {
             if state == .began,
                let moveItem = HTDrawItem.findTouchMoveItem(drawItemList),
                let moveItemIndex = drawItemList.index(of: moveItem) {
+                // User started interacting with an existing drawing.
                 configManager.onDrawItemDidTouch?(moveItem, moveItemIndex)
-            } else if state == .changed,
+            } else if state == .ended,
                       let moveItem = HTDrawItem.findTouchMoveItem(drawItemList),
                       let moveItemIndex = drawItemList.index(of: moveItem) {
-                // While dragging an existing drawing, continuously report its new position.
+                // Only fire move callback once, after the user finishes moving the item.
                 configManager.onDrawItemMove?(moveItem, moveItemIndex)
             }
             setNeedsDisplay()
@@ -130,14 +131,10 @@ class HTDrawContext {
             if length >= 1 {
                 let index = length - 1
                 drawItem?.pointList[index] = location
-
-                if case .changed = state, let drawItem = drawItem {
-                    // While creating a new drawing, report updated point positions during the drag.
-                    configManager.onDrawItemMove?(drawItem, drawItemList.count - 1)
-                }
-
                 // 最后一个点起笔
                 if case .ended = state, let drawItem = drawItem {
+                    // When finishing a drag while creating/editing a drawing, report the final position once.
+                    configManager.onDrawItemMove?(drawItem, drawItemList.count - 1)
                     configManager.onDrawPointComplete?(drawItem, drawItemList.count - 1)
                     if index == drawItem.drawType.count - 1 {
                         configManager.onDrawItemComplete?(drawItem, drawItemList.count - 1)
