@@ -335,31 +335,33 @@ class HTKLineContainerView: UIView {
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let view = super.hitTest(point, with: event)
-        if view == klineView {
-            switch configManager.shouldReloadDrawItemIndex {
-            case HTDrawState.none.rawValue:
-                return view
-            case HTDrawState.showPencil.rawValue:
-                if configManager.drawType == .none {
-                    if HTDrawItem.canResponseLocation(klineView.drawContext.drawItemList, convertLocation(point), klineView) != nil {
-                        return self
-                    } else {
-                        return view
-                    }
-                } else {
-                    return self
-                }
-            case HTDrawState.showContext.rawValue:
-                return self
-            default:
-                return self
-            }
+        guard view == klineView else {
+            return view
         }
-        return view
-//        if view == drawView, configManager.enabledDraw == false {
-//            return klineView
-//        }
-//        return view
+
+        // When no drawing UI is active, let HTKLineView handle touches so the chart scrolls normally.
+        if configManager.shouldReloadDrawItemIndex == HTDrawState.none.rawValue {
+            return view
+        }
+
+        // If we are actively creating a drawing (line / rect / etc.), always route touches to
+        // the container so drawing gestures don't cause the chart itself to scroll.
+        if configManager.drawType != .none {
+            return self
+        }
+
+        // In "show" / manage-drawings mode (JS may pass drawType = -1 which maps to `.none` here),
+        // we only intercept touches that actually hit an existing drawing. All other touches go to
+        // HTKLineView so the user can still scroll the chart.
+        if HTDrawItem.canResponseLocation(
+            klineView.drawContext.drawItemList,
+            convertLocation(point),
+            klineView
+        ) != nil {
+            return self
+        } else {
+            return klineView
+        }
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {

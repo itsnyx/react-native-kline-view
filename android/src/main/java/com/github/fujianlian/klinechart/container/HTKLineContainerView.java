@@ -384,22 +384,42 @@ public class HTKLineContainerView extends RelativeLayout {
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent event) {
-        int reloadIndex = configManager.shouldReloadDrawItemIndex;
-        switch (reloadIndex) {
-            case HTDrawState.none: {
-                return false;
-            }
-            case HTDrawState.showPencil: {
-                if (configManager.drawType == HTDrawType.none) {
-                    HTPoint location = new HTPoint(event.getX(), event.getY());
-                    location = convertLocation(location);
-                    if ((HTDrawItem.canResponseLocation(klineView.drawContext.drawItemList, location, klineView)) == null) {
-                        return false;
-                    }
-                }
-            }
+        int action = event.getActionMasked();
+
+        // When no drawing UI is active, always let KLineChartView handle touch events
+        // so that normal scrolling and zooming work as expected.
+        if (configManager.shouldReloadDrawItemIndex == HTDrawState.none) {
+            return false;
         }
-        return true;
+
+        // If we are actively creating a drawing (line / rect / etc.), intercept all events
+        // so the chart itself doesn't scroll while the user is drawing.
+        if (configManager.drawType != HTDrawType.none) {
+            return true;
+        }
+
+        // In "show" / manage-drawings mode (JS may pass drawType = -1 which maps to none
+        // on native), we want the user to be able to scroll the chart freely and only
+        // intercept gestures that actually hit an existing drawing.
+        HTPoint location = new HTPoint(event.getX(), event.getY());
+        location = convertLocation(location);
+        boolean hitExisting =
+                HTDrawItem.canResponseLocation(klineView.drawContext.drawItemList, location, klineView) != null;
+
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+                // Start handling the gesture only if the user touched a drawing item.
+                return hitExisting;
+            case MotionEvent.ACTION_MOVE:
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                // For move/up, keep the same routing decision as for ACTION_DOWN:
+                // if the gesture started on a drawing, we keep intercepting; otherwise
+                // let KLineChartView continue handling it for scrolling.
+                return hitExisting;
+            default:
+                return false;
+        }
     }
 
     private HTPoint lastLocation;
