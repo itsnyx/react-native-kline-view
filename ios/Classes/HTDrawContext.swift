@@ -29,12 +29,24 @@ class HTDrawContext {
     }
     
     var breakTouch = false
+    // Tracks whether the user is currently moving an existing drawing item.
+    private var isMovingExistingItem = false
     
     func touchesGesture(_ location: CGPoint, _ translation: CGPoint, _ state: UIGestureRecognizerState) {
         guard let klineView = klineView, breakTouch == false else {
             if state == .ended {
                 breakTouch = false
             }
+            return
+        }
+
+        // If we were moving an existing item and the gesture just ended, fire a single move callback.
+        if state == .ended, isMovingExistingItem,
+           let moveItem = HTDrawItem.findTouchMoveItem(drawItemList),
+           let moveItemIndex = drawItemList.index(of: moveItem) {
+            configManager.onDrawItemMove?(moveItem, moveItemIndex)
+            isMovingExistingItem = false
+            setNeedsDisplay()
             return
         }
         switch state {
@@ -74,12 +86,8 @@ class HTDrawContext {
                let moveItem = HTDrawItem.findTouchMoveItem(drawItemList),
                let moveItemIndex = drawItemList.index(of: moveItem) {
                 // User started interacting with an existing drawing.
+                isMovingExistingItem = true
                 configManager.onDrawItemDidTouch?(moveItem, moveItemIndex)
-            } else if state == .ended,
-                      let moveItem = HTDrawItem.findTouchMoveItem(drawItemList),
-                      let moveItemIndex = drawItemList.index(of: moveItem) {
-                // Only fire move callback once, after the user finishes moving the item.
-                configManager.onDrawItemMove?(moveItem, moveItemIndex)
             }
             setNeedsDisplay()
             return

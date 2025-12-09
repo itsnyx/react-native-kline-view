@@ -22,6 +22,8 @@ public class HTDrawContext {
     private HTKLineConfigManager configManager;
 
     private Boolean breakTouch = false;
+    // Tracks whether the user is currently moving an existing drawing item.
+    private boolean isMovingExistingItem = false;
 
     public HTDrawContext(BaseKLineChartView klineView, HTKLineConfigManager configManager) {
         this.klineView = klineView;
@@ -34,6 +36,18 @@ public class HTDrawContext {
             if (state == MotionEvent.ACTION_UP) {
                 breakTouch = false;
             }
+            return;
+        }
+
+        // If we were moving an existing item and the gesture just ended, fire a single move callback.
+        if (state == MotionEvent.ACTION_UP && isMovingExistingItem) {
+            HTDrawItem moveItem = HTDrawItem.findTouchMoveItem(drawItemList);
+            if (moveItem != null && configManager.onDrawItemMove != null) {
+                int moveItemIndex = drawItemList.indexOf(moveItem);
+                configManager.onDrawItemMove.invoke(moveItem, moveItemIndex);
+            }
+            isMovingExistingItem = false;
+            invalidate();
             return;
         }
         switch (state) {
@@ -57,15 +71,9 @@ public class HTDrawContext {
                 HTDrawItem moveItem = HTDrawItem.findTouchMoveItem(drawItemList);
                 if (moveItem != null && configManager.onDrawItemDidTouch != null) {
                     // User started interacting with an existing drawing.
+                    isMovingExistingItem = true;
                     int moveItemIndex = drawItemList.indexOf(moveItem);
                     configManager.onDrawItemDidTouch.invoke(moveItem, moveItemIndex);
-                }
-            } else if (state == MotionEvent.ACTION_UP && configManager.onDrawItemMove != null) {
-                HTDrawItem moveItem = HTDrawItem.findTouchMoveItem(drawItemList);
-                if (moveItem != null) {
-                    // Only fire move callback once, after the user finishes moving the item.
-                    int moveItemIndex = drawItemList.indexOf(moveItem);
-                    configManager.onDrawItemMove.invoke(moveItem, moveItemIndex);
                 }
             }
             invalidate();
