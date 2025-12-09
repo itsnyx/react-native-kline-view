@@ -9,6 +9,8 @@ RCT_EXPORT_VIEW_PROPERTY(onDrawItemComplete, RCTBubblingEventBlock)
 
 RCT_EXPORT_VIEW_PROPERTY(onDrawPointComplete, RCTBubblingEventBlock)
 
+RCT_EXPORT_VIEW_PROPERTY(onEndReached, RCTBubblingEventBlock)
+
 RCT_EXPORT_VIEW_PROPERTY(optionList, NSString)
 
 @end
