@@ -75,6 +75,13 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
     private Float mChildMinValue = Float.MIN_VALUE;
 
+    // Vertical zoom state for main chart
+    private boolean mIsMainScaleFixed = false;
+
+    private float mFixedMainMaxValue = Float.MAX_VALUE;
+
+    private float mFixedMainMinValue = Float.MIN_VALUE;
+
     private int mStartIndex = 0;
 
     private int mStopIndex = 0;
@@ -869,6 +876,39 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         super.onScaleChanged(scale, oldScale);
     }
 
+    @Override
+    protected boolean onVerticalDragOnRightAxis(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+        if (mItemCount <= 0) {
+            return false;
+        }
+        // Initialize fixed range on first vertical zoom
+        if (!mIsMainScaleFixed) {
+            mIsMainScaleFixed = true;
+            mFixedMainMaxValue = mMainMaxValue;
+            mFixedMainMinValue = mMainMinValue;
+        }
+        float range = mFixedMainMaxValue - mFixedMainMinValue;
+        if (range <= 0) {
+            return false;
+        }
+
+        // Drag down (distanceY > 0) => increase range (zoom out)
+        float scaleChange = 1.0f + (distanceY / getHeight());
+        scaleChange = Math.max(0.2f, Math.min(5.0f, scaleChange));
+
+        float center = (mFixedMainMaxValue + mFixedMainMinValue) / 2.0f;
+        float newRange = range * scaleChange;
+        float minRange = range * 0.1f;
+        float maxRange = range * 10.0f;
+        newRange = Math.max(minRange, Math.min(maxRange, newRange));
+
+        mFixedMainMaxValue = center + newRange / 2.0f;
+        mFixedMainMinValue = center - newRange / 2.0f;
+
+        invalidate();
+        return true;
+    }
+
     /**
      * 计算当前的显示区域
      */
@@ -944,6 +984,17 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 //            if (mMainMaxValue == 0) {
 //                mMainMaxValue = 1;
 //            }
+        }
+
+        // Apply/maintain fixed vertical range when user is vertically zooming
+        if (mIsMainScaleFixed) {
+            // Use fixed range
+            mMainMaxValue = mFixedMainMaxValue;
+            mMainMinValue = mFixedMainMinValue;
+        } else {
+            // Keep latest auto range as baseline for future zooming
+            mFixedMainMaxValue = mMainMaxValue;
+            mFixedMainMinValue = mMainMinValue;
         }
 
         if (Math.abs(mVolMaxValue) < 0.01) {

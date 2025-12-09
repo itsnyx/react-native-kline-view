@@ -63,6 +63,11 @@ class HTKLineView: UIScrollView {
     var childBaseY: CGFloat  = 0
     var childHeight: CGFloat  = 0
 
+    // Vertical zoom state for main chart
+    var isMainScaleFixed = false
+    var fixedMainMinValue: CGFloat = 0
+    var fixedMainMaxValue: CGFloat = 0
+
 
 
 
@@ -78,6 +83,9 @@ class HTKLineView: UIScrollView {
         addGestureRecognizer(UILongPressGestureRecognizer.init(target: self, action: #selector(longPressSelector)))
         addGestureRecognizer(UITapGestureRecognizer.init(target: self, action: #selector(tapSelector)))
         addGestureRecognizer(UIPinchGestureRecognizer.init(target: self, action: #selector(pinchSelector)))
+        let pricePan = UIPanGestureRecognizer(target: self, action: #selector(pricePanSelector))
+        pricePan.delegate = self
+        addGestureRecognizer(pricePan)
     }
 
     required init?(coder: NSCoder) {
@@ -195,7 +203,14 @@ class HTKLineView: UIScrollView {
         self.allHeight = self.bounds.size.height - configManager.paddingBottom
         self.allWidth = self.bounds.size.width
 
-        self.mainMinMaxRange = mainDraw.minMaxRange(visibleModelArray, configManager)
+        let autoMainRange = mainDraw.minMaxRange(visibleModelArray, configManager)
+        if isMainScaleFixed {
+            self.mainMinMaxRange = fixedMainMinValue...fixedMainMaxValue
+        } else {
+            self.mainMinMaxRange = autoMainRange
+            fixedMainMinValue = autoMainRange.lowerBound
+            fixedMainMaxValue = autoMainRange.upperBound
+        }
         self.textHeight = mainDraw.textHeight(font: UIFont.systemFont(ofSize: 11)) / 2
         self.mainBaseY = configManager.paddingTop - textHeight
         self.mainHeight = allHeight * volumeRange.lowerBound - mainBaseY - textHeight
@@ -600,7 +615,7 @@ class HTKLineView: UIScrollView {
 
 }
 
-extension HTKLineView: UIScrollViewDelegate {
+extension HTKLineView: UIScrollViewDelegate, UIGestureRecognizerDelegate {
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let contentOffsetX = scrollView.contentOffset.x
@@ -615,6 +630,11 @@ extension HTKLineView: UIScrollViewDelegate {
         if contentOffsetX <= 0 {
             containerView?.onEndReached?([:])
         }
+    }
+
+    // Allow our pricePan gesture to work alongside the scroll view's pan
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return true
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -658,6 +678,40 @@ extension HTKLineView: UIScrollViewDelegate {
         scrollViewDidScroll(self)
     }
 
+    @objc
+    func pricePanSelector(_ gesture: UIPanGestureRecognizer) {
+        let location = gesture.location(in: self)
+        let threshold: CGFloat = 50
+        guard location.x > bounds.size.width - threshold else { return }
 
+        let translation = gesture.translation(in: self)
+        let dy = translation.y
+        gesture.setTranslation(.zero, in: self)
+
+        guard configManager.modelArray.count > 0 else { return }
+
+        if !isMainScaleFixed {
+            isMainScaleFixed = true
+            fixedMainMinValue = mainMinMaxRange.lowerBound
+            fixedMainMaxValue = mainMinMaxRange.upperBound
+        }
+        let range = fixedMainMaxValue - fixedMainMinValue
+        if range <= 0 { return }
+
+        // Drag down => increase range (zoom out)
+        var scaleChange = 1.0 + (dy / bounds.size.height)
+        scaleChange = max(0.2, min(5.0, scaleChange))
+
+        let center = (fixedMainMaxValue + fixedMainMinValue) / 2.0
+        var newRange = range * scaleChange
+        let minRange = range * 0.1
+        let maxRange = range * 10.0
+        newRange = max(minRange, min(maxRange, newRange))
+
+        fixedMainMaxValue = center + newRange / 2.0
+        fixedMainMinValue = center - newRange / 2.0
+
+        setNeedsDisplay()
+    }
 
 }
