@@ -1,4 +1,3 @@
-#import "RNKLineView-Swift.h"
 #import "RCTViewManager.h"
 
 

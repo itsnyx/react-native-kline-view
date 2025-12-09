@@ -141,7 +141,7 @@ class HTKLineContainerView: UIView {
                 var g: CGFloat = 0
                 var b: CGFloat = 0
                 var a: CGFloat = 0
-                color.getRed(&r, &g, &b, &a)
+                color.getRed(&r, green: &g, blue: &b, alpha: &a)
                 let ai = Int(a * 255.0) << 24
                 let ri = Int(r * 255.0) << 16
                 let gi = Int(g * 255.0) << 8
