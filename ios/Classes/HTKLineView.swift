@@ -139,11 +139,9 @@ class HTKLineView: UIScrollView {
 
     func reloadContentSize() {
         configManager.reloadScrollViewScale(scale)
-        // Add extra empty space on the right so the last few candles aren't flush with the edge
-        let tailEmptyCount: CGFloat = 5
-        let extraWidth = configManager.itemWidth * tailEmptyCount
-        let contentWidth = configManager.itemWidth * CGFloat(configManager.modelArray.count) + configManager.paddingRight + extraWidth
-        contentSize = CGSize.init(width: contentWidth, height: frame.size.height)
+        // Content width is determined by candle count plus the configured right padding
+        let contentWidth = configManager.itemWidth * CGFloat(configManager.modelArray.count) + configManager.paddingRight
+        contentSize = CGSize(width: contentWidth, height: frame.size.height)
     }
 
     func reloadContentOffset(_ contentOffsetX: CGFloat, _ animated: Bool = false) {

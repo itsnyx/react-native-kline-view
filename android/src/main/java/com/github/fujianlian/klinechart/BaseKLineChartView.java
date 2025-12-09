@@ -82,9 +82,6 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
     private float mFixedMainMinValue = Float.MIN_VALUE;
 
-    // How many "empty" candles worth of space to leave on the right when scrolled to end
-    private static final int TAIL_EMPTY_COUNT = 5;
-
     private int mStartIndex = 0;
 
     private int mStopIndex = 0;
@@ -1006,10 +1003,10 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
     }
 
     public int getMaxScrollX() {
+        // Max scroll is based purely on data length and the configured right padding.
+        // Any additional "tail" spacing should be controlled via configList.paddingRight on the JS side.
         int contentWidth = (int) Math.max((mDataLen - (mWidth - configManager.paddingRight) / mScaleX), 0);
-        // Leave some empty space equivalent to TAIL_EMPTY_COUNT candles on the right
-        int extraScroll = (int) (TAIL_EMPTY_COUNT * configManager.itemWidth);
-        return Math.max(contentWidth - extraScroll, 0);
+        return Math.max(contentWidth, 0);
     }
 
     /**
