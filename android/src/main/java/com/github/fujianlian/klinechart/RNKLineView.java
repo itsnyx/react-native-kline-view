@@ -128,10 +128,14 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
                 containerView.post(new Runnable() {
                     @Override
                     public void run() {
-                        // Only notify data change, keep config/drawings as-is
-                        boolean isEnd = containerView.klineView.getScrollOffset() >= containerView.klineView.getMaxScrollX();
+                        // Only notify data change, keep config/drawings as-is.
+                        // If the user was previously at the right edge (latest candle),
+                        // keep them "stuck" to the end; otherwise preserve their current
+                        // scroll offset so loading older candles at the left does not
+                        // snap them back to the newest data.
+                        boolean wasAtEnd = containerView.klineView.getScrollOffset() >= containerView.klineView.getMaxScrollX();
                         containerView.klineView.notifyChanged();
-                        if (isEnd || containerView.configManager.shouldScrollToEnd) {
+                        if (wasAtEnd) {
                             containerView.klineView.setScrollX(containerView.klineView.getMaxScrollX());
                         }
                     }
