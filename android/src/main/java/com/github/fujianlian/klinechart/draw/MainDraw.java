@@ -129,7 +129,16 @@ public class MainDraw implements IChartDraw<ICandle> {
         if (primaryStatus == PrimaryStatus.MA) {
             KLineEntity lastItem = (KLineEntity) lastPoint;
             KLineEntity currentItem = (KLineEntity) curPoint;
-            for (int i = 0; i < view.configManager.maList.size(); i ++) {
+            // Defensive: make sure per‑candle maList is present and large enough
+            if (currentItem.maList == null || lastItem.maList == null) {
+                return;
+            }
+            int configSize = view.configManager.maList != null ? view.configManager.maList.size() : 0;
+            int itemSize = Math.min(
+                    Math.min(configSize, currentItem.maList.size()),
+                    lastItem.maList.size()
+            );
+            for (int i = 0; i < itemSize; i++) {
                 HTKLineTargetItem currentTargetItem = (HTKLineTargetItem) currentItem.maList.get(i);
                 HTKLineTargetItem lastTargetItem = (HTKLineTargetItem) lastItem.maList.get(i);
                 primaryPaint.setColor(view.configManager.targetColorList[view.configManager.maList.get(i).index]);
@@ -162,7 +171,12 @@ public class MainDraw implements IChartDraw<ICandle> {
 
         } else {
             if (primaryStatus == PrimaryStatus.MA) {
-                for (int i = 0; i < view.configManager.maList.size(); i ++) {
+                if (point.maList == null) {
+                    return;
+                }
+                int configSize = view.configManager.maList != null ? view.configManager.maList.size() : 0;
+                int itemSize = Math.min(configSize, point.maList.size());
+                for (int i = 0; i < itemSize; i++) {
                     HTKLineTargetItem targetItem = (HTKLineTargetItem) point.maList.get(i);
                     this.primaryPaint.setColor(view.configManager.targetColorList[view.configManager.maList.get(i).index]);
                     StringBuilder stringBuilder = new StringBuilder();
@@ -199,7 +213,7 @@ public class MainDraw implements IChartDraw<ICandle> {
             add(item.getHighPrice());
             add(item.getLowPrice());
         }};
-        if (primaryStatus == PrimaryStatus.MA) {
+        if (primaryStatus == PrimaryStatus.MA && item.maList != null && item.maList.size() > 0) {
             valueList.add(item.targetListISMax(item.maList, isMax));
         } else if (primaryStatus == PrimaryStatus.BOLL) {
             valueList.add(item.getMb());
