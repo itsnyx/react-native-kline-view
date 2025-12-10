@@ -85,6 +85,31 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
     }
 
     /**
+     * Control the native refresh lifecycle from JS.
+     *
+     * When the user scrolls to the left edge, Android calls onEndReached and
+     * enters a "refreshing" state where scrolling is locked. Once your JS side
+     * has finished loading and prepending older candles, set `refreshing={false}`
+     * on RNKLineView to call refreshComplete() and unlock scrolling again.
+     *
+     * Example:
+     * <RNKLineView
+     *   ...
+     *   refreshing={this.state.loadingMore}
+     *   onEndReached={() => {
+     *     this.setState({ loadingMore: true });
+     *     loadMore().finally(() => this.setState({ loadingMore: false }));
+     *   }}
+     * />
+     */
+    @ReactProp(name = "refreshing")
+    public void setRefreshing(final HTKLineContainerView containerView, boolean refreshing) {
+        if (!refreshing) {
+            containerView.klineView.refreshComplete();
+        }
+    }
+
+    /**
      * Lightweight data-only update: replace modelArray without reloading full optionList.
      * Accepts the same modelArray JSON you normally embed inside optionList.
      */
