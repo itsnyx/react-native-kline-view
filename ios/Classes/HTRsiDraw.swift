@@ -28,19 +28,58 @@ class HTRsiDraw: NSObject, HTKLineDrawProtocol {
     }
 
     func drawLine(_ model: HTKLineModel, _ lastModel: HTKLineModel, _ maxValue: CGFloat, _ minValue: CGFloat, _ baseY: CGFloat, _ height: CGFloat, _ index: Int, _ lastIndex: Int, _ context: CGContext, _ configManager: HTKLineConfigManager) {
+        // Protect against temporary mismatches between `configManager.rsiList` and
+        // the per‑candle `model.rsiList`/`lastModel.rsiList` (for example when RSI is
+        // toggled on before the data payload has been updated). In that case we just
+        // skip drawing instead of crashing with an index out of range.
+        guard !configManager.rsiList.isEmpty,
+              !model.rsiList.isEmpty,
+              !lastModel.rsiList.isEmpty else {
+            return
+        }
+
         for itemModel in configManager.rsiList {
-            let color = configManager.targetColorList[itemModel.index]
-            drawLine(value: model.rsiList[itemModel.index].value, lastValue: lastModel.rsiList[itemModel.index].value, maxValue: maxValue, minValue: minValue, baseY: baseY, height: height, index: index, lastIndex: lastIndex, color: color, isBezier: false, context: context, configManager: configManager)
+            let idx = itemModel.index
+            guard idx >= 0,
+                  idx < model.rsiList.count,
+                  idx < lastModel.rsiList.count,
+                  idx < configManager.targetColorList.count else {
+                continue
+            }
+            let color = configManager.targetColorList[idx]
+            drawLine(
+                value: model.rsiList[idx].value,
+                lastValue: lastModel.rsiList[idx].value,
+                maxValue: maxValue,
+                minValue: minValue,
+                baseY: baseY,
+                height: height,
+                index: index,
+                lastIndex: lastIndex,
+                color: color,
+                isBezier: false,
+                context: context,
+                configManager: configManager
+            )
         }
     }
 
     func drawText(_ model: HTKLineModel, _ baseX: CGFloat, _ baseY: CGFloat, _ context: CGContext, _ configManager: HTKLineConfigManager) {
         var x = baseX
         let font = configManager.createFont(configManager.headerTextFontSize)
+        guard !configManager.rsiList.isEmpty, !model.rsiList.isEmpty else {
+            return
+        }
         for itemModel in configManager.rsiList {
-            let item = model.rsiList[itemModel.index]
+            let idx = itemModel.index
+            guard idx >= 0,
+                  idx < model.rsiList.count,
+                  idx < configManager.targetColorList.count else {
+                continue
+            }
+            let item = model.rsiList[idx]
             let title = String(format: "RSI(%@):%@", item.title, configManager.precision(item.value, -1))
-            let color = configManager.targetColorList[itemModel.index]
+            let color = configManager.targetColorList[idx]
             x += drawText(title: title, point: CGPoint.init(x: x, y: baseY), color: color, font: font, context: context, configManager: configManager)
             x += 5
         }

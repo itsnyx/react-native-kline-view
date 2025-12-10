@@ -37,12 +37,26 @@ public class RSIDraw implements IChartDraw<IRSI> {
 
     @Override
     public void drawTranslated(@Nullable IRSI lastPoint, @NonNull IRSI curPoint, float lastX, float curX, @NonNull Canvas canvas, @NonNull BaseKLineChartView view, int position) {
+        // Guard against transient config/data mismatches (e.g. when RSI is toggled on
+        // before modelArray has been updated) to avoid IndexOutOfBounds crashes.
+        if (!(curPoint instanceof KLineEntity) || !(lastPoint instanceof KLineEntity)) {
+            return;
+        }
         KLineEntity lastItem = (KLineEntity) lastPoint;
         KLineEntity currentItem = (KLineEntity) curPoint;
-        for (int i = 0; i < view.configManager.rsiList.size(); i++) {
+        if (currentItem.rsiList == null || lastItem.rsiList == null) {
+            return;
+        }
+        int dataSize = Math.min(currentItem.rsiList.size(), lastItem.rsiList.size());
+        int configSize = view.configManager.rsiList != null ? view.configManager.rsiList.size() : 0;
+        int loopSize = Math.min(dataSize, configSize);
+        for (int i = 0; i < loopSize; i++) {
             HTKLineTargetItem currentTargetItem = (HTKLineTargetItem) currentItem.rsiList.get(i);
             HTKLineTargetItem lastTargetItem = (HTKLineTargetItem) lastItem.rsiList.get(i);
-            primaryPaint.setColor(view.configManager.targetColorList[view.configManager.rsiList.get(i).index]);
+            int colorIndex = view.configManager.rsiList.get(i).index;
+            if (colorIndex >= 0 && colorIndex < view.configManager.targetColorList.length) {
+                primaryPaint.setColor(view.configManager.targetColorList[colorIndex]);
+            }
             view.drawChildLine(canvas, primaryPaint, lastX, lastTargetItem.value, curX, currentTargetItem.value);
         }
     }
@@ -50,10 +64,19 @@ public class RSIDraw implements IChartDraw<IRSI> {
     @Override
     public void drawText(@NonNull Canvas canvas, @NonNull BaseKLineChartView view, int position, float x, float y) {
         KLineEntity point = (KLineEntity) view.getItem(position);
+        if (point.rsiList == null || view.configManager.rsiList == null) {
+            return;
+        }
+        int dataSize = point.rsiList.size();
+        int configSize = view.configManager.rsiList.size();
+        int loopSize = Math.min(dataSize, configSize);
         String text = "";
-        for (int i = 0; i < view.configManager.rsiList.size(); i++) {
+        for (int i = 0; i < loopSize; i++) {
             HTKLineTargetItem targetItem = (HTKLineTargetItem) point.rsiList.get(i);
-            this.primaryPaint.setColor(view.configManager.targetColorList[view.configManager.rsiList.get(i).index]);
+            int colorIndex = view.configManager.rsiList.get(i).index;
+            if (colorIndex >= 0 && colorIndex < view.configManager.targetColorList.length) {
+                this.primaryPaint.setColor(view.configManager.targetColorList[colorIndex]);
+            }
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append("RSI(");
             stringBuilder.append(targetItem.title);
@@ -69,12 +92,18 @@ public class RSIDraw implements IChartDraw<IRSI> {
     @Override
     public float getMaxValue(IRSI point) {
         KLineEntity item = (KLineEntity) point;
+        if (item.rsiList == null || item.rsiList.isEmpty()) {
+            return 0;
+        }
         return item.targetListISMax(item.rsiList, true);
     }
 
     @Override
     public float getMinValue(IRSI point) {
         KLineEntity item = (KLineEntity) point;
+        if (item.rsiList == null || item.rsiList.isEmpty()) {
+            return 0;
+        }
         return item.targetListISMax(item.rsiList, false);
     }
 

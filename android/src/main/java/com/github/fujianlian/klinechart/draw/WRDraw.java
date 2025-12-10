@@ -35,12 +35,26 @@ public class WRDraw implements IChartDraw<IWR> {
 
     @Override
     public void drawTranslated(@Nullable IWR lastPoint, @NonNull IWR curPoint, float lastX, float curX, @NonNull Canvas canvas, @NonNull BaseKLineChartView view, int position) {
+        // Guard against transient config/data mismatches (e.g. when WR is toggled on
+        // before modelArray has been updated) to avoid IndexOutOfBounds crashes.
+        if (!(curPoint instanceof KLineEntity) || !(lastPoint instanceof KLineEntity)) {
+            return;
+        }
         KLineEntity lastItem = (KLineEntity) lastPoint;
         KLineEntity currentItem = (KLineEntity) curPoint;
-        for (int i = 0; i < view.configManager.wrList.size(); i++) {
+        if (currentItem.wrList == null || lastItem.wrList == null) {
+            return;
+        }
+        int dataSize = Math.min(currentItem.wrList.size(), lastItem.wrList.size());
+        int configSize = view.configManager.wrList != null ? view.configManager.wrList.size() : 0;
+        int loopSize = Math.min(dataSize, configSize);
+        for (int i = 0; i < loopSize; i++) {
             HTKLineTargetItem currentTargetItem = (HTKLineTargetItem) currentItem.wrList.get(i);
             HTKLineTargetItem lastTargetItem = (HTKLineTargetItem) lastItem.wrList.get(i);
-            primaryPaint.setColor(view.configManager.targetColorList[view.configManager.wrList.get(i).index]);
+            int colorIndex = view.configManager.wrList.get(i).index;
+            if (colorIndex >= 0 && colorIndex < view.configManager.targetColorList.length) {
+                primaryPaint.setColor(view.configManager.targetColorList[colorIndex]);
+            }
             view.drawChildLine(canvas, primaryPaint, lastX, lastTargetItem.value, curX, currentTargetItem.value);
         }
     }
@@ -48,10 +62,19 @@ public class WRDraw implements IChartDraw<IWR> {
     @Override
     public void drawText(@NonNull Canvas canvas, @NonNull BaseKLineChartView view, int position, float x, float y) {
         KLineEntity point = (KLineEntity) view.getItem(position);
+        if (point.wrList == null || view.configManager.wrList == null) {
+            return;
+        }
+        int dataSize = point.wrList.size();
+        int configSize = view.configManager.wrList.size();
+        int loopSize = Math.min(dataSize, configSize);
         String text = "";
-        for (int i = 0; i < view.configManager.wrList.size(); i++) {
+        for (int i = 0; i < loopSize; i++) {
             HTKLineTargetItem targetItem = (HTKLineTargetItem) point.wrList.get(i);
-            this.primaryPaint.setColor(view.configManager.targetColorList[view.configManager.wrList.get(i).index]);
+            int colorIndex = view.configManager.wrList.get(i).index;
+            if (colorIndex >= 0 && colorIndex < view.configManager.targetColorList.length) {
+                this.primaryPaint.setColor(view.configManager.targetColorList[colorIndex]);
+            }
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append("WR(");
             stringBuilder.append(targetItem.title);
@@ -67,12 +90,18 @@ public class WRDraw implements IChartDraw<IWR> {
     @Override
     public float getMaxValue(IWR point) {
         KLineEntity item = (KLineEntity) point;
+        if (item.wrList == null || item.wrList.isEmpty()) {
+            return 0;
+        }
         return item.targetListISMax(item.wrList, true);
     }
 
     @Override
     public float getMinValue(IWR point) {
         KLineEntity item = (KLineEntity) point;
+        if (item.wrList == null || item.wrList.isEmpty()) {
+            return 0;
+        }
         return item.targetListISMax(item.wrList, false);
     }
 
