@@ -229,6 +229,40 @@ class HTDrawItem: NSObject {
     
     static func beganFillTouchMoveItemPointMapper(_ drawItem: HTDrawItem, _ location: CGPoint, _ klineView: HTKLineView) -> Bool {
         for (index, point) in drawItem.pointList.enumerated() {
+            // Special hit-testing for text annotations: allow tapping anywhere inside
+            // the rendered text bubble (with a small margin), not just exactly on
+            // the anchor point.
+            if case .text = drawItem.drawType {
+                let viewPoint = klineView.viewPointFromValuePoint(point)
+                let locationViewPoint = klineView.viewPointFromValuePoint(location)
+
+                let fontSize = drawItem.textFontSize > 0
+                    ? drawItem.textFontSize
+                    : klineView.configManager.candleTextFontSize
+                let font = klineView.configManager.createFont(fontSize)
+                let text = drawItem.text as NSString
+
+                if !drawItem.text.isEmpty {
+                    let paddingH: CGFloat = 12
+                    let paddingV: CGFloat = 6
+                    let attributes: [NSAttributedString.Key: Any] = [
+                        .font: font,
+                    ]
+                    let textSize = text.size(withAttributes: attributes)
+                    let bubbleRect = CGRect(
+                        x: viewPoint.x,
+                        y: viewPoint.y,
+                        width: textSize.width + paddingH * 2,
+                        height: textSize.height + paddingV * 2
+                    ).insetBy(dx: -10, dy: -10) // extra tap margin
+
+                    if bubbleRect.contains(locationViewPoint) {
+                        drawItem.touchMoveIndexList = [index]
+                        return true
+                    }
+                }
+            }
+
             if distance(
                 p1: klineView.viewPointFromValuePoint(point),
                 p2: klineView.viewPointFromValuePoint(location)
