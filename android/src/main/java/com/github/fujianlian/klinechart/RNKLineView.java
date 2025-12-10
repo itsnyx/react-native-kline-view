@@ -16,6 +16,7 @@ import com.github.fujianlian.klinechart.formatter.DateFormatter;
 import com.github.fujianlian.klinechart.formatter.ValueFormatter;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import com.alibaba.fastjson.JSON;
@@ -58,10 +59,28 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
         return builder.build();
 	}
 
+    // Expose imperative commands so JS can control the loading lifecycle (e.g. unlock scroll
+    // after older candles have been loaded).
+    @Override
+    public Map<String, Integer> getCommandsMap() {
+        return MapBuilder.of(
+                "refreshComplete", 1
+        );
+    }
 
-
-
-
+    @Override
+    public void receiveCommand(@Nonnull HTKLineContainerView root, int commandId, @Nullable ReadableArray args) {
+        switch (commandId) {
+            case 1:
+                // Finish the "load more" state and re-enable scrolling/zooming.
+                if (root.klineView != null) {
+                    root.klineView.refreshComplete();
+                }
+                break;
+            default:
+                break;
+        }
+    }
     @ReactProp(name = "optionList")
     public void setOptionList(final HTKLineContainerView containerView, String optionList) {
         if (optionList == null) {
@@ -82,31 +101,6 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
                 });
             }
         }).start();
-    }
-
-    /**
-     * Control the native refresh lifecycle from JS.
-     *
-     * When the user scrolls to the left edge, Android calls onEndReached and
-     * enters a "refreshing" state where scrolling is locked. Once your JS side
-     * has finished loading and prepending older candles, set `refreshing={false}`
-     * on RNKLineView to call refreshComplete() and unlock scrolling again.
-     *
-     * Example:
-     * <RNKLineView
-     *   ...
-     *   refreshing={this.state.loadingMore}
-     *   onEndReached={() => {
-     *     this.setState({ loadingMore: true });
-     *     loadMore().finally(() => this.setState({ loadingMore: false }));
-     *   }}
-     * />
-     */
-    @ReactProp(name = "refreshing")
-    public void setRefreshing(final HTKLineContainerView containerView, boolean refreshing) {
-        if (!refreshing) {
-            containerView.klineView.refreshComplete();
-        }
     }
 
     /**

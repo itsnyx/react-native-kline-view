@@ -36,9 +36,8 @@ public class HTKLineContainerView extends RelativeLayout {
         klineView.setDateTimeFormatter(new DateFormatter());
         klineView.configManager = configManager;
         // When scrolling to the left edge, request more historical candles from JS.
-        // NOTE: We no longer auto-call refreshComplete() here; instead, JS is
-        // responsible for telling native when loading has finished so that
-        // scrolling can be unlocked again.
+        // JS is responsible for calling the native `refreshComplete` command (via ref)
+        // after it has finished loading and prepending data.
         klineView.setRefreshListener(new KLineChartView.KChartRefreshListener() {
             @Override
             public void onLoadMoreBegin(KLineChartView chart) {
