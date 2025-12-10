@@ -1,7 +1,10 @@
 package com.github.fujianlian.klinechart;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.util.Base64;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
@@ -149,6 +152,13 @@ public class HTKLineConfigManager {
 
     public float closePriceRightLightLottieScale = 1;
 
+    // Optional base64-encoded logo image drawn in the center of the main chart,
+    // behind the candles. Provided from JS via configList["centerLogoSource"].
+    // May be a bare base64 string or a full data-URL (data:image/png;base64,...).
+    public String centerLogoSource = "";
+
+    // Decoded bitmap cached from centerLogoSource.
+    public Bitmap centerLogoBitmap = null;
 
     public int[] panelGradientColorList = { Color.BLUE, Color.BLUE };
 
@@ -478,6 +488,31 @@ public class HTKLineConfigManager {
         this.targetColorList = parseColorList(configList.get("targetColorList"));
         this.minuteGradientColorList = parseColorList(configList.get("minuteGradientColorList"));
         this.minuteGradientLocationList = parseLocationList(configList.get("minuteGradientLocationList"));
+
+        // Optional center logo (base64) from JS.
+        Object centerLogoSourceObj = configList.get("centerLogoSource");
+        if (centerLogoSourceObj instanceof String) {
+            this.centerLogoSource = (String) centerLogoSourceObj;
+        } else {
+            this.centerLogoSource = "";
+        }
+
+        // Decode / cache bitmap when source changes.
+        this.centerLogoBitmap = null;
+        if (this.centerLogoSource != null && this.centerLogoSource.length() > 0) {
+            try {
+                String base64String = this.centerLogoSource;
+                int commaIndex = base64String.indexOf(',');
+                if (commaIndex >= 0) {
+                    base64String = base64String.substring(commaIndex + 1);
+                }
+                byte[] data = Base64.decode(base64String, Base64.DEFAULT);
+                this.centerLogoBitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+            } catch (IllegalArgumentException e) {
+                // Ignore invalid base64; logo simply won't be drawn.
+                this.centerLogoBitmap = null;
+            }
+        }
 
         
     }

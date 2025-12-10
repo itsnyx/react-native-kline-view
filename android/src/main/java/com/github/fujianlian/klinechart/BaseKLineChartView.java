@@ -277,6 +277,10 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         canvas.save();
         canvas.scale(1, 1);
         drawGird(canvas);
+
+        // Draw optional center logo behind candles (if provided from JS via configList.centerLogoSource).
+        drawCenterLogo(canvas);
+
         if (mItemCount > 0) {
             drawK(canvas);
             drawText(canvas);
@@ -292,6 +296,46 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 //        path.addRect(0, mMainRect.top, getMaxScrollX() + getWidth(), mMainRect.bottom, Path.Direction.CW);
 //        canvas.clipPath(path);
         drawContext.onDraw(canvas);
+    }
+
+    /**
+     * Draw a semi-transparent bitmap centered in the main chart area, behind candles.
+     * The bitmap comes from configManager.centerLogoBitmap (decoded from JS base64).
+     */
+    private void drawCenterLogo(Canvas canvas) {
+        if (configManager == null || configManager.centerLogoBitmap == null) {
+            return;
+        }
+        if (mMainRect == null || mMainRect.height() <= 0 || mWidth <= 0) {
+            return;
+        }
+
+        Bitmap logo = configManager.centerLogoBitmap;
+        int bmpWidth = logo.getWidth();
+        int bmpHeight = logo.getHeight();
+        if (bmpWidth <= 0 || bmpHeight <= 0) {
+            return;
+        }
+
+        // Constrain logo to at most 50% of chart width/height.
+        float maxLogoWidth = mWidth * 0.5f;
+        float maxLogoHeight = mMainRect.height() * 0.5f;
+        float widthScale = maxLogoWidth / bmpWidth;
+        float heightScale = maxLogoHeight / bmpHeight;
+        float scale = Math.min(Math.min(widthScale, heightScale), 1.0f);
+
+        float drawWidth = bmpWidth * scale;
+        float drawHeight = bmpHeight * scale;
+
+        float left = (mWidth - drawWidth) / 2.0f;
+        float top = mMainRect.top + (mMainRect.height() - drawHeight) / 2.0f;
+        RectF dest = new RectF(left, top, left + drawWidth, top + drawHeight);
+
+        // Use background paint as a holder for alpha; preserve its previous alpha.
+        int oldAlpha = mBackgroundPaint.getAlpha();
+        mBackgroundPaint.setAlpha((int) (0.15f * 255)); // 15% opacity
+        canvas.drawBitmap(logo, null, dest, mBackgroundPaint);
+        mBackgroundPaint.setAlpha(oldAlpha);
     }
 
     public float yFromValue(float value) {

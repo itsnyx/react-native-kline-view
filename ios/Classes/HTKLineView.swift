@@ -42,6 +42,11 @@ class HTKLineView: UIScrollView {
 
     var animationView = LottieAnimationView()
 
+    // Optional logo image drawn in the center of the main chart, behind candles.
+    // Backed by a base64 string in configManager.centerLogoSource.
+    private var centerLogoImage: UIImage?
+    private var lastCenterLogoSource: String = ""
+
     var lastLoadAnimationSource = ""
 
 
@@ -112,28 +117,52 @@ class HTKLineView: UIScrollView {
 
         scrollViewDidScroll(self)
 
-        guard lastLoadAnimationSource != configManager.closePriceRightLightLottieSource else {
-            return
+        // (1) Reload/prepare the Lottie "live price" animation when source changes.
+        if lastLoadAnimationSource != configManager.closePriceRightLightLottieSource {
+            lastLoadAnimationSource = configManager.closePriceRightLightLottieSource
+
+            DispatchQueue.global().async { [weak self] in
+                guard
+                    let this = self,
+                    let data = this.configManager.closePriceRightLightLottieSource.data(using: String.Encoding.utf8),
+                    let animation = try? JSONDecoder().decode(LottieAnimation.self, from: data)
+                else {
+                    return
+                }
+                DispatchQueue.main.async {
+                    this.animationView.animation = animation
+                    this.animationView.loopMode = .loop
+                    this.animationView.play()
+                    var size = animation.size
+                    let scale = this.configManager.closePriceRightLightLottieScale
+                    size.width *= scale
+                    size.height *= scale
+                    this.animationView.frame.size = size
+                    this.animationView.isHidden = true
+                    this.addSubview(this.animationView)
+                    this.setNeedsDisplay()
+                }
+            }
         }
 
-        lastLoadAnimationSource = configManager.closePriceRightLightLottieSource
+        // (2) Decode / cache the center logo image (if any) when its source changes.
+        let logoSource = configManager.centerLogoSource
+        if logoSource != lastCenterLogoSource {
+            lastCenterLogoSource = logoSource
+            centerLogoImage = nil
 
-        DispatchQueue.global().async { [weak self] in
-            guard let this = self, let data = this.configManager.closePriceRightLightLottieSource.data(using: String.Encoding.utf8), let animation = try? JSONDecoder().decode(LottieAnimation.self, from: data) else {
+            guard !logoSource.isEmpty else {
                 return
             }
-            DispatchQueue.main.async {
-                this.animationView.animation = animation
-                this.animationView.loopMode = .loop
-                this.animationView.play()
-                var size = animation.size
-                let scale = this.configManager.closePriceRightLightLottieScale
-                size.width *= scale
-                size.height *= scale
-                this.animationView.frame.size = size
-                this.animationView.isHidden = true
-                this.addSubview(this.animationView)
-                this.setNeedsDisplay()
+
+            // Accept either a bare base64 string or a data-URL string.
+            var base64String = logoSource
+            if let range = base64String.range(of: ",") {
+                base64String = String(base64String[range.upperBound...])
+            }
+
+            if let data = Data(base64Encoded: base64String, options: .ignoreUnknownCharacters) {
+                centerLogoImage = UIImage(data: data)
             }
         }
     }
@@ -164,6 +193,10 @@ class HTKLineView: UIScrollView {
         }
 
         calculateBaseHeight()
+
+        // Draw center logo (if provided) behind all candles/lines but inside the main chart area.
+        drawCenterLogo(in: context)
+
         contextTranslate(context, CGFloat(visibleRange.lowerBound) * configManager.itemWidth, { context in
             drawCandle(context)
         })
@@ -210,6 +243,42 @@ class HTKLineView: UIScrollView {
         self.childBaseY = allHeight * volumeRange.upperBound + configManager.headerHeight + textHeight
         self.childHeight = allHeight * (1 - volumeRange.upperBound) - configManager.headerHeight - textHeight
         
+    }
+
+    /// Draw a semi-transparent logo image centered in the main chart area, behind candles.
+    private func drawCenterLogo(in context: CGContext) {
+        guard
+            let image = centerLogoImage,
+            mainHeight > 0,
+            allWidth > 0
+        else {
+            return
+        }
+
+        // Constrain logo size relative to chart dimensions (e.g. at most 50% of width/height).
+        let maxLogoWidth = allWidth * 0.5
+        let maxLogoHeight = mainHeight * 0.5
+        let imageSize = image.size
+        guard imageSize.width > 0, imageSize.height > 0 else {
+            return
+        }
+
+        let widthScale = maxLogoWidth / imageSize.width
+        let heightScale = maxLogoHeight / imageSize.height
+        let scale = min(widthScale, heightScale, 1.0)
+
+        let drawWidth = imageSize.width * scale
+        let drawHeight = imageSize.height * scale
+
+        let originX = (allWidth - drawWidth) / 2.0
+        let originY = mainBaseY + (mainHeight - drawHeight) / 2.0
+        let drawRect = CGRect(x: originX, y: originY, width: drawWidth, height: drawHeight)
+
+        context.saveGState()
+        // Light transparency so candles and grid remain clearly visible.
+        context.setAlpha(0.15)
+        image.draw(in: drawRect)
+        context.restoreGState()
     }
 
     func yFromValue(_ value: CGFloat) -> CGFloat {
