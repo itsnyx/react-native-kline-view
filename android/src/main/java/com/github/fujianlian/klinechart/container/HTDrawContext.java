@@ -98,8 +98,9 @@ public class HTDrawContext {
                     drawItem.textColor = configManager.drawTextColor;
                     drawItem.textBackgroundColor = configManager.drawTextBackgroundColor;
                     drawItem.textCornerRadius = configManager.drawTextCornerRadius;
-                    // Initialize per-item text font size from the current global candle text size.
-                    drawItem.textFontSize = configManager.candleTextFontSize;
+                    // Initialize per-item text font size from the current global candle text size,
+                    // but make it a bit larger by default (2x).
+                    drawItem.textFontSize = configManager.candleTextFontSize * 2f;
                     drawItemList.add(drawItem);
                     if (configManager.onDrawItemDidTouch != null) {
                         configManager.onDrawItemDidTouch.invoke(drawItem, drawItemList.size() - 1);
