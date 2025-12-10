@@ -8,6 +8,7 @@
 
 import UIKit
 import Lottie
+import ObjectiveC
 
 class HTKLineView: UIScrollView {
         
@@ -603,6 +604,16 @@ class HTKLineView: UIScrollView {
 
 extension HTKLineView: UIScrollViewDelegate {
 
+    // Use associated storage so we don't change the public API surface.
+    private struct AssociatedKeys {
+        static var onEndReachedFlag = "ht_onEndReachedFlag"
+    }
+
+    private var hasFiredOnEndReached: Bool {
+        get { return objc_getAssociatedObject(self, &AssociatedKeys.onEndReachedFlag) as? Bool ?? false }
+        set { objc_setAssociatedObject(self, &AssociatedKeys.onEndReachedFlag, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+    }
+
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let contentOffsetX = scrollView.contentOffset.x
         var visibleStartIndex = Int(floor(contentOffsetX / configManager.itemWidth))
@@ -612,9 +623,18 @@ extension HTKLineView: UIScrollViewDelegate {
         visibleRange = visibleStartIndex...visibleEndIndex
         self.setNeedsDisplay()
 
-        // When scrolled to the very left, notify JS to load older candles
-        if contentOffsetX <= 0 {
-            containerView?.onEndReached?([:])
+        // When the very first candle becomes visible, consider that "reached the left edge".
+        // Using the computed index is more reliable than a strict contentOffset == 0 check
+        // which can miss due to float rounding and padding.
+        if visibleStartIndex == 0 {
+            if !hasFiredOnEndReached {
+                hasFiredOnEndReached = true
+                containerView?.onEndReached?([:])
+            }
+        } else {
+            // User has scrolled away from the start, so allow the event to fire again
+            // next time they come back (after data has been prepended).
+            hasFiredOnEndReached = false
         }
     }
 

@@ -38,6 +38,11 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
 
     private boolean mScaleEnable = true;
 
+    // Debounce flags so edge callbacks (onLeftSide / onRightSide) are not
+    // fired continuously while the user is "stuck" at an edge.
+    private boolean mHasCalledLeftSide = false;
+    private boolean mHasCalledRightSide = false;
+
     public ScrollAndScaleView(Context context) {
         super(context);
         init();
@@ -282,13 +287,37 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
     }
 
     protected void checkAndFixScrollX() {
-        int contentSizeWidth = (getMaxScrollX());
-        if (mScrollX < getMinScrollX()) {
-            mScrollX = getMinScrollX();
+        int minScrollX = getMinScrollX();
+        int maxScrollX = getMaxScrollX();
+
+        if (mScrollX < minScrollX) {
+            mScrollX = minScrollX;
             mScroller.forceFinished(true);
-        } else if (mScrollX > contentSizeWidth) {
-            mScrollX = contentSizeWidth;
+
+            // We reached (or tried to scroll past) the left edge.
+            // Fire onLeftSide once per edge reach while the user is interacting.
+            if (touch && !mHasCalledLeftSide) {
+                mHasCalledLeftSide = true;
+                mHasCalledRightSide = false;
+                onLeftSide();
+            }
+        } else if (mScrollX > maxScrollX) {
+            mScrollX = maxScrollX;
             mScroller.forceFinished(true);
+
+            // Symmetric behavior for right edge so consumers that care
+            // about right-side reach can hook in via onRightSide().
+            if (touch && !mHasCalledRightSide) {
+                mHasCalledRightSide = true;
+                mHasCalledLeftSide = false;
+                onRightSide();
+            }
+        } else {
+            // We're within bounds again; allow the next edge reach to fire.
+            if (touch) {
+                mHasCalledLeftSide = false;
+                mHasCalledRightSide = false;
+            }
         }
     }
 
