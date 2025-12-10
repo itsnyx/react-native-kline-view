@@ -19,9 +19,20 @@ import com.github.fujianlian.klinechart.formatter.ValueFormatter;
 
 public class HTKLineConfigManager {
 
-	public List<KLineEntity> modelArray = new ArrayList<>();
+    public List<KLineEntity> modelArray = new ArrayList<>();
 
 	public Boolean shouldScrollToEnd = true;
+
+    /**
+     * Internal flag used by Android to know that the last scroll-to-left-edge
+     * triggered a "load older candles" flow. When true, the next `modelArray`
+     * update is treated as a prepend of older data and horizontal scroll
+     * offset is adjusted so the previously visible candles stay in view.
+     *
+     * This flag is set in `HTKLineContainerView` when `onLoadMoreBegin`
+     * fires and cleared after `setModelArray` finishes applying the update.
+     */
+    public boolean loadingMoreFromLeft = false;
 
 
 	public int shotBackgroundColor = Color.RED;

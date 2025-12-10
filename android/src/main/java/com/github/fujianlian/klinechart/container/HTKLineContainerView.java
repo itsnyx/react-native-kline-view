@@ -41,6 +41,11 @@ public class HTKLineContainerView extends RelativeLayout {
         klineView.setRefreshListener(new KLineChartView.KChartRefreshListener() {
             @Override
             public void onLoadMoreBegin(KLineChartView chart) {
+                // Mark that the next modelArray update is the result of a "load older
+                // candles" flow so we can keep the user's visible range anchored when
+                // new data is prepended on the left.
+                configManager.loadingMoreFromLeft = true;
+
                 int id = HTKLineContainerView.this.getId();
                 reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
                         id,

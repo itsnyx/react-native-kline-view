@@ -122,6 +122,12 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
                     return;
                 }
                 List modelArray = (List) parsed;
+
+                // Capture previous state so we can preserve/adjust scroll position on the UI thread.
+                final int previousCount = containerView.configManager.modelArray != null
+                        ? containerView.configManager.modelArray.size()
+                        : 0;
+
                 // Reuse existing packModelList logic
                 containerView.configManager.modelArray =
                         containerView.configManager.packModelList(modelArray);
@@ -129,15 +135,33 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
                     @Override
                     public void run() {
                         // Only notify data change, keep config/drawings as-is.
-                        // If the user was previously at the right edge (latest candle),
-                        // keep them "stuck" to the end; otherwise preserve their current
-                        // scroll offset so loading older candles at the left does not
-                        // snap them back to the newest data.
-                        boolean wasAtEnd = containerView.klineView.getScrollOffset() >= containerView.klineView.getMaxScrollX();
+                        int oldScrollOffset = containerView.klineView.getScrollOffset();
+                        int oldMaxScrollX = containerView.klineView.getMaxScrollX();
+                        boolean wasAtEnd = oldScrollOffset >= oldMaxScrollX;
+
+                        boolean loadingMoreFromLeft = containerView.configManager.loadingMoreFromLeft;
+                        int newCount = containerView.configManager.modelArray != null
+                                ? containerView.configManager.modelArray.size()
+                                : 0;
+                        int addedCount = Math.max(newCount - previousCount, 0);
+
                         containerView.klineView.notifyChanged();
-                        if (wasAtEnd) {
+
+                        if (loadingMoreFromLeft && oldScrollOffset == 0 && addedCount > 0) {
+                            // We just prepended older candles while the user was sitting at the
+                            // very left edge. Shift scrollX so that the previously visible first
+                            // candle stays anchored in view instead of jumping to the new oldest.
+                            int shiftPx = Math.round(addedCount * containerView.configManager.itemWidth);
+                            containerView.klineView.setScrollX(shiftPx);
+                        } else if (wasAtEnd) {
+                            // If the user was at the right edge (latest candle) before the update,
+                            // keep them pinned to the newest candle after the data change.
                             containerView.klineView.setScrollX(containerView.klineView.getMaxScrollX());
                         }
+
+                        // Reset left-load flag so normal updates (e.g. live ticks on the right)
+                        // are not misinterpreted as "prepend" operations.
+                        containerView.configManager.loadingMoreFromLeft = false;
                     }
                 });
             }
