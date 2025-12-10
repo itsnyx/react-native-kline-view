@@ -255,9 +255,9 @@ class HTKLineView: UIScrollView {
             return
         }
 
-        // Constrain logo size relative to chart dimensions (e.g. at most 50% of width/height).
-        let maxLogoWidth = allWidth * 0.5
-        let maxLogoHeight = mainHeight * 0.5
+        // Constrain logo size relative to chart dimensions (e.g. at most ~35% of width/height).
+        let maxLogoWidth = allWidth * 0.35
+        let maxLogoHeight = mainHeight * 0.35
         let imageSize = image.size
         guard imageSize.width > 0, imageSize.height > 0 else {
             return
@@ -276,7 +276,7 @@ class HTKLineView: UIScrollView {
 
         context.saveGState()
         // Light transparency so candles and grid remain clearly visible.
-        context.setAlpha(0.15)
+        context.setAlpha(0.10)
         image.draw(in: drawRect)
         context.restoreGState()
     }

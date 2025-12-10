@@ -317,9 +317,9 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             return;
         }
 
-        // Constrain logo to at most 50% of chart width/height.
-        float maxLogoWidth = mWidth * 0.5f;
-        float maxLogoHeight = mMainRect.height() * 0.5f;
+        // Constrain logo to at most ~35% of chart width/height.
+        float maxLogoWidth = mWidth * 0.35f;
+        float maxLogoHeight = mMainRect.height() * 0.35f;
         float widthScale = maxLogoWidth / bmpWidth;
         float heightScale = maxLogoHeight / bmpHeight;
         float scale = Math.min(Math.min(widthScale, heightScale), 1.0f);
@@ -333,7 +333,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
         // Use background paint as a holder for alpha; preserve its previous alpha.
         int oldAlpha = mBackgroundPaint.getAlpha();
-        mBackgroundPaint.setAlpha((int) (0.15f * 255)); // 15% opacity
+        mBackgroundPaint.setAlpha((int) (0.10f * 255)); // 10% opacity
         canvas.drawBitmap(logo, null, dest, mBackgroundPaint);
         mBackgroundPaint.setAlpha(oldAlpha);
     }
