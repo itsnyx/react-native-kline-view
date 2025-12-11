@@ -269,8 +269,16 @@ class HTKLineView: UIScrollView {
 
         let drawWidth = imageSize.width * scale
         let drawHeight = imageSize.height * scale
-
-        let originX = (allWidth - drawWidth) / 2.0
+        
+        // Keep the logo visually fixed in the center of the viewport while the
+        // candles (scrollable content) move underneath it.
+        //
+        // The scroll view exposes content in the range
+        // [contentOffset.x, contentOffset.x + bounds.width]. To pin the logo to
+        // the visual center of the screen, we place it at:
+        //   worldX = contentOffset.x + (bounds.width - logoWidth) / 2
+        // so that on-screen X is always (bounds.width - logoWidth) / 2.
+        let originX = contentOffset.x + (allWidth - drawWidth) / 2.0
         let originY = mainBaseY + (mainHeight - drawHeight) / 2.0
         let drawRect = CGRect(x: originX, y: originY, width: drawWidth, height: drawHeight)
 
