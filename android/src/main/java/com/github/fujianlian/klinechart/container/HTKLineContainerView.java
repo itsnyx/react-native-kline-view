@@ -120,8 +120,11 @@ public class HTKLineContainerView extends RelativeLayout {
                     map.putDouble("drawDashSpace", drawItem.drawDashSpace);
                     map.putBoolean("drawIsLock", drawItem.drawIsLock);
                 }
-                // Expose the index of the touched drawing item to React Native.
+                // Expose the index and a stable id of the touched drawing item to React Native.
                 map.putInt("index", drawItemIndex);
+                if (drawItem != null && drawItem.uid != null) {
+                    map.putString("id", drawItem.uid);
+                }
                 map.putInt("shouldReloadDrawItemIndex", drawItemIndex);
                 reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
                         id,
@@ -146,6 +149,9 @@ public class HTKLineContainerView extends RelativeLayout {
                 WritableMap map = Arguments.createMap();
                 if (drawItem != null) {
                     map.putInt("index", drawItemIndex);
+                    if (drawItem.uid != null) {
+                        map.putString("id", drawItem.uid);
+                    }
                     map.putInt("drawType", drawItem.drawType.rawValue());
                     map.putInt("drawColor", drawItem.drawColor);
                     map.putDouble("drawLineHeight", drawItem.drawLineHeight);
@@ -195,6 +201,9 @@ public class HTKLineContainerView extends RelativeLayout {
 
                 WritableMap map = Arguments.createMap();
                 map.putInt("index", drawItemIndex);
+                if (drawItem != null && drawItem.uid != null) {
+                    map.putString("id", drawItem.uid);
+                }
                 map.putInt("drawType", drawItem.drawType.rawValue());
                 map.putString("text", drawItem.text);
 
@@ -378,6 +387,12 @@ public class HTKLineContainerView extends RelativeLayout {
                     drawItem.textFontSize = ((Number) fontSizeObject).floatValue();
                 } else {
                     drawItem.textFontSize = configManager.candleTextFontSize;
+                }
+
+                // Optional stable id, if JS provided one
+                Object idObject = itemMap.get("id");
+                if (idObject instanceof String) {
+                    drawItem.uid = (String) idObject;
                 }
 
                 klineView.drawContext.drawItemList.add(drawItem);

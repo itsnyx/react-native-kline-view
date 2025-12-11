@@ -13,6 +13,12 @@ import java.util.List;
 
 public class HTDrawItem {
 
+    /**
+     * Stable unique identifier for this drawing, used by JS to track items
+     * even when their array index changes (e.g. after deletions).
+     */
+    public String uid;
+
     public HTDrawType drawType = HTDrawType.none;
 
     public int drawColor = Color.RED;
@@ -46,6 +52,7 @@ public class HTDrawItem {
     public HTDrawItem(HTDrawType drawType, HTPoint startPoint) {
         this.drawType = drawType;
         this.pointList.add(startPoint);
+        this.uid = java.util.UUID.randomUUID().toString();
     }
 
     // 找到谁正在被拖动

@@ -123,12 +123,14 @@ class HTKLineContainerView: UIView {
                 self?.onDrawItemDidTouch?([
                     "index": drawItemIndex,
                     "shouldReloadDrawItemIndex": drawItemIndex,
+                    "id": drawItem?.uid ?? ""
                 ])
                 return
             }
             self?.onDrawItemDidTouch?([
                 "index": drawItemIndex,
                 "shouldReloadDrawItemIndex": drawItemIndex,
+                "id": drawItem.uid,
                 "drawColor": colorList,
                 "drawLineHeight": drawItem.drawLineHeight,
                 "drawDashWidth": drawItem.drawDashWidth,
@@ -165,6 +167,7 @@ class HTKLineContainerView: UIView {
 
             this.onDrawItemComplete?([
                 "index": drawItemIndex,
+                "id": drawItem.uid,
                 "drawType": drawItem.drawType.rawValue,
                 "drawColor": colorToInt(drawItem.drawColor),
                 "drawLineHeight": drawItem.drawLineHeight,
@@ -195,6 +198,7 @@ class HTKLineContainerView: UIView {
 
             self?.onDrawItemMove?([
                 "index": drawItemIndex,
+                "id": drawItem.uid,
                 "drawType": drawItem.drawType.rawValue,
                 "pointList": pointArray,
                 "text": drawItem.text
@@ -244,7 +248,8 @@ class HTKLineContainerView: UIView {
                     continue
                 }
 
-                let drawItem = HTDrawItem(drawType, CGPoint(x: x, y: y))
+                let uid = item["id"] as? String
+                let drawItem = HTDrawItem(drawType, CGPoint(x: x, y: y), uid: uid)
 
                 // Remaining points
                 if points.count > 1 {

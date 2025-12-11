@@ -52,6 +52,10 @@ enum HTDrawType: Int {
 
 class HTDrawItem: NSObject {
     
+    /// Stable unique identifier for this drawing, used by JS to track items
+    /// even when their array index changes (e.g. after deletions).
+    let uid: String
+
     var drawType = HTDrawType.none
     
     var drawColor = UIColor.init(red: 0.27, green: 0.37, blue: 1, alpha: 1)
@@ -82,7 +86,8 @@ class HTDrawItem: NSObject {
     
     var touchMoveIndexList = [Int]()
     
-    init(_ drawType: HTDrawType, _ startPoint: CGPoint) {
+    init(_ drawType: HTDrawType, _ startPoint: CGPoint, uid: String? = nil) {
+        self.uid = uid ?? UUID().uuidString
         self.drawType = drawType
         self.pointList = [startPoint]
     }

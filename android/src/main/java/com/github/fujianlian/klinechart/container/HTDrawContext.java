@@ -206,12 +206,14 @@ public class HTDrawContext {
             paint.setPathEffect(null);
             paint.setStyle(Paint.Style.FILL);
             paint.setTextSize(configManager.candleTextFontSize);
-            paint.setColor(configManager.candleTextColor);
+            // Match text color to line color
+            paint.setColor(drawItem.drawColor);
 
             Paint.FontMetrics fm = paint.getFontMetrics();
             float textHeight = fm.descent - fm.ascent;
             float textWidth = paint.measureText(priceText);
-            float padding = 4f;
+            // Slightly reduced padding so label sits closer to the line.
+            float padding = 2f;
             float xText = klineView.getWidth() - textWidth - padding;
             // Draw the price text clearly ABOVE the line.
             float yText = viewPoint.y - textHeight - padding - fm.descent;

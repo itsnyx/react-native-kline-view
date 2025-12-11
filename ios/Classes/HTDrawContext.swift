@@ -226,10 +226,12 @@ class HTDrawContext {
             let font = configManager.createFont(configManager.candleTextFontSize)
             let attributes: [NSAttributedString.Key: Any] = [
                 .font: font,
-                .foregroundColor: configManager.candleTextColor
+                // Match text color to line color
+                .foregroundColor: drawItem.drawColor
             ]
             let textSize = (priceText as NSString).size(withAttributes: attributes)
-            let padding: CGFloat = 4
+            // Slightly reduced padding so label sits closer to the line.
+            let padding: CGFloat = 2
             let x = klineView.bounds.size.width - textSize.width - padding
             // Draw the price text clearly ABOVE the line.
             let y = viewPoint.y - textSize.height - padding

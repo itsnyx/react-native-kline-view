@@ -1096,7 +1096,18 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
      * @return
      */
     public KLineEntity getItem(int position) {
-    	return configManager.modelArray.get(position);
+        // Defensive: JS can update modelArray size asynchronously relative to our cached
+        // indices (mStartIndex, mStopIndex, mSelectedIndex), which can briefly point
+        // past the end of the new list. Clamp the requested index into the valid range
+        // so we never crash with IndexOutOfBoundsException during draw.
+        int size = configManager.modelArray != null ? configManager.modelArray.size() : 0;
+        if (size == 0) {
+            // Return a dummy entity to avoid hard crashes when data is momentarily empty.
+            // Callers typically only read fields for drawing; a zeroed entity is safe.
+            return new KLineEntity();
+        }
+        int clamped = Math.max(0, Math.min(position, size - 1));
+        return configManager.modelArray.get(clamped);
     }
 
     /**
