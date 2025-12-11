@@ -200,6 +200,22 @@ public class HTDrawContext {
             path.lineTo(klineView.getWidth(), viewPoint.y);
             canvas.drawPath(path, paint);
 
+            // Price label at the right side of the line (using the stored price value).
+            float priceValue = point.y;
+            String priceText = klineView.formatValue(priceValue);
+            paint.setPathEffect(null);
+            paint.setStyle(Paint.Style.FILL);
+            paint.setTextSize(configManager.candleTextFontSize);
+            paint.setColor(configManager.candleTextColor);
+
+            Paint.FontMetrics fm = paint.getFontMetrics();
+            float textHeight = fm.descent - fm.ascent;
+            float textWidth = paint.measureText(priceText);
+            float padding = 4f;
+            float xText = klineView.getWidth() - textWidth - padding;
+            float yText = viewPoint.y + textHeight / 2 - fm.descent;
+            canvas.drawText(priceText, xText, yText, paint);
+
             if (itemIndex == configManager.shouldReloadDrawItemIndex) {
                 Path highlight = new Path();
                 paint.setStyle(Paint.Style.FILL);

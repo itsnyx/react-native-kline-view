@@ -220,6 +220,20 @@ class HTDrawContext {
             context.drawPath(using: .stroke)
             context.restoreGState()
 
+            // Price label at the right side of the line (using the stored price value).
+            let priceValue = point.y
+            let priceText = configManager.precision(priceValue, configManager.price)
+            let font = configManager.createFont(configManager.candleTextFontSize)
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: configManager.candleTextColor
+            ]
+            let textSize = (priceText as NSString).size(withAttributes: attributes)
+            let padding: CGFloat = 4
+            let x = klineView.bounds.size.width - textSize.width - padding
+            let y = viewPoint.y - textSize.height / 2
+            (priceText as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: attributes)
+
             if itemIndex == configManager.shouldReloadDrawItemIndex {
                 context.addArc(center: viewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
                 context.setFillColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)

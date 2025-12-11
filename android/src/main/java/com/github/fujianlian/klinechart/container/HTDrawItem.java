@@ -211,6 +211,33 @@ public class HTDrawItem {
     public static Boolean beganFillTouchMoveItemPointMapper(HTDrawItem drawItem, HTPoint location, BaseKLineChartView klineView) {
         for (int index = 0; index < drawItem.pointList.size(); index ++) {
             HTPoint point = drawItem.pointList.get(index);
+            // Special hit-testing for global horizontal/vertical lines: allow tapping
+            // anywhere along the line (with a generous margin), not just the anchor point.
+            if (drawItem.drawType == HTDrawType.globalHorizontalLine ||
+                drawItem.drawType == HTDrawType.globalVerticalLine) {
+                HTPoint anchor = klineView.viewPointFromValuePoint(point);
+                HTPoint loc = klineView.viewPointFromValuePoint(location);
+                float tolerance = 30f;
+
+                if (drawItem.drawType == HTDrawType.globalHorizontalLine) {
+                    if (Math.abs(loc.y - anchor.y) <= tolerance &&
+                        loc.x >= 0 &&
+                        loc.x <= klineView.getWidth()) {
+                        drawItem.touchMoveIndexList.clear();
+                        drawItem.touchMoveIndexList.add(index);
+                        return true;
+                    }
+                } else { // globalVerticalLine
+                    if (Math.abs(loc.x - anchor.x) <= tolerance &&
+                        loc.y >= 0 &&
+                        loc.y <= klineView.getHeight()) {
+                        drawItem.touchMoveIndexList.clear();
+                        drawItem.touchMoveIndexList.add(index);
+                        return true;
+                    }
+                }
+            }
+
             if (distance(klineView.viewPointFromValuePoint(point), klineView.viewPointFromValuePoint(location)) <= 30) {
                 drawItem.touchMoveIndexList.clear();
                 drawItem.touchMoveIndexList.add(index);

@@ -269,6 +269,34 @@ class HTDrawItem: NSObject {
                 }
             }
 
+            // Hit-testing for global horizontal/vertical lines: allow tapping anywhere
+            // along the line (with a generous margin), not just the anchor point.
+            if case .globalHorizontalLine = drawItem.drawType {
+                let anchor = klineView.viewPointFromValuePoint(point)
+                let loc = klineView.viewPointFromValuePoint(location)
+                let tolerance: CGFloat = 12
+
+                if abs(loc.y - anchor.y) <= tolerance &&
+                    loc.x >= 0 &&
+                    loc.x <= klineView.bounds.size.width {
+                    drawItem.touchMoveIndexList = [index]
+                    return true
+                }
+            }
+
+            if case .globalVerticalLine = drawItem.drawType {
+                let anchor = klineView.viewPointFromValuePoint(point)
+                let loc = klineView.viewPointFromValuePoint(location)
+                let tolerance: CGFloat = 12
+
+                if abs(loc.x - anchor.x) <= tolerance &&
+                    loc.y >= 0 &&
+                    loc.y <= klineView.bounds.size.height {
+                    drawItem.touchMoveIndexList = [index]
+                    return true
+                }
+            }
+
             if distance(
                 p1: klineView.viewPointFromValuePoint(point),
                 p2: klineView.viewPointFromValuePoint(location)
