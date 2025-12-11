@@ -363,15 +363,18 @@ public class HTDrawContext {
                 paint.setStyle(Paint.Style.FILL);
                 canvas.drawRoundRect(rect, radius, radius, paint);
 
-                // Border
+                // Border – use line color
                 paint.setStyle(Paint.Style.STROKE);
                 paint.setStrokeWidth(1f);
-                paint.setColor(configManager.panelBorderColor);
+                paint.setColor(drawItem.drawColor);
                 canvas.drawRoundRect(rect, radius, radius, paint);
 
-                // Text
+                // Text – use textColor (or global drawTextColor fallback)
                 paint.setStyle(Paint.Style.FILL);
-                paint.setColor(configManager.candleTextColor);
+                int leftTextColor = drawItem.textColor != 0
+                        ? drawItem.textColor
+                        : configManager.drawTextColor;
+                paint.setColor(leftTextColor);
                 canvas.drawText(leftText, left + paddingH, baseLineY, paint);
             }
 

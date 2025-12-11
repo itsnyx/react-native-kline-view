@@ -346,12 +346,17 @@ class HTDrawContext {
             let leftText = (drawItem.text.isEmpty ? nil : drawItem.text)
 
             let font = configManager.createFont(configManager.candleTextFontSize)
-            let attributes: [NSAttributedString.Key: Any] = [
+
+            let priceAttributes: [NSAttributedString.Key: Any] = [
                 .font: font,
                 .foregroundColor: configManager.candleTextColor
             ]
+            let leftAttributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: (drawItem.textColor)
+            ]
 
-            let priceSize = (priceText as NSString).size(withAttributes: attributes)
+            let priceSize = (priceText as NSString).size(withAttributes: priceAttributes)
             let paddingH: CGFloat = 8
             let paddingV: CGFloat = 4
             let marginX: CGFloat = 4
@@ -365,7 +370,7 @@ class HTDrawContext {
 
             // Left label (custom text), only for globalHorizontalLineWithLabel.
             if drawItem.drawType == .globalHorizontalLineWithLabel, let label = leftText {
-                let leftSize = (label as NSString).size(withAttributes: attributes)
+                let leftSize = (label as NSString).size(withAttributes: leftAttributes)
                 let left = marginX
                 let top = baseLineY - leftSize.height - paddingV
                 let rect = CGRect(
@@ -381,12 +386,13 @@ class HTDrawContext {
                 context.addPath(path.cgPath)
                 context.drawPath(using: .fill)
 
-                context.setStrokeColor(configManager.panelBorderColor.cgColor)
+                // Border – use line color
+                context.setStrokeColor(drawItem.drawColor.cgColor)
                 context.addPath(path.cgPath)
                 context.drawPath(using: .stroke)
 
                 let textPoint = CGPoint(x: rect.minX + paddingH, y: rect.minY + paddingV)
-                (label as NSString).draw(at: textPoint, withAttributes: attributes)
+                (label as NSString).draw(at: textPoint, withAttributes: leftAttributes)
             }
 
             // Right price label.
@@ -415,7 +421,7 @@ class HTDrawContext {
                 x: priceRect.minX + paddingH,
                 y: priceRect.minY + paddingV
             )
-            (priceText as NSString).draw(at: priceTextPoint, withAttributes: attributes)
+            (priceText as NSString).draw(at: priceTextPoint, withAttributes: priceAttributes)
 
             if itemIndex == configManager.shouldReloadDrawItemIndex {
                 context.addArc(center: viewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
