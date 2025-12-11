@@ -89,7 +89,13 @@ public class HTDrawContext {
         switch (state) {
             case MotionEvent.ACTION_DOWN:
                 if (drawItem == null || (drawItem.pointList.size() >= drawItem.drawType.count())) {
-                    drawItem = new HTDrawItem(configManager.drawType, location);
+                    // For candleMarker, ignore the tapped Y-value and snap to the
+                    // bottom of the corresponding candle body (min(open, close)).
+                    HTPoint startLocation = location;
+                    if (configManager.drawType == HTDrawType.candleMarker) {
+                        startLocation = new HTPoint(location.x, bodyBottomValueForX(location.x));
+                    }
+                    drawItem = new HTDrawItem(configManager.drawType, startLocation);
                     drawItem.drawColor = configManager.drawColor;
                     drawItem.drawLineHeight = configManager.drawLineHeight;
                     drawItem.drawDashWidth = configManager.drawDashWidth;
@@ -179,6 +185,28 @@ public class HTDrawContext {
         canvas.drawPath(path, paint);
     }
 
+    /**
+     * For a given X-value (timestamp), find the candle whose id is closest and
+     * return the bottom of its real body (min(open, close)) in value-space.
+     * This is used to anchor candleMarker pointers to the corresponding candle.
+     */
+    private float bodyBottomValueForX(float valueX) {
+        if (configManager == null || configManager.modelArray == null || configManager.modelArray.size() == 0) {
+            return valueX;
+        }
+        KLineEntity closest = configManager.modelArray.get(0);
+        float minDiff = Math.abs(closest.id - valueX);
+        for (KLineEntity entity : configManager.modelArray) {
+            float diff = Math.abs(entity.id - valueX);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closest = entity;
+            }
+        }
+        float bodyLow = Math.min(closest.Open, closest.Close);
+        return bodyLow;
+    }
+
     public void drawMapper(Canvas canvas, HTDrawItem drawItem, int index, int itemIndex) {
         HTPoint point = drawItem.pointList.get(index);
 
@@ -241,7 +269,9 @@ public class HTDrawContext {
             // Bubble background
             paint.setColor(backgroundColor);
             paint.setStyle(Paint.Style.FILL);
-            float radius = bubbleHeight / 2f;
+            float radius = drawItem.textCornerRadius > 0
+                    ? drawItem.textCornerRadius
+                    : configManager.drawTextCornerRadius;
             canvas.drawRoundRect(rect, radius, radius, paint);
 
             // Pointer triangle from bubble to candle/price

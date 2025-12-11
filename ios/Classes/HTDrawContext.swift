@@ -120,7 +120,16 @@ class HTDrawContext {
         switch state {
         case .began:
             if (drawItem == nil || (drawItem?.pointList.count ?? 0) >= (drawItem?.drawType.count ?? 0)) {
-                let drawItem = HTDrawItem.init(configManager.drawType, location)
+                var startLocation = location
+                // For candleMarker, ignore the tapped Y-value and snap to the
+                // bottom of the corresponding candle body (min(open, close)).
+                if configManager.drawType == .candleMarker {
+                    startLocation = CGPoint(
+                        x: location.x,
+                        y: bodyBottomValue(forX: location.x)
+                    )
+                }
+                let drawItem = HTDrawItem.init(configManager.drawType, startLocation)
                 drawItem.drawColor = configManager.drawColor
                 drawItem.drawLineHeight = configManager.drawLineHeight
                 drawItem.drawDashWidth = configManager.drawDashWidth
@@ -190,6 +199,25 @@ class HTDrawContext {
         context.setLineDash(phase: 0, lengths: dashList)
         context.drawPath(using: .stroke)
     }
+
+    /// For a given X-value (timestamp), find the candle whose id is closest and
+    /// return the bottom of its real body (min(open, close)) in value-space.
+    /// This is used to anchor candleMarker pointers to the corresponding candle.
+    private func bodyBottomValue(forX value: CGFloat) -> CGFloat {
+        guard !configManager.modelArray.isEmpty else {
+            return value
+        }
+        var closest = configManager.modelArray[0]
+        var minDiff = abs(closest.id - value)
+        for model in configManager.modelArray {
+            let diff = abs(model.id - value)
+            if diff < minDiff {
+                minDiff = diff
+                closest = model
+            }
+        }
+        return min(closest.open, closest.close)
+    }
     
     func setNeedsDisplay() {
         klineView?.setNeedsDisplay()
@@ -257,7 +285,7 @@ class HTDrawContext {
 
             // Bubble background
             context.setFillColor(drawItem.textBackgroundColor.cgColor)
-            let radius = rect.height / 2
+            let radius = drawItem.textCornerRadius
             let bubblePath = UIBezierPath(roundedRect: rect, cornerRadius: radius)
             context.addPath(bubblePath.cgPath)
             context.drawPath(using: .fill)
