@@ -231,8 +231,9 @@ class HTDrawContext {
             let textSize = (priceText as NSString).size(withAttributes: attributes)
             let padding: CGFloat = 4
             let x = klineView.bounds.size.width - textSize.width - padding
-            let y = viewPoint.y - textSize.height / 2
-            (priceText as NSString).draw(at: CGPoint(x: x, y: y), withAttributes: attributes)
+            // Draw the price text clearly ABOVE the line.
+            let y = viewPoint.y - textSize.height - padding
+            (priceText as NSString).draw(at: CGPoint(x: x, y: max(0, y)), withAttributes: attributes)
 
             if itemIndex == configManager.shouldReloadDrawItemIndex {
                 context.addArc(center: viewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)

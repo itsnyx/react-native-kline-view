@@ -213,7 +213,11 @@ public class HTDrawContext {
             float textWidth = paint.measureText(priceText);
             float padding = 4f;
             float xText = klineView.getWidth() - textWidth - padding;
-            float yText = viewPoint.y + textHeight / 2 - fm.descent;
+            // Draw the price text clearly ABOVE the line.
+            float yText = viewPoint.y - textHeight - padding - fm.descent;
+            if (yText < textHeight) {
+                yText = textHeight;
+            }
             canvas.drawText(priceText, xText, yText, paint);
 
             if (itemIndex == configManager.shouldReloadDrawItemIndex) {
