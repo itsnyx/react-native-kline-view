@@ -336,8 +336,12 @@ const DrawTypeConstants = {
   text: 201, // Text annotation
   // Global price-level horizontal line (1 tap: price only, spans entire chart)
   globalHorizontalLine: 301,
+  // Global price-level horizontal line with left text + right price labels
+  globalHorizontalLineWithLabel: 303,
   // Global time-level vertical line (1 tap: time only, spans full height)
   globalVerticalLine: 302,
+  // Single-candle marker with label bubble and pointer to a candle
+  candleMarker: 304,
 };
 
 // Drawing State Constants
@@ -386,9 +390,17 @@ const DrawToolTypes = {
     label: 'Price Line',
     value: DrawTypeConstants.globalHorizontalLine,
   },
+  [DrawTypeConstants.globalHorizontalLineWithLabel]: {
+    label: 'Price Line+Text',
+    value: DrawTypeConstants.globalHorizontalLineWithLabel,
+  },
   [DrawTypeConstants.globalVerticalLine]: {
     label: 'Time Line',
     value: DrawTypeConstants.globalVerticalLine,
+  },
+  [DrawTypeConstants.candleMarker]: {
+    label: 'Candle Marker',
+    value: DrawTypeConstants.candleMarker,
   },
 };
 
@@ -414,8 +426,12 @@ const DrawToolHelper = {
         return FORMAT('Text');
       case DrawTypeConstants.globalHorizontalLine:
         return FORMAT('Price Line');
+      case DrawTypeConstants.globalHorizontalLineWithLabel:
+        return FORMAT('Price Line+Text');
       case DrawTypeConstants.globalVerticalLine:
         return FORMAT('Time Line');
+      case DrawTypeConstants.candleMarker:
+        return FORMAT('Candle Marker');
     }
     return '';
   },
@@ -440,7 +456,9 @@ const DrawToolHelper = {
     if (
       type === DrawTypeConstants.text ||
       type === DrawTypeConstants.globalHorizontalLine ||
-      type === DrawTypeConstants.globalVerticalLine
+      type === DrawTypeConstants.globalHorizontalLineWithLabel ||
+      type === DrawTypeConstants.globalVerticalLine ||
+      type === DrawTypeConstants.candleMarker
     ) {
       return 1;
     }
@@ -1218,11 +1236,17 @@ class App extends Component {
     const { nativeEvent } = event;
     console.log('Drawing item complete:', nativeEvent);
 
-    // For text annotations, ensure we have some default text so it is visible
-    const drawing =
-      nativeEvent.drawType === DrawTypeConstants.text && !nativeEvent.text
-        ? { ...nativeEvent, text: 'Text' }
-        : nativeEvent;
+    // For text-like annotations, ensure we have some default text so it is visible
+    let drawing = nativeEvent;
+    if (nativeEvent.drawType === DrawTypeConstants.text && !nativeEvent.text) {
+      drawing = { ...nativeEvent, text: 'Text' };
+    } else if (
+      nativeEvent.drawType === DrawTypeConstants.candleMarker &&
+      !nativeEvent.text
+    ) {
+      // Default label for candle marker, can be customized in real app
+      drawing = { ...nativeEvent, text: 'B' };
+    }
 
     // Save all drawings, including text, so they can be restored via drawList.drawItemList
     this.setState(prev => ({

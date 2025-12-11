@@ -221,12 +221,14 @@ public class HTDrawItem {
             // Special hit-testing for global horizontal/vertical lines: allow tapping
             // anywhere along the line (with a generous margin), not just the anchor point.
             if (drawItem.drawType == HTDrawType.globalHorizontalLine ||
+                drawItem.drawType == HTDrawType.globalHorizontalLineWithLabel ||
                 drawItem.drawType == HTDrawType.globalVerticalLine) {
                 HTPoint anchor = klineView.viewPointFromValuePoint(point);
                 HTPoint loc = klineView.viewPointFromValuePoint(location);
                 float tolerance = 30f;
 
-                if (drawItem.drawType == HTDrawType.globalHorizontalLine) {
+                if (drawItem.drawType == HTDrawType.globalHorizontalLine ||
+                    drawItem.drawType == HTDrawType.globalHorizontalLineWithLabel) {
                     if (Math.abs(loc.y - anchor.y) <= tolerance &&
                         loc.x >= 0 &&
                         loc.x <= klineView.getWidth()) {

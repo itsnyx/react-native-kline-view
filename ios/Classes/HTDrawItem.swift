@@ -24,6 +24,12 @@ enum HTDrawType: Int {
     // Global price-level horizontal line (spans entire chart horizontally, 1 anchor point)
     case globalHorizontalLine = 301
 
+    // Global price-level horizontal line with text (left) and price (right) labels
+    case globalHorizontalLineWithLabel = 303
+
+    // Single-candle marker with label bubble and pointer to a candle
+    case candleMarker = 304
+
     // Global time-level vertical line (spans entire chart vertically, 1 anchor point)
     case globalVerticalLine = 302
 
@@ -276,7 +282,8 @@ class HTDrawItem: NSObject {
 
             // Hit-testing for global horizontal/vertical lines: allow tapping anywhere
             // along the line (with a generous margin), not just the anchor point.
-            if case .globalHorizontalLine = drawItem.drawType {
+            if drawItem.drawType == .globalHorizontalLine ||
+                drawItem.drawType == .globalHorizontalLineWithLabel {
                 let anchor = klineView.viewPointFromValuePoint(point)
                 let loc = klineView.viewPointFromValuePoint(location)
                 let tolerance: CGFloat = 12

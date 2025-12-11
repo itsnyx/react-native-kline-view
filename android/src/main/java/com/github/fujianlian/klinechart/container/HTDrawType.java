@@ -17,8 +17,14 @@ public enum HTDrawType {
     // Global price-level horizontal line (spans entire chart horizontally, 1 anchor point)
     globalHorizontalLine,
 
+    // Global price-level horizontal line with text label (left) and price label (right)
+    globalHorizontalLineWithLabel,
+
     // Global time-level vertical line (spans entire chart vertically, 1 anchor point)
     globalVerticalLine,
+
+    // Single-candle marker with label bubble and pointer to a candle
+    candleMarker,
 
     rectangle,
 
@@ -49,6 +55,12 @@ public enum HTDrawType {
             }
             case 302: {
                 return globalVerticalLine;
+            }
+            case 303: {
+                return globalHorizontalLineWithLabel;
+            }
+            case 304: {
+                return candleMarker;
             }
             case 201: {
                 return text;
@@ -102,6 +114,12 @@ public enum HTDrawType {
             }
             case globalVerticalLine: {
                 return 302;
+            }
+            case globalHorizontalLineWithLabel: {
+                return 303;
+            }
+            case candleMarker: {
+                return 304;
             }
             case text: {
                 return 201;

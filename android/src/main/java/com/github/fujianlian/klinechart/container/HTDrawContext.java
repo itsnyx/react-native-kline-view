@@ -182,8 +182,102 @@ public class HTDrawContext {
     public void drawMapper(Canvas canvas, HTDrawItem drawItem, int index, int itemIndex) {
         HTPoint point = drawItem.pointList.get(index);
 
+        // Candle marker: bubble with text and a pointer to a specific candle/price.
+        if (drawItem.drawType == HTDrawType.candleMarker) {
+            HTPoint viewPoint = klineView.viewPointFromValuePoint(point);
+
+            paint.setPathEffect(null);
+            float fontSize = drawItem.textFontSize > 0 ? drawItem.textFontSize : configManager.candleTextFontSize;
+            paint.setTextSize(fontSize);
+
+            String text = (drawItem.text != null && drawItem.text.length() > 0) ? drawItem.text : "";
+
+            Paint.FontMetrics fm = paint.getFontMetrics();
+            float textHeight = fm.bottom - fm.top;
+            float textWidth = paint.measureText(text);
+
+            float paddingH = 12f;
+            float paddingV = 6f;
+            float gap = 4f;
+            float triangleHeight = 6f;
+            float triangleHalfWidth = 6f;
+            float marginX = 4f;
+
+            float bubbleWidth = textWidth + paddingH * 2f;
+            float bubbleHeight = textHeight + paddingV * 2f;
+
+            float centerX = viewPoint.x;
+            float left = centerX - bubbleWidth / 2f;
+            float right = centerX + bubbleWidth / 2f;
+
+            // Clamp bubble within view bounds and adjust center if needed.
+            if (left < marginX) {
+                float shift = marginX - left;
+                left += shift;
+                right += shift;
+                centerX += shift;
+            }
+            float maxRight = klineView.getWidth() - marginX;
+            if (right > maxRight) {
+                float shift = right - maxRight;
+                left -= shift;
+                right -= shift;
+                centerX -= shift;
+            }
+
+            float triangleBaseY = viewPoint.y + gap;
+            float top = triangleBaseY + triangleHeight;
+            float bottom = top + bubbleHeight;
+
+            android.graphics.RectF rect = new android.graphics.RectF(left, top, right, bottom);
+
+            int backgroundColor = drawItem.textBackgroundColor != 0
+                    ? drawItem.textBackgroundColor
+                    : configManager.drawTextBackgroundColor;
+            int textColor = drawItem.textColor != 0
+                    ? drawItem.textColor
+                    : configManager.drawTextColor;
+
+            // Bubble background
+            paint.setColor(backgroundColor);
+            paint.setStyle(Paint.Style.FILL);
+            float radius = bubbleHeight / 2f;
+            canvas.drawRoundRect(rect, radius, radius, paint);
+
+            // Pointer triangle from bubble to candle/price
+            Path triangle = new Path();
+            triangle.moveTo(viewPoint.x, viewPoint.y);
+            triangle.lineTo(centerX - triangleHalfWidth, triangleBaseY);
+            triangle.lineTo(centerX + triangleHalfWidth, triangleBaseY);
+            triangle.close();
+            canvas.drawPath(triangle, paint);
+
+            // Text
+            paint.setColor(textColor);
+            paint.setStyle(Paint.Style.FILL);
+            float textX = left + paddingH;
+            // Position baseline so that text sits inside the bubble.
+            float textY = top + paddingV - fm.top;
+            canvas.drawText(text, textX, textY, paint);
+
+            if (itemIndex == configManager.shouldReloadDrawItemIndex) {
+                Path highlight = new Path();
+                paint.setStyle(Paint.Style.FILL);
+                highlight.addCircle(viewPoint.x, viewPoint.y, 20, Path.Direction.CW);
+                paint.setColor(colorWithAlphaComponent(drawItem.drawColor, 0.5));
+                canvas.drawPath(highlight, paint);
+
+                highlight = new Path();
+                highlight.addCircle(viewPoint.x, viewPoint.y, 8, Path.Direction.CW);
+                paint.setColor(drawItem.drawColor);
+                canvas.drawPath(highlight, paint);
+            }
+            return;
+        }
+
         // Global price-level horizontal line: spans full chart width at a given price.
-        if (drawItem.drawType == HTDrawType.globalHorizontalLine) {
+        if (drawItem.drawType == HTDrawType.globalHorizontalLine ||
+            drawItem.drawType == HTDrawType.globalHorizontalLineWithLabel) {
             HTPoint viewPoint = klineView.viewPointFromValuePoint(point);
 
             paint.setColor(drawItem.drawColor);
@@ -200,27 +294,82 @@ public class HTDrawContext {
             path.lineTo(klineView.getWidth(), viewPoint.y);
             canvas.drawPath(path, paint);
 
-            // Price label at the right side of the line (using the stored price value).
+            // Labels: optional text on the left, price on the right.
             float priceValue = point.y;
             String priceText = klineView.formatValue(priceValue);
+            String leftText = (drawItem.text != null && drawItem.text.length() > 0)
+                    ? drawItem.text
+                    : null;
+
             paint.setPathEffect(null);
             paint.setStyle(Paint.Style.FILL);
             paint.setTextSize(configManager.candleTextFontSize);
-            // Match text color to line color
-            paint.setColor(drawItem.drawColor);
 
             Paint.FontMetrics fm = paint.getFontMetrics();
             float textHeight = fm.descent - fm.ascent;
-            float textWidth = paint.measureText(priceText);
-            // Slightly reduced padding so label sits closer to the line.
-            float padding = 2f;
-            float xText = klineView.getWidth() - textWidth - padding;
-            // Draw the price text clearly ABOVE the line.
-            float yText = viewPoint.y - textHeight - padding - fm.descent;
-            if (yText < textHeight) {
-                yText = textHeight;
+            float paddingH = 8f;
+            float paddingV = 4f;
+            float marginX = 4f;
+
+            // Baseline above the line so labels do not overlap the stroke.
+            float baseLineY = viewPoint.y - textHeight - paddingV - fm.descent;
+            if (baseLineY < textHeight) {
+                baseLineY = textHeight;
             }
-            canvas.drawText(priceText, xText, yText, paint);
+
+            // Left label (custom text), if any.
+            if (drawItem.drawType == HTDrawType.globalHorizontalLineWithLabel && leftText != null) {
+                float leftTextWidth = paint.measureText(leftText);
+                float left = marginX;
+                float right = left + leftTextWidth + paddingH * 2f;
+                float top = baseLineY + fm.top - paddingV;
+                float bottom = baseLineY + fm.bottom + paddingV;
+
+                android.graphics.RectF rect = new android.graphics.RectF(left, top, right, bottom);
+                float radius = (bottom - top) / 2f;
+
+                // Background
+                paint.setColor(configManager.panelBackgroundColor);
+                paint.setStyle(Paint.Style.FILL);
+                canvas.drawRoundRect(rect, radius, radius, paint);
+
+                // Border
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(1f);
+                paint.setColor(configManager.panelBorderColor);
+                canvas.drawRoundRect(rect, radius, radius, paint);
+
+                // Text
+                paint.setStyle(Paint.Style.FILL);
+                paint.setColor(configManager.candleTextColor);
+                canvas.drawText(leftText, left + paddingH, baseLineY, paint);
+            }
+
+            // Right price label.
+            float priceTextWidth = paint.measureText(priceText);
+            float rightRectRight = klineView.getWidth() - marginX;
+            float rightRectLeft = rightRectRight - (priceTextWidth + paddingH * 2f);
+            float top = baseLineY + fm.top - paddingV;
+            float bottom = baseLineY + fm.bottom + paddingV;
+
+            android.graphics.RectF priceRect = new android.graphics.RectF(rightRectLeft, top, rightRectRight, bottom);
+            float priceRadius = (bottom - top) / 2f;
+
+            // Background
+            paint.setColor(configManager.panelBackgroundColor);
+            paint.setStyle(Paint.Style.FILL);
+            canvas.drawRoundRect(priceRect, priceRadius, priceRadius, paint);
+
+            // Border
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(1f);
+            paint.setColor(configManager.panelBorderColor);
+            canvas.drawRoundRect(priceRect, priceRadius, priceRadius, paint);
+
+            // Text
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(configManager.candleTextColor);
+            canvas.drawText(priceText, rightRectLeft + paddingH, baseLineY, paint);
 
             if (itemIndex == configManager.shouldReloadDrawItemIndex) {
                 Path highlight = new Path();

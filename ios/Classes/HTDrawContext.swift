@@ -201,8 +201,100 @@ class HTDrawContext {
         }
         let point = drawItem.pointList[index]
 
+        // Candle marker: bubble with text and a pointer to a specific candle/price.
+        if drawItem.drawType == .candleMarker {
+            let viewPoint = klineView.viewPointFromValuePoint(point)
+
+            let fontSize = drawItem.textFontSize > 0
+                ? drawItem.textFontSize
+                : configManager.candleTextFontSize
+            let font = configManager.createFont(fontSize)
+            let text = drawItem.text as NSString
+
+            let paddingH: CGFloat = 12
+            let paddingV: CGFloat = 6
+            let gap: CGFloat = 4
+            let triangleHeight: CGFloat = 6
+            let triangleHalfWidth: CGFloat = 6
+            let marginX: CGFloat = 4
+
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: drawItem.textColor
+            ]
+            let textSize = text.size(withAttributes: attributes)
+            let bubbleWidth = textSize.width + paddingH * 2
+            let bubbleHeight = textSize.height + paddingV * 2
+
+            var centerX = viewPoint.x
+            var left = centerX - bubbleWidth / 2
+            var right = centerX + bubbleWidth / 2
+
+            // Clamp bubble within bounds and adjust center if needed.
+            if left < marginX {
+                let shift = marginX - left
+                left += shift
+                right += shift
+                centerX += shift
+            }
+            let maxRight = klineView.bounds.size.width - marginX
+            if right > maxRight {
+                let shift = right - maxRight
+                left -= shift
+                right -= shift
+                centerX -= shift
+            }
+
+            let triangleBaseY = viewPoint.y + gap
+            let rect = CGRect(
+                x: left,
+                y: triangleBaseY + triangleHeight,
+                width: bubbleWidth,
+                height: bubbleHeight
+            )
+
+            context.saveGState()
+
+            // Bubble background
+            context.setFillColor(drawItem.textBackgroundColor.cgColor)
+            let radius = rect.height / 2
+            let bubblePath = UIBezierPath(roundedRect: rect, cornerRadius: radius)
+            context.addPath(bubblePath.cgPath)
+            context.drawPath(using: .fill)
+
+            // Pointer triangle from bubble to candle/price
+            let trianglePath = UIBezierPath()
+            trianglePath.move(to: viewPoint)
+            trianglePath.addLine(to: CGPoint(x: centerX - triangleHalfWidth, y: triangleBaseY))
+            trianglePath.addLine(to: CGPoint(x: centerX + triangleHalfWidth, y: triangleBaseY))
+            trianglePath.close()
+            context.setFillColor(drawItem.textBackgroundColor.cgColor)
+            context.addPath(trianglePath.cgPath)
+            context.drawPath(using: .fill)
+
+            // Text inside bubble
+            let textPoint = CGPoint(
+                x: rect.minX + paddingH,
+                y: rect.minY + paddingV
+            )
+            text.draw(at: textPoint, withAttributes: attributes)
+
+            context.restoreGState()
+
+            if itemIndex == configManager.shouldReloadDrawItemIndex {
+                context.addArc(center: viewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
+                context.setFillColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
+                context.drawPath(using: .fill)
+                context.addArc(center: viewPoint, radius: 4, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
+                context.setFillColor(drawItem.drawColor.cgColor)
+                context.drawPath(using: .fill)
+            }
+            return
+        }
+
         // Global price-level horizontal line: spans full chart width at a given price.
-        if case .globalHorizontalLine = drawItem.drawType {
+        if drawItem.drawType == .globalHorizontalLine ||
+            drawItem.drawType == .globalHorizontalLineWithLabel {
             let viewPoint = klineView.viewPointFromValuePoint(point)
             let start = CGPoint(x: 0, y: viewPoint.y)
             let end = CGPoint(x: klineView.bounds.size.width, y: viewPoint.y)
@@ -220,22 +312,82 @@ class HTDrawContext {
             context.drawPath(using: .stroke)
             context.restoreGState()
 
-            // Price label at the right side of the line (using the stored price value).
+            // Labels: optional custom text on the left and price on the right.
             let priceValue = point.y
             let priceText = configManager.precision(priceValue, configManager.price)
+            let leftText = (drawItem.text.isEmpty ? nil : drawItem.text)
+
             let font = configManager.createFont(configManager.candleTextFontSize)
             let attributes: [NSAttributedString.Key: Any] = [
                 .font: font,
-                // Match text color to line color
-                .foregroundColor: drawItem.drawColor
+                .foregroundColor: configManager.candleTextColor
             ]
-            let textSize = (priceText as NSString).size(withAttributes: attributes)
-            // Slightly reduced padding so label sits closer to the line.
-            let padding: CGFloat = 2
-            let x = klineView.bounds.size.width - textSize.width - padding
-            // Draw the price text clearly ABOVE the line.
-            let y = viewPoint.y - textSize.height - padding
-            (priceText as NSString).draw(at: CGPoint(x: x, y: max(0, y)), withAttributes: attributes)
+
+            let priceSize = (priceText as NSString).size(withAttributes: attributes)
+            let paddingH: CGFloat = 8
+            let paddingV: CGFloat = 4
+            let marginX: CGFloat = 4
+
+            // Baseline above the line so the labels do not overlap the stroke.
+            let textHeight = priceSize.height
+            var baseLineY = viewPoint.y - textHeight - paddingV
+            if baseLineY < textHeight {
+                baseLineY = textHeight
+            }
+
+            // Left label (custom text), only for globalHorizontalLineWithLabel.
+            if drawItem.drawType == .globalHorizontalLineWithLabel, let label = leftText {
+                let leftSize = (label as NSString).size(withAttributes: attributes)
+                let left = marginX
+                let top = baseLineY - leftSize.height - paddingV
+                let rect = CGRect(
+                    x: left,
+                    y: top,
+                    width: leftSize.width + paddingH * 2,
+                    height: leftSize.height + paddingV * 2
+                )
+
+                context.setFillColor(configManager.panelBackgroundColor.cgColor)
+                let radius = rect.height / 2
+                let path = UIBezierPath(roundedRect: rect, cornerRadius: radius)
+                context.addPath(path.cgPath)
+                context.drawPath(using: .fill)
+
+                context.setStrokeColor(configManager.panelBorderColor.cgColor)
+                context.addPath(path.cgPath)
+                context.drawPath(using: .stroke)
+
+                let textPoint = CGPoint(x: rect.minX + paddingH, y: rect.minY + paddingV)
+                (label as NSString).draw(at: textPoint, withAttributes: attributes)
+            }
+
+            // Right price label.
+            let rightRectWidth = priceSize.width + paddingH * 2
+            let rightRectRight = klineView.bounds.size.width - marginX
+            let rightRectLeft = rightRectRight - rightRectWidth
+            let rightTop = baseLineY - priceSize.height - paddingV
+            let priceRect = CGRect(
+                x: rightRectLeft,
+                y: rightTop,
+                width: rightRectWidth,
+                height: priceSize.height + paddingV * 2
+            )
+
+            context.setFillColor(configManager.panelBackgroundColor.cgColor)
+            let priceRadius = priceRect.height / 2
+            let pricePath = UIBezierPath(roundedRect: priceRect, cornerRadius: priceRadius)
+            context.addPath(pricePath.cgPath)
+            context.drawPath(using: .fill)
+
+            context.setStrokeColor(configManager.panelBorderColor.cgColor)
+            context.addPath(pricePath.cgPath)
+            context.drawPath(using: .stroke)
+
+            let priceTextPoint = CGPoint(
+                x: priceRect.minX + paddingH,
+                y: priceRect.minY + paddingV
+            )
+            (priceText as NSString).draw(at: priceTextPoint, withAttributes: attributes)
 
             if itemIndex == configManager.shouldReloadDrawItemIndex {
                 context.addArc(center: viewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
