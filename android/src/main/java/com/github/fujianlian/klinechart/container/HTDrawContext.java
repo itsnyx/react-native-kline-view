@@ -182,6 +182,72 @@ public class HTDrawContext {
     public void drawMapper(Canvas canvas, HTDrawItem drawItem, int index, int itemIndex) {
         HTPoint point = drawItem.pointList.get(index);
 
+        // Global price-level horizontal line: spans full chart width at a given price.
+        if (drawItem.drawType == HTDrawType.globalHorizontalLine) {
+            HTPoint viewPoint = klineView.viewPointFromValuePoint(point);
+
+            paint.setColor(drawItem.drawColor);
+            paint.setStrokeWidth(drawItem.drawLineHeight);
+            paint.setStyle(Paint.Style.STROKE);
+            if (drawItem.drawDashSpace != 0) {
+                paint.setPathEffect(new DashPathEffect(new float[] { drawItem.drawDashWidth, drawItem.drawDashSpace }, 0));
+            } else {
+                paint.setPathEffect(null);
+            }
+
+            Path path = new Path();
+            path.moveTo(0, viewPoint.y);
+            path.lineTo(klineView.getWidth(), viewPoint.y);
+            canvas.drawPath(path, paint);
+
+            if (itemIndex == configManager.shouldReloadDrawItemIndex) {
+                Path highlight = new Path();
+                paint.setStyle(Paint.Style.FILL);
+                highlight.addCircle(viewPoint.x, viewPoint.y, 20, Path.Direction.CW);
+                paint.setColor(colorWithAlphaComponent(drawItem.drawColor, 0.5));
+                canvas.drawPath(highlight, paint);
+
+                highlight = new Path();
+                highlight.addCircle(viewPoint.x, viewPoint.y, 8, Path.Direction.CW);
+                paint.setColor(drawItem.drawColor);
+                canvas.drawPath(highlight, paint);
+            }
+            return;
+        }
+
+        // Global time-level vertical line: spans full chart height at a given timestamp.
+        if (drawItem.drawType == HTDrawType.globalVerticalLine) {
+            HTPoint viewPoint = klineView.viewPointFromValuePoint(point);
+
+            paint.setColor(drawItem.drawColor);
+            paint.setStrokeWidth(drawItem.drawLineHeight);
+            paint.setStyle(Paint.Style.STROKE);
+            if (drawItem.drawDashSpace != 0) {
+                paint.setPathEffect(new DashPathEffect(new float[] { drawItem.drawDashWidth, drawItem.drawDashSpace }, 0));
+            } else {
+                paint.setPathEffect(null);
+            }
+
+            Path path = new Path();
+            path.moveTo(viewPoint.x, 0);
+            path.lineTo(viewPoint.x, klineView.getHeight());
+            canvas.drawPath(path, paint);
+
+            if (itemIndex == configManager.shouldReloadDrawItemIndex) {
+                Path highlight = new Path();
+                paint.setStyle(Paint.Style.FILL);
+                highlight.addCircle(viewPoint.x, viewPoint.y, 20, Path.Direction.CW);
+                paint.setColor(colorWithAlphaComponent(drawItem.drawColor, 0.5));
+                canvas.drawPath(highlight, paint);
+
+                highlight = new Path();
+                highlight.addCircle(viewPoint.x, viewPoint.y, 8, Path.Direction.CW);
+                paint.setColor(drawItem.drawColor);
+                canvas.drawPath(highlight, paint);
+            }
+            return;
+        }
+
         // Special handling for text annotations: draw text at the anchor point with background.
         if (drawItem.drawType == HTDrawType.text) {
             HTPoint viewPoint = klineView.viewPointFromValuePoint(point);

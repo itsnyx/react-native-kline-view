@@ -119,28 +119,28 @@ class HTKLineView: UIScrollView {
 
         // (1) Reload/prepare the Lottie "live price" animation when source changes.
         if lastLoadAnimationSource != configManager.closePriceRightLightLottieSource {
-            lastLoadAnimationSource = configManager.closePriceRightLightLottieSource
+        lastLoadAnimationSource = configManager.closePriceRightLightLottieSource
 
-            DispatchQueue.global().async { [weak self] in
+        DispatchQueue.global().async { [weak self] in
                 guard
                     let this = self,
                     let data = this.configManager.closePriceRightLightLottieSource.data(using: String.Encoding.utf8),
                     let animation = try? JSONDecoder().decode(LottieAnimation.self, from: data)
                 else {
-                    return
-                }
-                DispatchQueue.main.async {
-                    this.animationView.animation = animation
-                    this.animationView.loopMode = .loop
-                    this.animationView.play()
-                    var size = animation.size
-                    let scale = this.configManager.closePriceRightLightLottieScale
-                    size.width *= scale
-                    size.height *= scale
-                    this.animationView.frame.size = size
-                    this.animationView.isHidden = true
-                    this.addSubview(this.animationView)
-                    this.setNeedsDisplay()
+                return
+            }
+            DispatchQueue.main.async {
+                this.animationView.animation = animation
+                this.animationView.loopMode = .loop
+                this.animationView.play()
+                var size = animation.size
+                let scale = this.configManager.closePriceRightLightLottieScale
+                size.width *= scale
+                size.height *= scale
+                this.animationView.frame.size = size
+                this.animationView.isHidden = true
+                this.addSubview(this.animationView)
+                this.setNeedsDisplay()
                 }
             }
         }

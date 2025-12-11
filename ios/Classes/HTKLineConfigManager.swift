@@ -229,7 +229,7 @@ class HTKLineConfigManager: NSObject {
     var closePriceRightLightLottieScale: CGFloat = 0.4
 
     var closePriceRightLightLottieSource = ""
-
+    
     // Optional base64-encoded logo image drawn in the center of the main chart,
     // behind the candles. Provided from JS via configList["centerLogoSource"].
     // Expected to be a plain base64 string, or a data-URL string like:

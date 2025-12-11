@@ -334,6 +334,10 @@ const DrawTypeConstants = {
   rectangle: 101,
   parallelogram: 102,
   text: 201, // Text annotation
+  // Global price-level horizontal line (1 tap: price only, spans entire chart)
+  globalHorizontalLine: 301,
+  // Global time-level vertical line (1 tap: time only, spans full height)
+  globalVerticalLine: 302,
 };
 
 // Drawing State Constants
@@ -378,6 +382,14 @@ const DrawToolTypes = {
     label: 'Text',
     value: DrawTypeConstants.text,
   },
+  [DrawTypeConstants.globalHorizontalLine]: {
+    label: 'Price Line',
+    value: DrawTypeConstants.globalHorizontalLine,
+  },
+  [DrawTypeConstants.globalVerticalLine]: {
+    label: 'Time Line',
+    value: DrawTypeConstants.globalVerticalLine,
+  },
 };
 
 // Drawing Tool Helper Methods
@@ -400,6 +412,10 @@ const DrawToolHelper = {
         return FORMAT('Parallelogram');
       case DrawTypeConstants.text:
         return FORMAT('Text');
+      case DrawTypeConstants.globalHorizontalLine:
+        return FORMAT('Price Line');
+      case DrawTypeConstants.globalVerticalLine:
+        return FORMAT('Time Line');
     }
     return '';
   },
@@ -421,7 +437,11 @@ const DrawToolHelper = {
       return 3;
     }
     // text and other 1-point tools
-    if (type === DrawTypeConstants.text) {
+    if (
+      type === DrawTypeConstants.text ||
+      type === DrawTypeConstants.globalHorizontalLine ||
+      type === DrawTypeConstants.globalVerticalLine
+    ) {
       return 1;
     }
     return 0;

@@ -14,6 +14,12 @@ public enum HTDrawType {
 
     parallelLine,
 
+    // Global price-level horizontal line (spans entire chart horizontally, 1 anchor point)
+    globalHorizontalLine,
+
+    // Global time-level vertical line (spans entire chart vertically, 1 anchor point)
+    globalVerticalLine,
+
     rectangle,
 
     parallelogram,
@@ -38,6 +44,12 @@ public enum HTDrawType {
             case 5: {
                 return parallelLine;
             }
+            case 301: {
+                return globalHorizontalLine;
+            }
+            case 302: {
+                return globalVerticalLine;
+            }
             case 201: {
                 return text;
             }
@@ -60,7 +72,7 @@ public enum HTDrawType {
         if (this == parallelLine || this == parallelogram) {
             return 3;
         }
-        // text & other types use a single anchor point
+        // text, globalHorizontalLine, globalVerticalLine and other 1-point tools
         return 1;
     }
 
@@ -84,6 +96,12 @@ public enum HTDrawType {
             }
             case parallelLine: {
                 return 5;
+            }
+            case globalHorizontalLine: {
+                return 301;
+            }
+            case globalVerticalLine: {
+                return 302;
             }
             case text: {
                 return 201;

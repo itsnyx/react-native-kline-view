@@ -201,6 +201,66 @@ class HTDrawContext {
         }
         let point = drawItem.pointList[index]
 
+        // Global price-level horizontal line: spans full chart width at a given price.
+        if case .globalHorizontalLine = drawItem.drawType {
+            let viewPoint = klineView.viewPointFromValuePoint(point)
+            let start = CGPoint(x: 0, y: viewPoint.y)
+            let end = CGPoint(x: klineView.bounds.size.width, y: viewPoint.y)
+
+            context.saveGState()
+            context.setStrokeColor(drawItem.drawColor.cgColor)
+            context.setLineWidth(drawItem.drawLineHeight)
+            var dashList = [drawItem.drawDashWidth, drawItem.drawDashSpace]
+            if drawItem.drawDashSpace == 0 {
+                dashList = []
+            }
+            context.setLineDash(phase: 0, lengths: dashList)
+            context.move(to: start)
+            context.addLine(to: end)
+            context.drawPath(using: .stroke)
+            context.restoreGState()
+
+            if itemIndex == configManager.shouldReloadDrawItemIndex {
+                context.addArc(center: viewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
+                context.setFillColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
+                context.drawPath(using: .fill)
+                context.addArc(center: viewPoint, radius: 4, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
+                context.setFillColor(drawItem.drawColor.cgColor)
+                context.drawPath(using: .fill)
+            }
+            return
+        }
+
+        // Global time-level vertical line: spans full chart height at a given timestamp.
+        if case .globalVerticalLine = drawItem.drawType {
+            let viewPoint = klineView.viewPointFromValuePoint(point)
+            let start = CGPoint(x: viewPoint.x, y: 0)
+            let end = CGPoint(x: viewPoint.x, y: klineView.bounds.size.height)
+
+            context.saveGState()
+            context.setStrokeColor(drawItem.drawColor.cgColor)
+            context.setLineWidth(drawItem.drawLineHeight)
+            var dashList = [drawItem.drawDashWidth, drawItem.drawDashSpace]
+            if drawItem.drawDashSpace == 0 {
+                dashList = []
+            }
+            context.setLineDash(phase: 0, lengths: dashList)
+            context.move(to: start)
+            context.addLine(to: end)
+            context.drawPath(using: .stroke)
+            context.restoreGState()
+
+            if itemIndex == configManager.shouldReloadDrawItemIndex {
+                context.addArc(center: viewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
+                context.setFillColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
+                context.drawPath(using: .fill)
+                context.addArc(center: viewPoint, radius: 4, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
+                context.setFillColor(drawItem.drawColor.cgColor)
+                context.drawPath(using: .fill)
+            }
+            return
+        }
+
         // Special handling for text annotations: draw text at the anchor point with background.
         if case .text = drawItem.drawType {
             let viewPoint = klineView.viewPointFromValuePoint(point)

@@ -21,6 +21,12 @@ enum HTDrawType: Int {
 
     case parallelLine = 5
 
+    // Global price-level horizontal line (spans entire chart horizontally, 1 anchor point)
+    case globalHorizontalLine = 301
+
+    // Global time-level vertical line (spans entire chart vertically, 1 anchor point)
+    case globalVerticalLine = 302
+
     case rectangle = 101
 
     case parallelogram = 102
