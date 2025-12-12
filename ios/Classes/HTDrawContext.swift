@@ -441,7 +441,7 @@ class HTDrawContext {
 
             let priceAttributes: [NSAttributedString.Key: Any] = [
                 .font: font,
-                .foregroundColor: configManager.candleTextColor
+                .foregroundColor: drawItem.textColor
             ]
             let leftAttributes: [NSAttributedString.Key: Any] = [
                 .font: font,
@@ -449,7 +449,7 @@ class HTDrawContext {
             ]
 
             let priceSize = (priceText as NSString).size(withAttributes: priceAttributes)
-            let paddingH: CGFloat = 4
+            let paddingH: CGFloat = 6
             let paddingV: CGFloat = 4
             let marginX: CGFloat = 4
 
@@ -457,7 +457,7 @@ class HTDrawContext {
             // Each bubble rect is vertically centered on viewPoint.y.
             let centerY = viewPoint.y
             let viewH = klineView.bounds.size.height
-            let borderWidth: CGFloat = 2
+            let borderWidth: CGFloat = 1
             let clampTop: (CGFloat, CGFloat) -> CGFloat = { top, height in
                 if height >= viewH { return 0 }
                 return min(max(top, 0), viewH - height)
@@ -512,7 +512,7 @@ class HTDrawContext {
             context.drawPath(using: .fill)
 
             context.setLineWidth(borderWidth)
-            context.setStrokeColor(configManager.panelBorderColor.cgColor)
+            context.setStrokeColor(drawItem.drawColor.cgColor)
             context.addPath(pricePath.cgPath)
             context.drawPath(using: .stroke)
 

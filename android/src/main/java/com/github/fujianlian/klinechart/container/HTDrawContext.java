@@ -440,7 +440,7 @@ public class HTDrawContext {
 
             Paint.FontMetrics fm = paint.getFontMetrics();
             float textHeight = fm.descent - fm.ascent;
-            float paddingH = 4f;
+            float paddingH = 6f;
             float paddingV = 4f;
             float marginX = 4f;
 
@@ -469,7 +469,7 @@ public class HTDrawContext {
             }
 
             // Border + corner radius styling tweaks requested for 303.
-            float borderWidth = (float) ViewUtil.Dp2Px(klineView.getContext(), 2f);
+            float borderWidth = (float) ViewUtil.Dp2Px(klineView.getContext(), 1f);
             float cornerRadius = (bottomY - topY) / 4f; // half of the previous pill radius (height/2)
 
             // Left label (custom text), if any.
@@ -521,12 +521,15 @@ public class HTDrawContext {
             // Border
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(borderWidth);
-            paint.setColor(configManager.panelBorderColor);
+            paint.setColor(drawItem.drawColor);
             canvas.drawRoundRect(priceRect, priceRadius, priceRadius, paint);
 
             // Text
             paint.setStyle(Paint.Style.FILL);
-            paint.setColor(configManager.candleTextColor);
+            int priceTextColor = drawItem.textColor != 0
+                    ? drawItem.textColor
+                    : configManager.drawTextColor;
+            paint.setColor(priceTextColor);
             canvas.drawText(priceText, rightRectLeft + paddingH, baseLineY, paint);
 
             if (itemIndex == configManager.shouldReloadDrawItemIndex) {
