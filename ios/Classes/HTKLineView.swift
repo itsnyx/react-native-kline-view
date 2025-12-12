@@ -339,7 +339,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     }
 
     // Only begin our y-axis pan when user drags vertically inside the right y-axis region.
-    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         if gestureRecognizer === yAxisPanGesture {
             let p = gestureRecognizer.location(in: self)
             guard isInRightYAxisArea(p) else { return false }
