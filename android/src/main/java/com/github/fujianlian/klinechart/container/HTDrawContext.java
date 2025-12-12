@@ -243,11 +243,44 @@ public class HTDrawContext {
         return bodyHigh;
     }
 
+    /**
+     * Find the index of the candle whose id is closest to the given X-value (timestamp).
+     * Used to make candleMarker visibility decisions based on visible candle indices.
+     */
+    private int closestCandleIndexForX(float valueX) {
+        if (configManager == null || configManager.modelArray == null || configManager.modelArray.size() == 0) {
+            return -1;
+        }
+        int closestIndex = 0;
+        float minDiff = Math.abs(configManager.modelArray.get(0).id - valueX);
+        for (int i = 1; i < configManager.modelArray.size(); i++) {
+            float diff = Math.abs(configManager.modelArray.get(i).id - valueX);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestIndex = i;
+            }
+        }
+        return closestIndex;
+    }
+
     public void drawMapper(Canvas canvas, HTDrawItem drawItem, int index, int itemIndex) {
         HTPoint point = drawItem.pointList.get(index);
 
         // Candle marker: bubble with text and a pointer to a specific candle/price.
         if (drawItem.drawType == HTDrawType.candleMarker) {
+            // If the marker's anchor candle is outside the current visible candle range,
+            // don't draw it at all (avoid "sticking" to left/right edges due to clamping).
+            if (configManager != null && configManager.modelArray != null && configManager.modelArray.size() > 0) {
+                int startIndex = klineView.indexFromScrollX(klineView.viewXToScrollX(0));
+                int stopIndex = klineView.indexFromScrollX(klineView.viewXToScrollX(klineView.getWidth()));
+                int minIndex = Math.min(startIndex, stopIndex);
+                int maxIndex = Math.max(startIndex, stopIndex);
+                int anchorIndex = closestCandleIndexForX(point.x);
+                if (anchorIndex < 0 || anchorIndex < minIndex || anchorIndex > maxIndex) {
+                    return;
+                }
+            }
+
             HTPoint viewPoint = klineView.viewPointFromValuePoint(point);
 
             paint.setPathEffect(null);

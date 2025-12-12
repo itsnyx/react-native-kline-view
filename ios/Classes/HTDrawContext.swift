@@ -262,6 +262,31 @@ class HTDrawContext {
 
         // Candle marker: bubble with text and a pointer to a specific candle/price.
         if drawItem.drawType == .candleMarker {
+            // If the marker's anchor candle is outside the current visible candle range,
+            // don't draw it at all (avoid "sticking" to left/right edges due to clamping).
+            if !configManager.modelArray.isEmpty {
+                // Find the closest candle index to the marker's X (timestamp). We use an index-based
+                // test rather than raw timestamp bounds to avoid edge cases where the marker's `x`
+                // is slightly outside the visible-id range but still belongs to the edge candle.
+                var closestIndex = 0
+                var minDiff = abs(configManager.modelArray[0].id - point.x)
+                for (i, model) in configManager.modelArray.enumerated() {
+                    let diff = abs(model.id - point.x)
+                    if diff < minDiff {
+                        minDiff = diff
+                        closestIndex = i
+                    }
+                }
+
+                let startIndex = max(0, min(klineView.visibleRange.lowerBound, configManager.modelArray.count - 1))
+                let endIndex = max(0, min(klineView.visibleRange.upperBound, configManager.modelArray.count - 1))
+                let minIndex = min(startIndex, endIndex)
+                let maxIndex = max(startIndex, endIndex)
+                if closestIndex < minIndex || closestIndex > maxIndex {
+                    return
+                }
+            }
+
             let viewPoint = klineView.viewPointFromValuePoint(point)
 
             let fontSize = drawItem.textFontSize > 0
