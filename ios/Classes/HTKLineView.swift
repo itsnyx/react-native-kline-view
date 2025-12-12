@@ -10,7 +10,7 @@ import UIKit
 import Lottie
 import ObjectiveC
 
-class HTKLineView: UIScrollView {
+class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         
     weak var containerView: HTKLineContainerView?
     var configManager: HTKLineConfigManager
@@ -34,6 +34,25 @@ class HTKLineView: UIScrollView {
     private var selectedPriceValue: CGFloat = .nan
 
     var scale: CGFloat = 1
+
+    // --- Right y-axis drag scaling (vertical zoom) ---
+    private var isMainScaleFixed: Bool = false
+    private var fixedMainMaxValue: CGFloat = .nan
+    private var fixedMainMinValue: CGFloat = .nan
+    private var yAxisScaleStartY: CGFloat = .nan
+    private var yAxisScaleStartMax: CGFloat = .nan
+    private var yAxisScaleStartMin: CGFloat = .nan
+    private var yAxisScaleVisibleHigh: CGFloat = .nan
+    private var yAxisScaleVisibleLow: CGFloat = .nan
+    private let yAxisGestureWidth: CGFloat = 64
+    private let yAxisGestureSensitivityFactor: CGFloat = 0.7
+
+    private lazy var yAxisPanGesture: UIPanGestureRecognizer = {
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(yAxisPanSelector(_:)))
+        pan.maximumNumberOfTouches = 1
+        pan.delegate = self
+        return pan
+    }()
 
     let mainDraw = HTMainDraw.init()
 
@@ -93,6 +112,7 @@ class HTKLineView: UIScrollView {
         addGestureRecognizer(UILongPressGestureRecognizer.init(target: self, action: #selector(longPressSelector)))
         addGestureRecognizer(UITapGestureRecognizer.init(target: self, action: #selector(tapSelector)))
         addGestureRecognizer(UIPinchGestureRecognizer.init(target: self, action: #selector(pinchSelector)))
+        addGestureRecognizer(yAxisPanGesture)
     }
 
     required init?(coder: NSCoder) {
@@ -239,7 +259,37 @@ class HTKLineView: UIScrollView {
         self.allHeight = self.bounds.size.height - configManager.paddingBottom
         self.allWidth = self.bounds.size.width
         
-        self.mainMinMaxRange = mainDraw.minMaxRange(visibleModelArray, configManager)
+        // Auto range (includes MA/BOLL etc), then optionally override with fixed y-axis scale.
+        let autoMainRange = mainDraw.minMaxRange(visibleModelArray, configManager)
+
+        // Candle extremes (used to prevent clipping when zooming in via y-axis drag).
+        var candleHigh: CGFloat = CGFloat.leastNormalMagnitude
+        var candleLow: CGFloat = CGFloat.greatestFiniteMagnitude
+        for model in visibleModelArray {
+            candleHigh = max(candleHigh, model.high)
+            candleLow = min(candleLow, model.low)
+        }
+        if candleHigh <= candleLow {
+            candleHigh = autoMainRange.upperBound
+            candleLow = autoMainRange.lowerBound
+        }
+
+        if isMainScaleFixed, fixedMainMaxValue.isFinite, fixedMainMinValue.isFinite {
+            var maxV = fixedMainMaxValue
+            var minV = fixedMainMinValue
+            // Never clip the highest/lowest visible candle.
+            if maxV < candleHigh { maxV = candleHigh }
+            if minV > candleLow { minV = candleLow }
+            if maxV <= minV { maxV = minV + 1e-6 }
+            fixedMainMaxValue = maxV
+            fixedMainMinValue = minV
+            self.mainMinMaxRange = Range<CGFloat>(uncheckedBounds: (lower: minV, upper: maxV))
+        } else {
+            // Keep auto range as baseline for future y-axis drags.
+            fixedMainMaxValue = autoMainRange.upperBound
+            fixedMainMinValue = autoMainRange.lowerBound
+            self.mainMinMaxRange = autoMainRange
+        }
         self.textHeight = mainDraw.textHeight(font: UIFont.systemFont(ofSize: 11)) / 2
         self.mainBaseY = configManager.paddingTop - textHeight
         self.mainHeight = allHeight * volumeRange.lowerBound - mainBaseY - textHeight
@@ -252,6 +302,112 @@ class HTKLineView: UIScrollView {
         self.childBaseY = allHeight * volumeRange.upperBound + configManager.headerHeight + textHeight
         self.childHeight = allHeight * (1 - volumeRange.upperBound) - configManager.headerHeight - textHeight
         
+    }
+
+    private func isInRightYAxisArea(_ point: CGPoint) -> Bool {
+        // Only allow scaling in the main chart vertical span.
+        let mainTop = mainBaseY
+        let mainBottom = mainBaseY + mainHeight
+        if point.y < mainTop || point.y > mainBottom {
+            return false
+        }
+        // Hit target on the far right where y-axis labels are drawn.
+        let width = max(yAxisGestureWidth, configManager.paddingRight)
+        return point.x >= (bounds.size.width - width)
+    }
+
+    // Only begin our y-axis pan when user drags vertically inside the right y-axis region.
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if gestureRecognizer === yAxisPanGesture {
+            let p = gestureRecognizer.location(in: self)
+            guard isInRightYAxisArea(p) else { return false }
+            let v = (gestureRecognizer as? UIPanGestureRecognizer)?.velocity(in: self) ?? .zero
+            return abs(v.y) > abs(v.x)
+        }
+        return true
+    }
+
+    // Prevent scroll view's own pan from competing when we are handling y-axis scaling.
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if gestureRecognizer === yAxisPanGesture || otherGestureRecognizer === yAxisPanGesture {
+            return false
+        }
+        return true
+    }
+
+    @objc private func yAxisPanSelector(_ pan: UIPanGestureRecognizer) {
+        let point = pan.location(in: self)
+
+        switch pan.state {
+        case .began:
+            guard isInRightYAxisArea(point) else { return }
+
+            // Initialize from current visible range (auto or fixed).
+            yAxisScaleStartY = point.y
+            yAxisScaleStartMax = mainMinMaxRange.upperBound
+            yAxisScaleStartMin = mainMinMaxRange.lowerBound
+
+            // Visible candle extremes for clamp (never clip).
+            var candleHigh: CGFloat = CGFloat.leastNormalMagnitude
+            var candleLow: CGFloat = CGFloat.greatestFiniteMagnitude
+            for model in visibleModelArray {
+                candleHigh = max(candleHigh, model.high)
+                candleLow = min(candleLow, model.low)
+            }
+            if candleHigh <= candleLow {
+                candleHigh = yAxisScaleStartMax
+                candleLow = yAxisScaleStartMin
+            }
+            yAxisScaleVisibleHigh = candleHigh
+            yAxisScaleVisibleLow = candleLow
+
+            isMainScaleFixed = true
+            fixedMainMaxValue = yAxisScaleStartMax
+            fixedMainMinValue = yAxisScaleStartMin
+            setNeedsDisplay()
+
+        case .changed:
+            guard isMainScaleFixed, yAxisScaleStartY.isFinite else { return }
+
+            let dy = point.y - yAxisScaleStartY
+            var baseRange = yAxisScaleStartMax - yAxisScaleStartMin
+            if baseRange <= 0 {
+                baseRange = max(1e-6, yAxisScaleVisibleHigh - yAxisScaleVisibleLow)
+            }
+            let minRange = max(1e-6, yAxisScaleVisibleHigh - yAxisScaleVisibleLow)
+
+            let denom = max(1, mainHeight * yAxisGestureSensitivityFactor)
+            var factor = exp(dy / denom) // dy>0 => zoom out (range bigger)
+            let minFactor = minRange / baseRange
+            if factor < minFactor { factor = minFactor }
+            if factor > 20 { factor = 20 }
+
+            let newRange = baseRange * factor
+            let center = (yAxisScaleStartMax + yAxisScaleStartMin) / 2
+            var newMax = center + newRange / 2
+            var newMin = center - newRange / 2
+
+            // Never clip candle extremes.
+            if newMax < yAxisScaleVisibleHigh {
+                newMax = yAxisScaleVisibleHigh
+                newMin = newMax - newRange
+            }
+            if newMin > yAxisScaleVisibleLow {
+                newMin = yAxisScaleVisibleLow
+                newMax = newMin + newRange
+            }
+            if newMax <= newMin { newMax = newMin + 1e-6 }
+
+            fixedMainMaxValue = newMax
+            fixedMainMinValue = newMin
+            setNeedsDisplay()
+
+        case .ended, .cancelled, .failed:
+            yAxisScaleStartY = .nan
+            setNeedsDisplay()
+        default:
+            break
+        }
     }
 
     /// Draw a semi-transparent logo image centered in the main chart area, behind candles.
