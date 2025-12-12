@@ -87,6 +87,10 @@ class HTDrawItem: NSObject {
     // Optional per-item font size for text annotations.
     // When 0, the renderer will fall back to configManager.candleTextFontSize.
     var textFontSize: CGFloat = 0
+
+    /// Position for candleMarker bubble relative to its candle.
+    /// Supported values (from JS): "top" or "bottom" (default).
+    var position: String = "bottom"
     
     var pointList = [CGPoint]()
     

@@ -150,7 +150,18 @@ class HTDrawContext {
             let length = drawItem?.pointList.count ?? 0
             if length >= 1 {
                 let index = length - 1
-                drawItem?.pointList[index] = location
+                var effectiveLocation = location
+                // For candleMarker, always anchor vertically to the candle body
+                // at the given timestamp so Y is derived from the candle data
+                // instead of the raw touch or serialized value. When position is
+                // "top", use the top of the body; otherwise use the bottom.
+                if drawItem?.drawType == .candleMarker {
+                    let isTop = drawItem?.position.lowercased() == "top"
+                    effectiveLocation.y = isTop
+                        ? bodyTopValue(forX: location.x)
+                        : bodyBottomValue(forX: location.x)
+                }
+                drawItem?.pointList[index] = effectiveLocation
                 // 最后一个点起笔
                 if case .ended = state, let drawItem = drawItem {
                     // When finishing a drag while creating/editing a drawing, report the final position once.
@@ -202,7 +213,8 @@ class HTDrawContext {
 
     /// For a given X-value (timestamp), find the candle whose id is closest and
     /// return the bottom of its real body (min(open, close)) in value-space.
-    /// This is used to anchor candleMarker pointers to the corresponding candle.
+    /// This is used to anchor candleMarker pointers to the corresponding candle
+    /// when position == "bottom".
     private func bodyBottomValue(forX value: CGFloat) -> CGFloat {
         guard !configManager.modelArray.isEmpty else {
             return value
@@ -217,6 +229,25 @@ class HTDrawContext {
             }
         }
         return min(closest.open, closest.close)
+    }
+
+    /// For a given X-value (timestamp), find the candle whose id is closest and
+    /// return the top of its real body (max(open, close)) in value-space.
+    /// This is used to anchor candleMarker pointers when position == "top".
+    private func bodyTopValue(forX value: CGFloat) -> CGFloat {
+        guard !configManager.modelArray.isEmpty else {
+            return value
+        }
+        var closest = configManager.modelArray[0]
+        var minDiff = abs(closest.id - value)
+        for model in configManager.modelArray {
+            let diff = abs(model.id - value)
+            if diff < minDiff {
+                minDiff = diff
+                closest = model
+            }
+        }
+        return max(closest.open, closest.close)
     }
     
     func setNeedsDisplay() {
@@ -273,13 +304,28 @@ class HTDrawContext {
                 centerX -= shift
             }
 
-            let triangleBaseY = viewPoint.y + gap
-            let rect = CGRect(
-                x: left,
-                y: triangleBaseY + triangleHeight,
-                width: bubbleWidth,
-                height: bubbleHeight
-            )
+            let isTop = drawItem.position.lowercased() == "top"
+            let triangleBaseY: CGFloat
+            let rect: CGRect
+            if isTop {
+                triangleBaseY = viewPoint.y - gap
+                let bottom = triangleBaseY - triangleHeight
+                let top = bottom - bubbleHeight
+                rect = CGRect(
+                    x: left,
+                    y: top,
+                    width: bubbleWidth,
+                    height: bubbleHeight
+                )
+            } else {
+                triangleBaseY = viewPoint.y + gap
+                rect = CGRect(
+                    x: left,
+                    y: triangleBaseY + triangleHeight,
+                    width: bubbleWidth,
+                    height: bubbleHeight
+                )
+            }
 
             context.saveGState()
 

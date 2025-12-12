@@ -45,6 +45,12 @@ public class HTDrawItem {
     // When 0, the renderer will fall back to configManager.candleTextFontSize.
     public float textFontSize = 0;
 
+    /**
+     * Position for candleMarker bubble relative to its candle.
+     * Supported values (from JS): "top" or "bottom" (default).
+     */
+    public String position = "bottom";
+
     public List<HTPoint> pointList = new ArrayList<>();
 
     private List<Integer> touchMoveIndexList = new ArrayList<>();

@@ -164,7 +164,7 @@ class HTKLineContainerView: UIView {
                     "y": point.y
                 ])
             }
-
+            
             this.onDrawItemComplete?([
                 "index": drawItemIndex,
                 "id": drawItem.uid,
@@ -180,7 +180,9 @@ class HTKLineContainerView: UIView {
                 "textBackgroundColor": colorToInt(drawItem.textBackgroundColor),
                 "textCornerRadius": drawItem.textCornerRadius,
                 // Expose per-item text font size (falls back to candleTextFontSize when 0 on native).
-                "fontSize": drawItem.textFontSize > 0 ? drawItem.textFontSize : configManager.candleTextFontSize
+                "fontSize": drawItem.textFontSize > 0 ? drawItem.textFontSize : configManager.candleTextFontSize,
+                // Expose candleMarker position ("top" | "bottom") so JS can persist it.
+                "position": drawItem.position
             ])
         }
         configManager.onDrawItemMove = { [weak self] (drawItem, drawItemIndex) in
@@ -195,13 +197,14 @@ class HTKLineContainerView: UIView {
                     "y": point.y
                 ])
             }
-
+            
             self?.onDrawItemMove?([
                 "index": drawItemIndex,
                 "id": drawItem.uid,
                 "drawType": drawItem.drawType.rawValue,
                 "pointList": pointArray,
-                "text": drawItem.text
+                "text": drawItem.text,
+                "position": drawItem.position
             ])
         }
         configManager.onDrawPointComplete = { [weak self] (drawItem, drawItemIndex) in
@@ -236,9 +239,7 @@ class HTKLineContainerView: UIView {
             for item in rawList {
                 guard let points = item["pointList"] as? [[String: Any]],
                       points.count > 0,
-                      let firstPoint = points.first,
-                      let x = firstPoint["x"] as? CGFloat,
-                      let y = firstPoint["y"] as? CGFloat
+                      let firstPoint = points.first
                 else {
                     continue
                 }
@@ -247,9 +248,30 @@ class HTKLineContainerView: UIView {
                 guard let drawType = HTDrawType(rawValue: rawType) else {
                     continue
                 }
-
+                
+                guard let x = firstPoint["x"] as? CGFloat else {
+                    continue
+                }
+                
+                // Optional position for candleMarker ("top" | "bottom").
+                let position = (item["position"] as? String) ?? "bottom"
+                
+                // For candleMarker, derive Y from the candle body at this timestamp so
+                // JS can omit `y` in pointList and only provide the horizontal anchor.
+                let startY: CGFloat
+                if drawType == .candleMarker {
+                    let isTop = position.lowercased() == "top"
+                    startY = candleMarkerBodyValue(forX: x, useTop: isTop)
+                } else {
+                    guard let y = firstPoint["y"] as? CGFloat else {
+                        continue
+                    }
+                    startY = y
+                }
+                
                 let uid = item["id"] as? String
-                let drawItem = HTDrawItem(drawType, CGPoint(x: x, y: y), uid: uid)
+                let drawItem = HTDrawItem(drawType, CGPoint(x: x, y: startY), uid: uid)
+                drawItem.position = position
 
                 // Remaining points
                 if points.count > 1 {
@@ -407,6 +429,29 @@ class HTKLineContainerView: UIView {
         klineView.drawContext.touchesGesture(location, translation, state)
         shotView.shotPoint = state != .ended ? touched.first?.location(in: self) : nil
     }
-    
+
+    /// For a given X-value (timestamp), find the candle whose id is closest and
+    /// return either the bottom or top of its real body in value-space
+    /// (min(open, close) when useTop is false; max(open, close) when true).
+    /// This mirrors HTDrawContext.bodyBottomValue(forX:)/bodyTopValue(forX:) and is used
+    /// when reconstructing candleMarker drawings from JS that only provide `x`.
+    private func candleMarkerBodyValue(forX value: CGFloat, useTop: Bool) -> CGFloat {
+        guard !configManager.modelArray.isEmpty else {
+            return value
+        }
+        var closest = configManager.modelArray[0]
+        var minDiff = abs(closest.id - value)
+        for model in configManager.modelArray {
+            let diff = abs(model.id - value)
+            if diff < minDiff {
+                minDiff = diff
+                closest = model
+            }
+        }
+        let bodyLow = min(closest.open, closest.close)
+        let bodyHigh = max(closest.open, closest.close)
+        return useTop ? bodyHigh : bodyLow
+    }
+
 }
 

@@ -10,6 +10,7 @@ import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.events.RCTEventEmitter;
 import com.github.fujianlian.klinechart.HTKLineConfigManager;
 import com.github.fujianlian.klinechart.KLineChartView;
+import com.github.fujianlian.klinechart.KLineEntity;
 import com.github.fujianlian.klinechart.RNKLineView;
 import com.github.fujianlian.klinechart.formatter.DateFormatter;
 import java.util.List;
@@ -165,6 +166,8 @@ public class HTKLineContainerView extends RelativeLayout {
                     // Expose per-item text font size (falls back to candleTextFontSize when 0 on native).
                     map.putDouble("fontSize",
                             drawItem.textFontSize > 0 ? drawItem.textFontSize : configManager.candleTextFontSize);
+                    // Expose candleMarker position ("top" | "bottom") so JS can persist it.
+                    map.putString("position", drawItem.position);
 
                     WritableArray pointArray = Arguments.createArray();
                     for (HTPoint point : drawItem.pointList) {
@@ -206,6 +209,7 @@ public class HTKLineContainerView extends RelativeLayout {
                 }
                 map.putInt("drawType", drawItem.drawType.rawValue());
                 map.putString("text", drawItem.text);
+                map.putString("position", drawItem.position);
 
                 WritableArray pointArray = Arguments.createArray();
                 for (HTPoint point : drawItem.pointList) {
@@ -290,6 +294,10 @@ public class HTKLineContainerView extends RelativeLayout {
                 }
                 HTDrawType drawType = HTDrawType.drawTypeFromRawValue(rawType);
 
+                // Optional position for candleMarker ("top" | "bottom").
+                Object positionObject = itemMap.get("position");
+                String position = positionObject instanceof String ? ((String) positionObject) : "bottom";
+
                 // First point (required)
                 Object firstPointObject = pointList.get(0);
                 if (!(firstPointObject instanceof Map)) {
@@ -298,15 +306,26 @@ public class HTKLineContainerView extends RelativeLayout {
                 Map firstPointMap = (Map) firstPointObject;
                 Object xObject = firstPointMap.get("x");
                 Object yObject = firstPointMap.get("y");
-                if (!(xObject instanceof Number) || !(yObject instanceof Number)) {
+                if (!(xObject instanceof Number)) {
                     continue;
                 }
-                HTPoint startPoint = new HTPoint(
-                        ((Number) xObject).floatValue(),
-                        ((Number) yObject).floatValue()
-                );
+                float startX = ((Number) xObject).floatValue();
+                float startY;
+                // For candleMarker, derive Y from the candle body at this timestamp so
+                // JS can omit `y` in pointList and only provide the horizontal anchor.
+                if (drawType == HTDrawType.candleMarker) {
+                    boolean isTop = "top".equalsIgnoreCase(position);
+                    startY = candleMarkerBodyValueForX(startX, isTop);
+                } else {
+                    if (!(yObject instanceof Number)) {
+                        continue;
+                    }
+                    startY = ((Number) yObject).floatValue();
+                }
+                HTPoint startPoint = new HTPoint(startX, startY);
 
                 HTDrawItem drawItem = new HTDrawItem(drawType, startPoint);
+                drawItem.position = position;
 
                 // Remaining points (optional)
                 for (int i = 1; i < pointList.size(); i++) {
@@ -488,6 +507,31 @@ public class HTKLineContainerView extends RelativeLayout {
         } else {
             shotView.setPoint(new HTPoint(event.getX(), event.getY()));
         }
+    }
+
+    /**
+     * For a given X-value (timestamp), find the candle whose id is closest and
+     * return either the bottom or top of its real body in value-space
+     * (min(open, close) when useTop is false; max(open, close) when true).
+     * This mirrors HTDrawContext.bodyBottomValueForX/bodyTopValueForX and is used
+     * when reconstructing candleMarker drawings from JS that only provide `x`.
+     */
+    private float candleMarkerBodyValueForX(float valueX, boolean useTop) {
+        if (configManager == null || configManager.modelArray == null || configManager.modelArray.size() == 0) {
+            return valueX;
+        }
+        KLineEntity closest = configManager.modelArray.get(0);
+        float minDiff = Math.abs(closest.id - valueX);
+        for (KLineEntity entity : configManager.modelArray) {
+            float diff = Math.abs(entity.id - valueX);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closest = entity;
+            }
+        }
+        float bodyLow = Math.min(closest.Open, closest.Close);
+        float bodyHigh = Math.max(closest.Open, closest.Close);
+        return useTop ? bodyHigh : bodyLow;
     }
 
 }

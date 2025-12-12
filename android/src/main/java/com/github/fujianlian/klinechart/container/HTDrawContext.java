@@ -122,7 +122,19 @@ public class HTDrawContext {
                     int length = drawItem.pointList.size();
                     if (length >= 1) {
                         int index = length - 1;
-                        drawItem.pointList.set(index, location);
+                        HTPoint effectiveLocation = location;
+                        // For candleMarker, always anchor vertically to the candle body
+                        // at the given timestamp so Y is derived from the candle data
+                        // instead of the raw touch or serialized value. When position is
+                        // "top", use the top of the body; otherwise use the bottom.
+                        if (drawItem.drawType == HTDrawType.candleMarker) {
+                            boolean isTop = "top".equalsIgnoreCase(drawItem.position);
+                            float anchorY = isTop
+                                    ? bodyTopValueForX(location.x)
+                                    : bodyBottomValueForX(location.x);
+                            effectiveLocation = new HTPoint(location.x, anchorY);
+                        }
+                        drawItem.pointList.set(index, effectiveLocation);
                         if (state == MotionEvent.ACTION_UP) {
                             // When finishing a drag while creating/editing a drawing, report the final position once.
                             if (configManager.onDrawItemMove != null) {
@@ -189,7 +201,8 @@ public class HTDrawContext {
     /**
      * For a given X-value (timestamp), find the candle whose id is closest and
      * return the bottom of its real body (min(open, close)) in value-space.
-     * This is used to anchor candleMarker pointers to the corresponding candle.
+     * This is used to anchor candleMarker pointers to the corresponding candle
+     * when position == "bottom".
      */
     private float bodyBottomValueForX(float valueX) {
         if (configManager == null || configManager.modelArray == null || configManager.modelArray.size() == 0) {
@@ -206,6 +219,28 @@ public class HTDrawContext {
         }
         float bodyLow = Math.min(closest.Open, closest.Close);
         return bodyLow;
+    }
+
+    /**
+     * For a given X-value (timestamp), find the candle whose id is closest and
+     * return the top of its real body (max(open, close)) in value-space.
+     * This is used to anchor candleMarker pointers when position == "top".
+     */
+    private float bodyTopValueForX(float valueX) {
+        if (configManager == null || configManager.modelArray == null || configManager.modelArray.size() == 0) {
+            return valueX;
+        }
+        KLineEntity closest = configManager.modelArray.get(0);
+        float minDiff = Math.abs(closest.id - valueX);
+        for (KLineEntity entity : configManager.modelArray) {
+            float diff = Math.abs(entity.id - valueX);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closest = entity;
+            }
+        }
+        float bodyHigh = Math.max(closest.Open, closest.Close);
+        return bodyHigh;
     }
 
     public void drawMapper(Canvas canvas, HTDrawItem drawItem, int index, int itemIndex) {
@@ -254,9 +289,19 @@ public class HTDrawContext {
                 centerX -= shift;
             }
 
-            float triangleBaseY = viewPoint.y + gap;
-            float top = triangleBaseY + triangleHeight;
-            float bottom = top + bubbleHeight;
+            boolean isTop = "top".equalsIgnoreCase(drawItem.position);
+            float triangleBaseY;
+            float top;
+            float bottom;
+            if (isTop) {
+                triangleBaseY = viewPoint.y - gap;
+                bottom = triangleBaseY - triangleHeight;
+                top = bottom - bubbleHeight;
+            } else {
+                triangleBaseY = viewPoint.y + gap;
+                top = triangleBaseY + triangleHeight;
+                bottom = top + bubbleHeight;
+            }
 
             android.graphics.RectF rect = new android.graphics.RectF(left, top, right, bottom);
 
