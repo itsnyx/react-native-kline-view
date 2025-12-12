@@ -1016,6 +1016,9 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
                     baseRange = Math.max(1e-6f, mMainHighMaxValue - mMainLowMinValue);
                 }
                 float minRange = Math.max(1e-6f, mYAxisScaleVisibleHigh - mYAxisScaleVisibleLow);
+                // Cap zoom-out: max zoom-out range is 10x the max zoom-in range
+                // (i.e. max zoom-in range is 10% of max zoom-out range).
+                float maxZoomOutRange = minRange / 0.10f;
 
                 // Exponential feel: small drags = fine control; large drags = faster zoom.
                 float denom = Math.max(1f, mMainRect.height() * mYAxisGestureSensitivityFactor);
@@ -1023,9 +1026,11 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
                 // Clamp factor to avoid absurd ranges.
                 float minFactor = minRange / baseRange;
                 if (factor < minFactor) factor = minFactor;
-                if (factor > 20f) factor = 20f;
-
                 float newRange = baseRange * factor;
+                // Absolute clamp so zoom-out stops at a sensible limit.
+                if (newRange > maxZoomOutRange) {
+                    newRange = maxZoomOutRange;
+                }
                 float center = (mYAxisScaleStartMax + mYAxisScaleStartMin) / 2f;
                 float newMax = center + newRange / 2f;
                 float newMin = center - newRange / 2f;

@@ -386,14 +386,17 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
                 baseRange = max(1e-6, yAxisScaleVisibleHigh - yAxisScaleVisibleLow)
             }
             let minRange = max(1e-6, yAxisScaleVisibleHigh - yAxisScaleVisibleLow)
+            // Cap zoom-out: max zoom-out range is 10x the max zoom-in range
+            // (i.e. max zoom-in range is 10% of max zoom-out range).
+            let maxZoomOutRange = minRange / 0.10
 
             let denom = max(1, mainHeight * yAxisGestureSensitivityFactor)
-            var factor = exp(dy / denom) // dy>0 => zoom out (range bigger)
+            let factor = exp(dy / denom) // dy>0 => zoom out (range bigger)
             let minFactor = minRange / baseRange
-            if factor < minFactor { factor = minFactor }
-            if factor > 20 { factor = 20 }
-
-            let newRange = baseRange * factor
+            let clampedFactor = max(factor, minFactor)
+            var newRange = baseRange * clampedFactor
+            // Absolute clamp so zoom-out stops at a sensible limit.
+            if newRange > maxZoomOutRange { newRange = maxZoomOutRange }
             let center = (yAxisScaleStartMax + yAxisScaleStartMin) / 2
             var newMax = center + newRange / 2
             var newMin = center - newRange / 2
