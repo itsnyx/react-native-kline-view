@@ -296,17 +296,34 @@ public class HTDrawContext {
             float top;
             float bottom;
             if (isTop) {
-                // Tip slightly above the candle high, bubble further above.
                 tipY = viewPoint.y - candleMargin;
                 triangleBaseY = tipY - gap;
                 bottom = triangleBaseY - triangleHeight;
                 top = bottom - bubbleHeight;
             } else {
-                // Tip slightly above the candle low (inside chart), bubble below.
-                tipY = viewPoint.y - candleMargin;
+                tipY = viewPoint.y + candleMargin;
                 triangleBaseY = tipY + gap;
                 top = triangleBaseY + triangleHeight;
                 bottom = top + bubbleHeight;
+            }
+
+            // Clamp vertically inside the view so bottom markers stay visible
+            // even when the candle is near the bottom of the chart.
+            float marginY = 4f;
+            float viewHeight = klineView.getHeight();
+            if (top < marginY) {
+                float shift = marginY - top;
+                top += shift;
+                bottom += shift;
+                triangleBaseY += shift;
+                tipY += shift;
+            }
+            if (bottom > viewHeight - marginY) {
+                float shift = bottom - (viewHeight - marginY);
+                top -= shift;
+                bottom -= shift;
+                triangleBaseY -= shift;
+                tipY -= shift;
             }
 
             android.graphics.RectF rect = new android.graphics.RectF(left, top, right, bottom);

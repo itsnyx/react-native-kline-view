@@ -306,11 +306,10 @@ class HTDrawContext {
 
             let isTop = drawItem.position.lowercased() == "top"
             let candleMargin: CGFloat = 4
-            let tipY: CGFloat
-            let triangleBaseY: CGFloat
-            let rect: CGRect
+            var tipY: CGFloat
+            var triangleBaseY: CGFloat
+            var rect: CGRect
             if isTop {
-                // Tip slightly above the candle high, bubble further above.
                 tipY = viewPoint.y - candleMargin
                 triangleBaseY = tipY - gap
                 let bottom = triangleBaseY - triangleHeight
@@ -322,8 +321,7 @@ class HTDrawContext {
                     height: bubbleHeight
                 )
             } else {
-                // Tip slightly above the candle low (inside chart), bubble below.
-                tipY = viewPoint.y - candleMargin
+                tipY = viewPoint.y + candleMargin
                 triangleBaseY = tipY + gap
                 rect = CGRect(
                     x: left,
@@ -331,6 +329,23 @@ class HTDrawContext {
                     width: bubbleWidth,
                     height: bubbleHeight
                 )
+            }
+
+            // Clamp vertically inside the view so bottom markers stay visible
+            // even when the candle is near the bottom of the chart.
+            let marginY: CGFloat = 4
+            let viewHeight = klineView.bounds.size.height
+            if rect.minY < marginY {
+                let shift = marginY - rect.minY
+                rect.origin.y += shift
+                triangleBaseY += shift
+                tipY += shift
+            }
+            if rect.maxY > viewHeight - marginY {
+                let shift = rect.maxY - (viewHeight - marginY)
+                rect.origin.y -= shift
+                triangleBaseY -= shift
+                tipY -= shift
             }
 
             context.saveGState()
