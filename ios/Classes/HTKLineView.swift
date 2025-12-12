@@ -24,6 +24,11 @@ class HTKLineView: UIScrollView {
 
     var selectedIndex = -1
 
+    /// When selecting via long-press, we snap X to the nearest candle (selectedIndex),
+    /// but keep Y free so the user can drag vertically to inspect arbitrary prices.
+    /// Stored in view coordinates (same space as drawing).
+    var selectedY: CGFloat = .nan
+
     var scale: CGFloat = 1
 
     let mainDraw = HTMainDraw.init()
@@ -523,9 +528,19 @@ class HTKLineView: UIScrollView {
         guard visibleRange.contains(selectedIndex) else {
             return
         }
-        let value = visibleModelArray[selectedIndex - visibleRange.lowerBound].close
+        let candleClose = visibleModelArray[selectedIndex - visibleRange.lowerBound].close
         let x = (CGFloat(selectedIndex) + 0.5) * configManager.itemWidth - contentOffset.x
-        let y = yFromValue(value)
+        // Allow the crosshair Y to follow the finger, but clamp it to the main chart area
+        // so the right-side "price" label remains meaningful.
+        let mainTop = mainBaseY
+        let mainBottom = mainBaseY + mainHeight
+        let y: CGFloat
+        if selectedY.isFinite {
+            y = max(mainTop, min(mainBottom, selectedY))
+        } else {
+            y = yFromValue(candleClose)
+        }
+        let value = valueFromY(y)
 
         context.setStrokeColor(configManager.candleTextColor.cgColor)
         context.setLineWidth(configManager.lineWidth / 2)
@@ -722,17 +737,28 @@ extension HTKLineView: UIScrollViewDelegate {
 
     @objc
     func longPressSelector(_ gesture: UILongPressGestureRecognizer) {
-        let index = Int(floor(gesture.location(in: self).x / configManager.itemWidth))
+        let location = gesture.location(in: self)
+        // X snaps to candle; Y follows the finger (clamped during draw).
+        let index = Int(floor(location.x / configManager.itemWidth))
         selectedIndex = index
-        if (selectedIndex >= configManager.modelArray.count) {
+        if selectedIndex >= configManager.modelArray.count {
             selectedIndex = configManager.modelArray.count - 1
         }
-        self.setNeedsDisplay()
+        selectedY = location.y
+
+        // Update continuously while holding/dragging.
+        switch gesture.state {
+        case .began, .changed, .ended:
+            self.setNeedsDisplay()
+        default:
+            break
+        }
     }
 
     @objc
     func tapSelector(_ gesture: UITapGestureRecognizer) {
         selectedIndex = -1
+        selectedY = .nan
         self.setNeedsDisplay()
     }
 

@@ -104,6 +104,13 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
     private Paint mSelectedYLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+    /**
+     * During long-press selection we snap X to the nearest candle (mSelectedIndex),
+     * but keep Y free so the user can drag vertically and read arbitrary prices.
+     * Stored in view coordinates.
+     */
+    private float mSelectedY = Float.NaN;
+
     private Paint mSelectPointPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private Paint mSelectCenterPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -674,11 +681,18 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         float w2 = ViewUtil.Dp2Px(getContext(), 3);
         float r = textHeight / 2 + w2;
         float triangleWidth = 10;
-        float y = yFromValue(point.getClosePrice());
+        float y;
+        if (Float.isNaN(mSelectedY)) {
+            y = yFromValue(point.getClosePrice());
+        } else {
+            // Clamp to main chart area to keep the right-side label a "price" value.
+            y = Math.max(mMainRect.top, Math.min(mMainRect.bottom, mSelectedY));
+        }
         float x;
         float startX;
         float endX;
-        String text = formatValue(point.getClosePrice());
+        float selectedValue = valueFromY(y);
+        String text = formatValue(selectedValue);
         float textWidth = mTextPaint.measureText(text);
         if (scrollXtoViewX(getItemMiddleScrollX(mSelectedIndex)) < getChartWidth() / 2) {
             x = 1;
@@ -903,6 +917,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         super.onLongPress(e);
         int lastIndex = mSelectedIndex;
         calculateSelectedX(e.getX());
+        mSelectedY = e.getY();
         if (lastIndex != mSelectedIndex) {
             onSelectedChanged(this, getItem(mSelectedIndex), mSelectedIndex);
         }
