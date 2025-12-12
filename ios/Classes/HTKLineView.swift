@@ -550,7 +550,8 @@ class HTKLineView: UIScrollView {
         context.addArc(center: CGPoint.init(x: x, y: y), radius: configManager.candleWidth * 2 / 2, startAngle: 0, endAngle: CGFloat(Double.pi * 2), clockwise: true)
         context.setFillColor(configManager.selectedPointContainerColor.cgColor)
         context.fillPath()
-        context.addArc(center: CGPoint.init(x: x, y: y), radius: configManager.candleWidth / 1.5 / 2, startAngle: 0, endAngle: CGFloat(Double.pi * 2), clockwise: true)
+        // Inner (white) dot — keep it intentionally smaller than the outer halo for readability.
+        context.addArc(center: CGPoint.init(x: x, y: y), radius: configManager.candleWidth / 2.25 / 2, startAngle: 0, endAngle: CGFloat(Double.pi * 2), clockwise: true)
         context.setFillColor(configManager.selectedPointContentColor.cgColor)
         context.fillPath()
 

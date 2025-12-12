@@ -754,11 +754,13 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
         mSelectCenterPaint.setColor(configManager.selectedPointContentColor);
         mSelectCenterBackgroundPaint.setColor(configManager.selectedPointContainerColor);
-        float radiusX = 6 * this.mScaleX;
-        float radiusY = 6 * this.mScaleX;
+        // Inner (white) dot radius.
+        float radiusX = 4f * this.mScaleX;
+        float radiusY = 4f * this.mScaleX;
         RectF rect = new RectF(pointX - radiusX, y - radiusY, pointX + radiusX, y + radiusY);
-        radiusX *= 3;
-        radiusY *= 3;
+        // Outer halo radius.
+        radiusX *= 2.5f;
+        radiusY *= 2.5f;
         RectF backgroundRect = new RectF(pointX - radiusX, y - radiusY, pointX + radiusX, y + radiusY);
         if (pointX > startX && pointX < endX) {
             canvas.drawOval(backgroundRect, mSelectCenterBackgroundPaint);
