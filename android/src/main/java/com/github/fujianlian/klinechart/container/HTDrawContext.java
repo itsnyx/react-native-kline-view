@@ -501,7 +501,9 @@ public class HTDrawContext {
                 float radius = cornerRadius;
 
                 // Background
-                paint.setColor(configManager.panelBackgroundColor);
+                paint.setColor(drawItem.textBackgroundColor != 0
+                        ? drawItem.textBackgroundColor
+                        : configManager.drawTextBackgroundColor);
                 paint.setStyle(Paint.Style.FILL);
                 canvas.drawRoundRect(rect, radius, radius, paint);
 

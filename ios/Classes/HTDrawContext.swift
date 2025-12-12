@@ -496,7 +496,7 @@ class HTDrawContext {
                     height: rectHeight
                 )
 
-                context.setFillColor(configManager.panelBackgroundColor.cgColor)
+                context.setFillColor(drawItem.textBackgroundColor.cgColor)
                 let radius = rect.height / 4 // half of previous pill radius
                 let path = UIBezierPath(roundedRect: rect, cornerRadius: radius)
                 context.addPath(path.cgPath)
