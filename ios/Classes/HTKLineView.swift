@@ -29,6 +29,10 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     /// Stored in view coordinates (same space as drawing).
     var selectedY: CGFloat = .nan
 
+    // While long-press hovering, temporarily disable scrolling so the scroll view pan
+    // doesn’t steal the gesture (and clear selection via scroll callbacks).
+    private var wasScrollEnabledBeforeLongPress: Bool = true
+
     // Hit target for the right-side hover price pill (used to trigger `onNewOrder`).
     private var selectedPricePillRect: CGRect = .zero
     private var selectedPriceValue: CGFloat = .nan
@@ -57,6 +61,8 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     private lazy var longPressGesture: UILongPressGestureRecognizer = {
         let g = UILongPressGestureRecognizer(target: self, action: #selector(longPressSelector(_:)))
         g.delegate = self
+        // Be a bit more forgiving of tiny finger jitter while waiting for the long press.
+        g.allowableMovement = 20
         return g
     }()
 
@@ -1008,6 +1014,11 @@ extension HTKLineView: UIScrollViewDelegate {
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        // If the user is hovering via long-press, don't clear selection.
+        // (In hover mode we also disable scrolling, but this is an extra safety net.)
+        if longPressGesture.state == .began || longPressGesture.state == .changed {
+            return
+        }
         selectedIndex = -1
         self.setNeedsDisplay()
     }
@@ -1015,18 +1026,32 @@ extension HTKLineView: UIScrollViewDelegate {
     @objc
     func longPressSelector(_ gesture: UILongPressGestureRecognizer) {
         let location = gesture.location(in: self)
-        // X snaps to candle; Y follows the finger (clamped during draw).
-        let index = Int(floor(location.x / configManager.itemWidth))
-        selectedIndex = index
-        if selectedIndex >= configManager.modelArray.count {
-            selectedIndex = configManager.modelArray.count - 1
+        // Convert finger position to *content* coordinates so it maps to the correct candle
+        // even when the scroll view is scrolled.
+        let itemWidth = configManager.itemWidth
+        let xInContent = location.x + contentOffset.x
+
+        if itemWidth > 0, !configManager.modelArray.isEmpty {
+            // X snaps to candle index; Y follows the finger (clamped during draw).
+            let index = Int(floor(xInContent / itemWidth))
+            selectedIndex = max(0, min(index, configManager.modelArray.count - 1))
+            selectedY = location.y
+        } else {
+            selectedIndex = -1
+            selectedY = .nan
         }
-        selectedY = location.y
 
         // Update continuously while holding/dragging.
         switch gesture.state {
-        case .began, .changed, .ended:
-            self.setNeedsDisplay()
+        case .began:
+            wasScrollEnabledBeforeLongPress = isScrollEnabled
+            isScrollEnabled = false
+            setNeedsDisplay()
+        case .changed:
+            setNeedsDisplay()
+        case .ended, .cancelled, .failed:
+            isScrollEnabled = wasScrollEnabledBeforeLongPress
+            setNeedsDisplay()
         default:
             break
         }
