@@ -470,7 +470,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         float paddingRight = this.configManager.paddingRight;
         IKLine point = (IKLine) getItem(mItemCount - 1);
         float price = point.getClosePrice();
-        String text = mainDraw.getValueFormatter().format(price);
+        String text = safeText(mainDraw.getValueFormatter().format(price));
         float width = calculateWidth(text);
         Paint.FontMetrics fm = mTextPaint.getFontMetrics();
         float height = fm.descent - fm.ascent;
@@ -576,6 +576,9 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
      */
     private int calculateWidth(String text) {
         Rect rect = new Rect();
+        if (text == null) {
+            return 0;
+        }
         mTextPaint.getTextBounds(text, 0, text.length(), rect);
         return rect.width() + 5;
     }
@@ -587,8 +590,15 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
      */
     private Rect calculateMaxMin(String text) {
         Rect rect = new Rect();
+        if (text == null) {
+            return rect;
+        }
         mMaxMinPaint.getTextBounds(text, 0, text.length(), rect);
         return rect;
+    }
+
+    private static String safeText(String text) {
+        return text == null ? "" : text;
     }
 
     /**
@@ -607,7 +617,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             float rowValue = (mMainMaxValue - mMainMinValue) / mGridRows;
             float rowSpace = mMainRect.height() / mGridRows;
             for (int i = 0; i < mGridRows + 1; i++) {
-                String text = formatValue(rowValue * (mGridRows - i) + mMainMinValue);
+                String text = safeText(formatValue(rowValue * (mGridRows - i) + mMainMinValue));
                 float y = rowSpace * i + mMainRect.top;
                 y = fixTextY1(y);
                 canvas.drawText(text, mWidth - calculateWidth(text), y, mTextPaint);
@@ -618,7 +628,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             IValueFormatter formatter = mVolDraw.getValueFormatter();
             if (formatter instanceof ValueFormatter) {
                 ValueFormatter valueFormatter = (ValueFormatter)formatter;
-                String formatValue = valueFormatter.formatVolume(mVolMaxValue);
+                String formatValue = safeText(valueFormatter.formatVolume(mVolMaxValue));
                 canvas.drawText(formatValue,
                         mWidth - calculateWidth(formatValue), mVolRect.top + baseLine, mTextPaint);
             }
@@ -630,7 +640,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             IValueFormatter formatter = mChildDraw.getValueFormatter();
             if (formatter instanceof ValueFormatter) {
                 ValueFormatter valueFormatter = (ValueFormatter)formatter;
-                String formatValue = valueFormatter.format(mChildMaxValue);
+                String formatValue = safeText(valueFormatter.format(mChildMaxValue));
                 canvas.drawText(formatValue,
                         mWidth - calculateWidth(formatValue), mVolRect.bottom + baseLine, mTextPaint);
             }
@@ -649,6 +659,9 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             if (scrollX >= startX && scrollX <= stopX) {
                 int index = indexFromScrollX(scrollX);
                 String text = getItem(index).Date;
+                if (text == null || text.length() == 0) {
+                    continue;
+                }
                 canvas.drawText(text, columnSpace * i - mTextPaint.measureText(text) / 2, y, mTextPaint);
             }
         }
@@ -660,12 +673,16 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         float scrollX = viewXToScrollX(0);
         if (scrollX >= startX && scrollX <= stopX) {
             String text = getItem(mStartIndex).Date;
-            canvas.drawText(text, -mTextPaint.measureText(text) / 2, y, mTextPaint);
+            if (text != null && text.length() > 0) {
+                canvas.drawText(text, -mTextPaint.measureText(text) / 2, y, mTextPaint);
+            }
         }
         scrollX = viewXToScrollX(mWidth);
         if (scrollX >= startX && scrollX <= stopX) {
             String text = getItem(mStopIndex).Date;
-            canvas.drawText(text, mWidth - mTextPaint.measureText(text) / 2, y, mTextPaint);
+            if (text != null && text.length() > 0) {
+                canvas.drawText(text, mWidth - mTextPaint.measureText(text) / 2, y, mTextPaint);
+            }
         }
 
     }
@@ -698,7 +715,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         float startX;
         float endX;
         float selectedValue = valueFromY(y);
-        String text = formatValue(selectedValue);
+        String text = safeText(formatValue(selectedValue));
         float textWidth = mTextPaint.measureText(text);
 
         // Right-side hover price pill (always on the right, over the y-axis labels).
@@ -828,7 +845,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
 
         // 画X值
-        String date = getItem(mSelectedIndex).Date;
+        String date = safeText(getItem(mSelectedIndex).Date);
         textWidth = mMaxMinPaint.measureText(date);
         r = textHeight / 2;
         x = scrollXtoViewX(getItemMiddleScrollX(mSelectedIndex));
@@ -863,7 +880,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
     private void drawMaxMinValue(Canvas canvas, float value, float x, float y) {
         IValueFormatter formatter = this.getValueFormatter();
-        String valueString = formatter.format(value);
+        String valueString = safeText(formatter.format(value));
         int height = calculateMaxMin(valueString).height();
         y += height / 2;
         String lineString = "---";
