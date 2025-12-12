@@ -7,6 +7,7 @@ import android.view.View;
 import com.github.fujianlian.klinechart.BaseKLineChartView;
 import com.github.fujianlian.klinechart.HTKLineConfigManager;
 import com.github.fujianlian.klinechart.KLineChartView;
+import com.github.fujianlian.klinechart.KLineEntity;
 
 import java.util.ArrayList;
 import java.util.List;
