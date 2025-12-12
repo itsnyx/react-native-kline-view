@@ -857,9 +857,34 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             x = mWidth - 1 - textWidth / 2 - w1;
         }
 
-        canvas.drawRect(x - textWidth / 2 - w1, y, x + textWidth / 2 + w1, y + mBottomPadding, mSelectPointPaint);
-        canvas.drawRect(x - textWidth / 2 - w1, y, x + textWidth / 2 + w1, y + mBottomPadding, mSelectorFramePaint);
-        canvas.drawText(date, x - textWidth / 2, fixTextY1(y + (mBottomPadding / 2)), mMaxMinPaint);
+        // Bottom active date (hover mode): pill background (no border), compact height to match x-axis labels.
+        float xPaddingH = ViewUtil.Dp2Px(getContext(), 6);
+        float xPaddingV = ViewUtil.Dp2Px(getContext(), 3);
+        float centerY = y + (mBottomPadding / 2f);
+        float rectTop = centerY - (textHeight / 2f + xPaddingV);
+        float rectBottom = centerY + (textHeight / 2f + xPaddingV);
+        // Clamp inside the bottom time area.
+        rectTop = Math.max(y, rectTop);
+        rectBottom = Math.min(y + mBottomPadding, rectBottom);
+
+        RectF timeRect = new RectF(
+                x - textWidth / 2f - xPaddingH,
+                rectTop,
+                x + textWidth / 2f + xPaddingH,
+                rectBottom
+        );
+        float cornerRadius = ViewUtil.Dp2Px(getContext(), 5);
+        mSelectPointPaint.setAntiAlias(true);
+        mSelectPointPaint.setStyle(Paint.Style.FILL);
+        // Match the right-side hover price pill background.
+        mSelectPointPaint.setColor(Color.WHITE);
+        canvas.drawRoundRect(timeRect, cornerRadius, cornerRadius, mSelectPointPaint);
+
+        // Match the pill text color.
+        int oldColor = mMaxMinPaint.getColor();
+        mMaxMinPaint.setColor(Color.BLACK);
+        canvas.drawText(date, x - textWidth / 2, fixTextY1(centerY), mMaxMinPaint);
+        mMaxMinPaint.setColor(oldColor);
         mainDraw.drawSelector(this, canvas);
     }
 

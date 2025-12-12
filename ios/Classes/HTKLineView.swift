@@ -731,21 +731,39 @@ class HTKLineView: UIScrollView {
             return
         }
         let value = visibleModelArray[selectedIndex - visibleRange.lowerBound].dateString
-        let color = configManager.candleTextColor
         let x = (CGFloat(selectedIndex) + 0.5) * configManager.itemWidth - contentOffset.x
         let font = configManager.createFont(configManager.candleTextFontSize)
         let title = value
         let width = mainDraw.textWidth(title: title, font: font)
-        let padding: CGFloat = 5
-        let height = mainDraw.textHeight(font: font)
-        let y = childBaseY + childHeight
-        context.setFillColor(configManager.panelBackgroundColor.cgColor)
-        context.setLineWidth(configManager.lineWidth / 2.0)
-        context.setStrokeColor(color.cgColor)
-        let rect = CGRect.init(x: x - width / 2 - padding, y: y, width: width + padding * 2, height: configManager.paddingBottom - configManager.lineWidth)
-        context.fill(rect)
-        context.stroke(rect)
-        mainDraw.drawText(title: title, point: CGPoint.init(x: x - width / 2.0, y: y + (configManager.paddingBottom - height) / 2), color: color, font: font, context: context, configManager: configManager)
+        let textHeight = mainDraw.textHeight(font: font)
+
+        // Bottom active date (hover mode): pill background (no border), compact height to match x-axis labels.
+        let paddingH: CGFloat = 6
+        let paddingV: CGFloat = 3
+        let cornerRadius: CGFloat = 5
+
+        let rowCenterY = childBaseY + childHeight + configManager.paddingBottom / 2
+        let pillHeight = textHeight + paddingV * 2
+        let rectY = rowCenterY - pillHeight / 2
+        let rect = CGRect(x: x - width / 2 - paddingH, y: rectY, width: width + paddingH * 2, height: pillHeight)
+
+        context.saveGState()
+        let path = UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius)
+        // Match the right-side hover price pill background.
+        context.setFillColor(UIColor.white.cgColor)
+        context.addPath(path.cgPath)
+        context.drawPath(using: .fill)
+        context.restoreGState()
+
+        // Match the pill text color.
+        mainDraw.drawText(
+            title: title,
+            point: CGPoint(x: x - width / 2.0, y: rectY + paddingV),
+            color: .black,
+            font: font,
+            context: context,
+            configManager: configManager
+        )
     }
     
     func valuePointFromViewPoint(_ point: CGPoint) -> CGPoint {
