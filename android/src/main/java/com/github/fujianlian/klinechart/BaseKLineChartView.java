@@ -1485,6 +1485,14 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         return mChildRect;
     }
 
+    /**
+     * Expose the main (price) chart rect so overlays (e.g. drawing tools) can clip
+     * themselves and avoid rendering into the volume/child panes.
+     */
+    public Rect getMainRect() {
+        return mMainRect;
+    }
+
     public Rect getVolRect() {
         return mVolRect;
     }

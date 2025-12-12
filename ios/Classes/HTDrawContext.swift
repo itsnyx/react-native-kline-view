@@ -415,11 +415,33 @@ class HTDrawContext {
         // Global price-level horizontal line: spans full chart width at a given price.
         if drawItem.drawType == .globalHorizontalLine ||
             drawItem.drawType == .globalHorizontalLineWithLabel {
+            // Hide the line when its price is outside the current visible main (price)
+            // pane range. This prevents it from "sticking" and drawing into the
+            // volume/child panes when off-range.
+            let priceValue = point.y
+            let minPrice = min(klineView.mainMinMaxRange.lowerBound, klineView.mainMinMaxRange.upperBound)
+            let maxPrice = max(klineView.mainMinMaxRange.lowerBound, klineView.mainMinMaxRange.upperBound)
+            if priceValue < minPrice || priceValue > maxPrice {
+                return
+            }
+
+            // Clip to the main (price) pane so this tool can never render under volume.
+            let mainRect = CGRect(
+                x: 0,
+                y: klineView.mainBaseY,
+                width: klineView.bounds.size.width,
+                height: klineView.mainHeight
+            )
+            if mainRect.height <= 0 || mainRect.width <= 0 {
+                return
+            }
+
             let viewPoint = klineView.viewPointFromValuePoint(point)
             let start = CGPoint(x: 0, y: viewPoint.y)
             let end = CGPoint(x: klineView.bounds.size.width, y: viewPoint.y)
 
             context.saveGState()
+            context.clip(to: mainRect)
             context.setStrokeColor(drawItem.drawColor.cgColor)
             context.setLineWidth(drawItem.drawLineHeight)
             var dashList = [drawItem.drawDashWidth, drawItem.drawDashSpace]
@@ -430,10 +452,8 @@ class HTDrawContext {
             context.move(to: start)
             context.addLine(to: end)
             context.drawPath(using: .stroke)
-            context.restoreGState()
 
             // Labels: optional custom text on the left and price on the right.
-            let priceValue = point.y
             let priceText = configManager.precision(priceValue, configManager.price)
             let leftText = (drawItem.text.isEmpty ? nil : drawItem.text)
 
@@ -456,11 +476,11 @@ class HTDrawContext {
             // Place labels centered on the line (vertically), not hovering above it.
             // Each bubble rect is vertically centered on viewPoint.y.
             let centerY = viewPoint.y
-            let viewH = klineView.bounds.size.height
+            let viewH = mainRect.height
             let borderWidth: CGFloat = 1
             let clampTop: (CGFloat, CGFloat) -> CGFloat = { top, height in
-                if height >= viewH { return 0 }
-                return min(max(top, 0), viewH - height)
+                if height >= viewH { return mainRect.minY }
+                return min(max(top, mainRect.minY), mainRect.maxY - height)
             }
 
             // Left label (custom text), only for globalHorizontalLineWithLabel.
@@ -530,6 +550,7 @@ class HTDrawContext {
                 context.setFillColor(drawItem.drawColor.cgColor)
                 context.drawPath(using: .fill)
             }
+            context.restoreGState()
             return
         }
 

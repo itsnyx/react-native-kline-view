@@ -411,7 +411,23 @@ public class HTDrawContext {
         // Global price-level horizontal line: spans full chart width at a given price.
         if (drawItem.drawType == HTDrawType.globalHorizontalLine ||
             drawItem.drawType == HTDrawType.globalHorizontalLineWithLabel) {
+            // Hide this line completely when its price is outside the current visible
+            // main (price) pane range. This prevents the line from "sticking" and
+            // rendering into the volume/child panes when off-range.
+            float mainMin = Math.min(klineView.getMainMinValue(), klineView.getMainMaxValue());
+            float mainMax = Math.max(klineView.getMainMinValue(), klineView.getMainMaxValue());
+            float priceValue = point.y;
+            if (priceValue < mainMin || priceValue > mainMax) {
+                return;
+            }
+
             HTPoint viewPoint = klineView.viewPointFromValuePoint(point);
+
+            // Clip drawing to the main (price) chart rect so the line/labels never
+            // render under the volume chart.
+            android.graphics.Rect mainRect = klineView.getMainRect();
+            canvas.save();
+            canvas.clipRect(mainRect.left, mainRect.top, mainRect.right, mainRect.bottom);
 
             paint.setColor(drawItem.drawColor);
             paint.setStrokeWidth(drawItem.drawLineHeight);
@@ -428,7 +444,6 @@ public class HTDrawContext {
             canvas.drawPath(path, paint);
 
             // Labels: optional text on the left, price on the right.
-            float priceValue = point.y;
             String priceText = klineView.formatValue(priceValue);
             String leftText = (drawItem.text != null && drawItem.text.length() > 0)
                     ? drawItem.text
@@ -454,15 +469,17 @@ public class HTDrawContext {
             float topY = centerY - (textHeight / 2f + paddingV);
             float bottomY = centerY + (textHeight / 2f + paddingV);
 
-            // Clamp to view bounds to avoid drawing offscreen (e.g. near top/bottom).
-            float viewH = klineView.getHeight();
-            if (topY < 0) {
-                float dy = -topY;
+            // Clamp within the main (price) rect, not the full view, so labels can't
+            // drift into the volume pane.
+            float topBound = mainRect.top;
+            float bottomBound = mainRect.bottom;
+            if (topY < topBound) {
+                float dy = topBound - topY;
                 topY += dy;
                 bottomY += dy;
                 baseLineY += dy;
-            } else if (bottomY > viewH) {
-                float dy = bottomY - viewH;
+            } else if (bottomY > bottomBound) {
+                float dy = bottomY - bottomBound;
                 topY -= dy;
                 bottomY -= dy;
                 baseLineY -= dy;
@@ -544,6 +561,7 @@ public class HTDrawContext {
                 paint.setColor(drawItem.drawColor);
                 canvas.drawPath(highlight, paint);
             }
+            canvas.restore();
             return;
         }
 
