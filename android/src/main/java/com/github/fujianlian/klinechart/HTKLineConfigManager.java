@@ -90,6 +90,10 @@ public class HTKLineConfigManager {
     // Controlled from JS via optionList.configList.showPlusIcon (default: true).
     public boolean showPlusIcon = true;
 
+    // Whether to show the Volume section (volume bars + volume header/labels).
+    // Controlled from JS via optionList.configList.showVolume (default: true).
+    public boolean showVolume = true;
+
 
 
 
@@ -494,6 +498,16 @@ public class HTKLineConfigManager {
             this.showPlusIcon = ((Number) showPlusIconObj).intValue() != 0;
         } else {
             this.showPlusIcon = true;
+        }
+
+        Object showVolumeObj = configList.get("showVolume");
+        if (showVolumeObj instanceof Boolean) {
+            this.showVolume = (Boolean) showVolumeObj;
+        } else if (showVolumeObj instanceof Number) {
+            // allow 0/1
+            this.showVolume = ((Number) showVolumeObj).intValue() != 0;
+        } else {
+            this.showVolume = true;
         }
 
 

@@ -765,6 +765,8 @@ class App extends Component {
       panelTextColor: processColor(theme.titleColor),
       // Hover price pill: show/hide the plus icon (default true on native if omitted)
       showPlusIcon: true,
+      // Show/hide the Volume section (default true on native if omitted)
+      showVolume: true,
       selectedPointContainerColor: processColor('transparent'),
       selectedPointContentColor: processColor(
         this.state.isDarkTheme ? theme.titleColor : 'white',

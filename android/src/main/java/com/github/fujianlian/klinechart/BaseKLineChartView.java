@@ -277,12 +277,29 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
 
         int allHeight = this.getHeight() - mBottomPadding;
-        int mMainHeight = (int) (allHeight * configManager.mainFlex);
-        int mVolHeight = (int) (allHeight * configManager.volumeFlex);
+        boolean showVolume = configManager == null || configManager.showVolume;
+
+        // When volume is hidden, merge volumeFlex into the main chart so the main area expands
+        // and the child area remains the same height.
+        int mMainHeight = (int) (allHeight * (configManager.mainFlex + (showVolume ? 0f : configManager.volumeFlex)));
+        int mVolHeight = showVolume ? (int) (allHeight * configManager.volumeFlex) : 0;
         int mChildHeight = (int) (allHeight * (1 - configManager.mainFlex - configManager.volumeFlex));
+
         mMainRect = new Rect(0, mTopPadding - textHeight, mWidth, mMainHeight - textHeight);
-        mVolRect = new Rect(0, mMainRect.bottom + textHeight + mChildPadding, mWidth, mMainRect.bottom + textHeight + mVolHeight);
-        mChildRect = new Rect(0, mVolRect.bottom + mChildPadding, mWidth, mVolRect.bottom + mChildHeight);
+        if (showVolume) {
+            mVolRect = new Rect(
+                    0,
+                    mMainRect.bottom + textHeight + mChildPadding,
+                    mWidth,
+                    mMainRect.bottom + textHeight + mVolHeight
+            );
+            mChildRect = new Rect(0, mVolRect.bottom + mChildPadding, mWidth, mVolRect.bottom + mChildHeight);
+        } else {
+            // Collapse volume rect to a zero-height separator at the end of the main chart.
+            int boundaryY = mMainRect.bottom + textHeight;
+            mVolRect = new Rect(0, boundaryY, mWidth, boundaryY);
+            mChildRect = new Rect(0, boundaryY + mChildPadding, mWidth, boundaryY + mChildPadding + mChildHeight);
+        }
         if (!isShowChild) {
             mChildRect.top = mVolRect.bottom;
             mChildRect.bottom = mVolRect.bottom;
@@ -571,7 +588,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             if (mMainDraw != null) {
                 mMainDraw.drawTranslated(lastPoint, currentPoint, lastX, currentPointX, canvas, this, i);
             }
-            if (mVolDraw != null) {
+            if (mVolDraw != null && (configManager == null || configManager.showVolume)) {
                 mVolDraw.drawTranslated(lastPoint, currentPoint, lastX, currentPointX, canvas, this, i);
             }
             if (mChildDraw != null) {
@@ -638,7 +655,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             }
         }
         //--------------画中间子图的值-------------
-        if (mVolDraw != null) {
+        if (mVolDraw != null && (configManager == null || configManager.showVolume)) {
             IValueFormatter formatter = mVolDraw.getValueFormatter();
             if (formatter instanceof ValueFormatter) {
                 ValueFormatter valueFormatter = (ValueFormatter)formatter;
@@ -1125,7 +1142,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
                 float y = textHeight + 15;
                 mMainDraw.drawText(canvas, this, position, x, y);
             }
-            if (mVolDraw != null) {
+            if (mVolDraw != null && (configManager == null || configManager.showVolume)) {
                 float y = mVolRect.top - mChildPadding + textHeight;
                 mVolDraw.drawText(canvas, this, position, x, y);
             }
@@ -1259,7 +1276,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
                     mMainMinIndex = i;
                 }
             }
-            if (mVolDraw != null) {
+            if (mVolDraw != null && (configManager == null || configManager.showVolume)) {
                 mVolMaxValue = Math.max(mVolMaxValue, mVolDraw.getMaxValue(point));
                 mVolMinValue = Math.min(mVolMinValue, mVolDraw.getMinValue(point));
                 // 成交量最小应该是 0 或者比最小成交量大一点点

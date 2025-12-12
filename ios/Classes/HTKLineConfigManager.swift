@@ -233,6 +233,10 @@ class HTKLineConfigManager: NSObject {
     // Whether to show the "+" icon inside the right-side hover price pill.
     // Controlled from JS via optionList.configList.showPlusIcon (default: true).
     var showPlusIcon: Bool = true
+
+    // Whether to show the Volume section (volume bars + volume header/labels).
+    // Controlled from JS via optionList.configList.showVolume (default: true).
+    var showVolume: Bool = true
     
     // Optional base64-encoded logo image drawn in the center of the main chart,
     // behind the candles. Provided from JS via configList["centerLogoSource"].
@@ -486,6 +490,7 @@ class HTKLineConfigManager: NSObject {
         closePriceRightLightLottieSource = configList["closePriceRightLightLottieSource"] as? String ?? ""
         centerLogoSource = configList["centerLogoSource"] as? String ?? ""
         showPlusIcon = configList["showPlusIcon"] as? Bool ?? true
+        showVolume = configList["showVolume"] as? Bool ?? true
     }
 
 }

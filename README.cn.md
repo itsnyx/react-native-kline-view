@@ -156,6 +156,7 @@ Android 无需额外配置。
 | `minuteGradientLocationList` | Array | 渐变停止位置 [0, 0.3, 0.6, 1] |
 | `mainFlex` | Number | 主图高度比例 (0.6 - 0.85) |
 | `volumeFlex` | Number | 成交量图高度比例 (0.15 - 0.25) |
+| `showVolume` | Boolean | 是否显示成交量区域（默认 `true`） |
 | `paddingTop` | Number | 顶部内边距（像素） |
 | `paddingBottom` | Number | 底部内边距（像素） |
 | `paddingRight` | Number | 右侧内边距（像素） |

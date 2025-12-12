@@ -260,7 +260,16 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
     func calculateBaseHeight() {
         self.visibleModelArray = configManager.modelArray.count > 0 ? Array(configManager.modelArray[visibleRange]) : configManager.modelArray
-        self.volumeRange = configManager.mainFlex...configManager.mainFlex + configManager.volumeFlex
+        // Layout:
+        // - main section: [0 .. mainBoundary)
+        // - volume section: [mainBoundary .. volumeBoundary) (optional)
+        // - child section: [volumeBoundary .. 1]
+        //
+        // When volume is hidden, we "merge" volumeFlex into the main chart so the
+        // main area expands and the child area stays the same size.
+        let mainBoundary = configManager.mainFlex + (configManager.showVolume ? 0 : configManager.volumeFlex)
+        let volumeBoundary = mainBoundary + (configManager.showVolume ? configManager.volumeFlex : 0)
+        self.volumeRange = mainBoundary...volumeBoundary
         
         self.allHeight = self.bounds.size.height - configManager.paddingBottom
         self.allWidth = self.bounds.size.width
@@ -300,9 +309,15 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         self.mainBaseY = configManager.paddingTop - textHeight
         self.mainHeight = allHeight * volumeRange.lowerBound - mainBaseY - textHeight
         
-        self.volumeMinMaxRange = volumeDraw.minMaxRange(visibleModelArray, configManager)
-        self.volumeBaseY = allHeight * volumeRange.lowerBound + configManager.headerHeight + textHeight
-        self.volumeHeight = allHeight * (volumeRange.upperBound - volumeRange.lowerBound) - configManager.headerHeight - textHeight
+        if configManager.showVolume {
+            self.volumeMinMaxRange = volumeDraw.minMaxRange(visibleModelArray, configManager)
+            self.volumeBaseY = allHeight * volumeRange.lowerBound + configManager.headerHeight + textHeight
+            self.volumeHeight = allHeight * (volumeRange.upperBound - volumeRange.lowerBound) - configManager.headerHeight - textHeight
+        } else {
+            self.volumeMinMaxRange = Range<CGFloat>.init(uncheckedBounds: (lower: 0, upper: 0))
+            self.volumeBaseY = allHeight * volumeRange.lowerBound
+            self.volumeHeight = 0
+        }
         
         self.childMinMaxRange = childDraw?.minMaxRange(visibleModelArray, configManager) ?? Range<CGFloat>.init(uncheckedBounds: (lower: 0, upper: 0))
         self.childBaseY = allHeight * volumeRange.upperBound + configManager.headerHeight + textHeight
@@ -511,13 +526,17 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
         for (i, model) in visibleModelArray.enumerated() {
             mainDraw.drawCandle(model, i, mainMinMaxRange.upperBound, mainMinMaxRange.lowerBound, mainBaseY, mainHeight, context, configManager)
-            volumeDraw.drawCandle(model, i, volumeMinMaxRange.upperBound, volumeMinMaxRange.lowerBound, volumeBaseY, volumeHeight, context, configManager)
+            if configManager.showVolume {
+                volumeDraw.drawCandle(model, i, volumeMinMaxRange.upperBound, volumeMinMaxRange.lowerBound, volumeBaseY, volumeHeight, context, configManager)
+            }
             childDraw?.drawCandle(model, i, childMinMaxRange.upperBound, childMinMaxRange.lowerBound, childBaseY, childHeight, context, configManager)
 
             let lastIndex = i == 0 ? i : i - 1
             let lastModel = visibleModelArray[lastIndex]
             mainDraw.drawLine(model, lastModel, mainMinMaxRange.upperBound, mainMinMaxRange.lowerBound, mainBaseY, mainHeight, i, lastIndex, context, configManager)
-            volumeDraw.drawLine(model, lastModel, volumeMinMaxRange.upperBound, volumeMinMaxRange.lowerBound, volumeBaseY, volumeHeight, i, lastIndex, context, configManager)
+            if configManager.showVolume {
+                volumeDraw.drawLine(model, lastModel, volumeMinMaxRange.upperBound, volumeMinMaxRange.lowerBound, volumeBaseY, volumeHeight, i, lastIndex, context, configManager)
+            }
             childDraw?.drawLine(model, lastModel, childMinMaxRange.upperBound, childMinMaxRange.lowerBound, childBaseY, childHeight, i, lastIndex, context, configManager)
         }
     }
@@ -530,7 +549,9 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         if let model = model {
             let baseX: CGFloat = 5
             mainDraw.drawText(model, baseX, 10, context, configManager)
-            volumeDraw.drawText(model, baseX, volumeBaseY - configManager.headerHeight, context, configManager)
+            if configManager.showVolume {
+                volumeDraw.drawText(model, baseX, volumeBaseY - configManager.headerHeight, context, configManager)
+            }
             childDraw?.drawText(model, baseX, childBaseY - configManager.headerHeight, context, configManager)
         }
     }
@@ -538,7 +559,9 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     func drawValue(_ context: CGContext) {
         let baseX = self.allWidth
         mainDraw.drawValue(mainMinMaxRange.upperBound, mainMinMaxRange.lowerBound, baseX, mainBaseY, mainHeight, context, configManager)
-        volumeDraw.drawValue(volumeMinMaxRange.upperBound, volumeMinMaxRange.lowerBound, baseX, volumeBaseY, volumeHeight, context, configManager)
+        if configManager.showVolume {
+            volumeDraw.drawValue(volumeMinMaxRange.upperBound, volumeMinMaxRange.lowerBound, baseX, volumeBaseY, volumeHeight, context, configManager)
+        }
         childDraw?.drawValue(childMinMaxRange.upperBound, childMinMaxRange.lowerBound, baseX, childBaseY, childHeight, context, configManager)
 
     }

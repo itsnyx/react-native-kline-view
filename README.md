@@ -172,6 +172,7 @@ Each data point should contain the following fields:
 | `minuteGradientLocationList` | Array  | Gradient stop positions [0, 0.3, 0.6, 1]              |
 | `mainFlex`                   | Number | Main chart height ratio (0.6 - 0.85)                  |
 | `volumeFlex`                 | Number | Volume chart height ratio (0.15 - 0.25)               |
+| `showVolume`                 | Bool   | Show/hide the Volume section (default `true`)         |
 | `paddingTop`                 | Number | Top padding in pixels                                 |
 | `paddingBottom`              | Number | Bottom padding in pixels                              |
 | `paddingRight`               | Number | Right padding in pixels                               |
