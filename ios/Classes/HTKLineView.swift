@@ -54,6 +54,12 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         return pan
     }()
 
+    private lazy var longPressGesture: UILongPressGestureRecognizer = {
+        let g = UILongPressGestureRecognizer(target: self, action: #selector(longPressSelector(_:)))
+        g.delegate = self
+        return g
+    }()
+
     let mainDraw = HTMainDraw.init()
 
     let volumeDraw = HTVolumeDraw.init()
@@ -109,7 +115,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         showsVerticalScrollIndicator = false
         backgroundColor = UIColor.clear
 
-        addGestureRecognizer(UILongPressGestureRecognizer.init(target: self, action: #selector(longPressSelector)))
+        addGestureRecognizer(longPressGesture)
         addGestureRecognizer(UITapGestureRecognizer.init(target: self, action: #selector(tapSelector)))
         addGestureRecognizer(UIPinchGestureRecognizer.init(target: self, action: #selector(pinchSelector)))
         addGestureRecognizer(yAxisPanGesture)
@@ -323,6 +329,11 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
             guard isInRightYAxisArea(p) else { return false }
             let v = (gestureRecognizer as? UIPanGestureRecognizer)?.velocity(in: self) ?? .zero
             return abs(v.y) > abs(v.x)
+        }
+        if gestureRecognizer === longPressGesture {
+            let p = gestureRecognizer.location(in: self)
+            // Never allow the long-press hover selector to start from the y-axis area.
+            return !isInRightYAxisArea(p)
         }
         return true
     }

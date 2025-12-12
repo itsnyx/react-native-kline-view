@@ -22,6 +22,10 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
 
     protected boolean isLongPress = false;
 
+    // Allow subclasses to temporarily disable long-press selection behavior (e.g. when using
+    // a dedicated gesture on the right y-axis).
+    protected boolean mLongPressEnable = true;
+
     private OverScroller mScroller;
 
     protected boolean touch = false;
@@ -99,7 +103,17 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
 
     @Override
     public void onLongPress(MotionEvent e) {
+        if (!mLongPressEnable) {
+            return;
+        }
         isLongPress = true;
+    }
+
+    public void setLongPressEnable(boolean enable) {
+        mLongPressEnable = enable;
+        if (!enable) {
+            isLongPress = false;
+        }
     }
 
     @Override

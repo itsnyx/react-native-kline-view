@@ -982,8 +982,11 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
                     mIsYAxisScaleCandidate = true;
                     mYAxisDownX = event.getX();
                     mYAxisDownY = event.getY();
+                    // Prevent long-press selector from activating while finger is on the y-axis.
+                    setLongPressEnable(false);
                 } else {
                     mIsYAxisScaleCandidate = false;
+                    setLongPressEnable(true);
                 }
                 return false;
             }
@@ -1051,11 +1054,13 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             case MotionEvent.ACTION_CANCEL: {
                 if (!mIsYAxisScaling) {
                     mIsYAxisScaleCandidate = false;
+                    setLongPressEnable(true);
                     return false;
                 }
                 mIsYAxisScaling = false;
                 mIsYAxisScaleCandidate = false;
                 mYAxisScaleStartY = Float.NaN;
+                setLongPressEnable(true);
                 getParent().requestDisallowInterceptTouchEvent(false);
                 invalidate();
                 return true;
