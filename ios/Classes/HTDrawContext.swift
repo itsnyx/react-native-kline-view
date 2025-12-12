@@ -310,6 +310,7 @@ class HTDrawContext {
             let triangleBaseY: CGFloat
             let rect: CGRect
             if isTop {
+                // Tip slightly above the candle high, bubble further above.
                 tipY = viewPoint.y - candleMargin
                 triangleBaseY = tipY - gap
                 let bottom = triangleBaseY - triangleHeight
@@ -321,7 +322,8 @@ class HTDrawContext {
                     height: bubbleHeight
                 )
             } else {
-                tipY = viewPoint.y + candleMargin
+                // Tip slightly above the candle low (inside chart), bubble below.
+                tipY = viewPoint.y - candleMargin
                 triangleBaseY = tipY + gap
                 rect = CGRect(
                     x: left,

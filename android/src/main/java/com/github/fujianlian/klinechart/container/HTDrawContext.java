@@ -296,12 +296,14 @@ public class HTDrawContext {
             float top;
             float bottom;
             if (isTop) {
+                // Tip slightly above the candle high, bubble further above.
                 tipY = viewPoint.y - candleMargin;
                 triangleBaseY = tipY - gap;
                 bottom = triangleBaseY - triangleHeight;
                 top = bottom - bubbleHeight;
             } else {
-                tipY = viewPoint.y + candleMargin;
+                // Tip slightly above the candle low (inside chart), bubble below.
+                tipY = viewPoint.y - candleMargin;
                 triangleBaseY = tipY + gap;
                 top = triangleBaseY + triangleHeight;
                 bottom = top + bubbleHeight;
