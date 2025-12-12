@@ -166,6 +166,10 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
     private float mLineWidth;
 
+    // Hit target for the right-side hover price pill (used to trigger `onNewOrder`).
+    private final RectF mSelectedPricePillRect = new RectF();
+    private float mSelectedPriceValue = Float.NaN;
+
     public BaseKLineChartView(Context context, HTKLineConfigManager configManager) {
         super(context);
         this.configManager = configManager;
@@ -668,6 +672,8 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
     private void drawSelector(Canvas canvas) {
         if (!isLongPress) {
+            mSelectedPricePillRect.setEmpty();
+            mSelectedPriceValue = Float.NaN;
             return;
         }
         Paint.FontMetrics fm = mTextPaint.getFontMetrics();
@@ -694,37 +700,92 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         float selectedValue = valueFromY(y);
         String text = formatValue(selectedValue);
         float textWidth = mTextPaint.measureText(text);
-        if (scrollXtoViewX(getItemMiddleScrollX(mSelectedIndex)) < getChartWidth() / 2) {
-            x = 1;
-            startX = textWidth + 2 * w1 + w2 + triangleWidth;
-            endX = mWidth;
-            Path path = new Path();
-            path.moveTo(x, y - r);
-            path.lineTo(x, y + r);
-            path.lineTo(textWidth + 2 * w1, y + r);
-            path.lineTo(startX, y);
-            path.lineTo(textWidth + 2 * w1, y - r);
-            path.close();
-            canvas.drawPath(path, mSelectPointPaint);
-            canvas.drawPath(path, mSelectorFramePaint);
-            canvas.drawText(text, x + w1, fixTextY1(y), mMaxMinPaint);
-        } else {
-            x = mWidth - textWidth - 1 - 2 * w1 - w2 - triangleWidth;
-            startX = 0;
-            endX = x;
 
-            Path path = new Path();
-            path.moveTo(x, y);
-            path.lineTo(x + w2 + triangleWidth, y + r);
-            path.lineTo(mWidth - 2, y + r);
-            path.lineTo(mWidth - 2, y - r);
-            path.lineTo(x + w2 + triangleWidth, y - r);
-            path.close();
+        // Right-side hover price pill (always on the right, inset so it doesn't cover y-axis labels).
+        mSelectedPriceValue = selectedValue;
 
-            canvas.drawPath(path, mSelectPointPaint);
-            canvas.drawPath(path, mSelectorFramePaint);
-            canvas.drawText(text, x + w1 + w2, fixTextY1(y), mMaxMinPaint);
+        // Estimate how much space the right y-axis labels occupy so our hover pill doesn't cover them.
+        String maxAxis = formatValue(mMainMaxValue);
+        String minAxis = formatValue(mMainMinValue);
+        float axisWidth = Math.max(calculateWidth(maxAxis), calculateWidth(minAxis));
+        float axisInset = axisWidth + ViewUtil.Dp2Px(getContext(), 6);
+
+        float pillPaddingV = ViewUtil.Dp2Px(getContext(), 6);
+        float pillHeight = Math.max(ViewUtil.Dp2Px(getContext(), 26), textHeight + pillPaddingV * 2f);
+        float iconInset = ViewUtil.Dp2Px(getContext(), 4);
+        float iconAreaWidth = pillHeight; // square area on the left for the plus icon
+        float textPaddingH = ViewUtil.Dp2Px(getContext(), 12);
+        float dividerWidth = 1f;
+
+        float pillWidth = iconAreaWidth + dividerWidth + textWidth + textPaddingH * 2f;
+        float rightMargin = ViewUtil.Dp2Px(getContext(), 6);
+        float rightEdge = mWidth - rightMargin - axisInset;
+        float left = rightEdge - pillWidth;
+        float top = y - pillHeight / 2f;
+        float bottom = y + pillHeight / 2f;
+
+        // Clamp vertically inside the view.
+        float marginY = 2f;
+        if (top < marginY) {
+            float shift = marginY - top;
+            top += shift;
+            bottom += shift;
         }
+        if (bottom > getHeight() - marginY) {
+            float shift = bottom - (getHeight() - marginY);
+            top -= shift;
+            bottom -= shift;
+        }
+
+        mSelectedPricePillRect.set(left, top, rightEdge, bottom);
+        startX = 0;
+        endX = Math.max(0, left);
+
+        // Background (white pill) + subtle border.
+        Paint paint = mSelectPointPaint;
+        paint.setAntiAlias(true);
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(Color.WHITE);
+        float radius = (bottom - top) / 2f;
+        canvas.drawRoundRect(mSelectedPricePillRect, radius, radius, paint);
+
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(1f);
+        paint.setColor(Color.argb(255, 217, 217, 217)); // light gray
+        canvas.drawRoundRect(mSelectedPricePillRect, radius, radius, paint);
+
+        // Plus icon: black circle + white plus.
+        float iconCx = left + iconAreaWidth / 2f;
+        float iconCy = (top + bottom) / 2f;
+        float circleRadius = (pillHeight - iconInset * 2f) / 2f;
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(Color.BLACK);
+        canvas.drawCircle(iconCx, iconCy, circleRadius, paint);
+
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setColor(Color.WHITE);
+        paint.setStrokeWidth(Math.max(2f, circleRadius * 0.18f));
+        paint.setStrokeCap(Paint.Cap.ROUND);
+        float plusLen = circleRadius;
+        canvas.drawLine(iconCx - plusLen / 2f, iconCy, iconCx + plusLen / 2f, iconCy, paint);
+        canvas.drawLine(iconCx, iconCy - plusLen / 2f, iconCx, iconCy + plusLen / 2f, paint);
+
+        // Divider.
+        float dividerX = left + iconAreaWidth;
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setColor(Color.argb(255, 217, 217, 217));
+        paint.setStrokeWidth(dividerWidth);
+        canvas.drawLine(dividerX, top + ViewUtil.Dp2Px(getContext(), 6), dividerX, bottom - ViewUtil.Dp2Px(getContext(), 6), paint);
+
+        // Price text (black).
+        int oldTextColor = mMaxMinPaint.getColor();
+        Paint.Align oldAlign = mMaxMinPaint.getTextAlign();
+        mMaxMinPaint.setColor(Color.BLACK);
+        mMaxMinPaint.setTextAlign(Paint.Align.LEFT);
+        float textX = dividerX + textPaddingH;
+        canvas.drawText(text, textX, fixTextY1((top + bottom) / 2f), mMaxMinPaint);
+        mMaxMinPaint.setColor(oldTextColor);
+        mMaxMinPaint.setTextAlign(oldAlign);
 
         // k线图横线
         canvas.drawLine(startX, y,  endX, y, mSelectedXLinePaint);
@@ -786,6 +847,21 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         canvas.drawRect(x - textWidth / 2 - w1, y, x + textWidth / 2 + w1, y + mBottomPadding, mSelectorFramePaint);
         canvas.drawText(date, x - textWidth / 2, fixTextY1(y + (mBottomPadding / 2)), mMaxMinPaint);
         mainDraw.drawSelector(this, canvas);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        // If the selector is visible and the user taps the hover price pill,
+        // trigger `onNewOrder(price)` and keep the selector visible.
+        if ((event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_DOWN && isLongPress) {
+            if (!mSelectedPricePillRect.isEmpty() && mSelectedPricePillRect.contains(event.getX(), event.getY())) {
+                if (configManager != null && configManager.onNewOrder != null && !Float.isNaN(mSelectedPriceValue)) {
+                    configManager.onNewOrder.invoke((double) mSelectedPriceValue);
+                }
+                return true;
+            }
+        }
+        return super.onTouchEvent(event);
     }
 
     private void drawMaxMinValue(Canvas canvas, float value, float x, float y) {

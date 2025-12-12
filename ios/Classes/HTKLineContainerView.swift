@@ -12,6 +12,10 @@ class HTKLineContainerView: UIView {
     var configManager = HTKLineConfigManager()
     
     @objc var onDrawItemDidTouch: RCTBubblingEventBlock?
+
+    // Fired when the user taps the hover price pill on the right side (long-press selector).
+    // JS receives: { price: number }
+    @objc var onNewOrder: RCTBubblingEventBlock?
     
     @objc var onDrawItemComplete: RCTBubblingEventBlock?
 

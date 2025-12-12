@@ -241,6 +241,24 @@ public class HTKLineContainerView extends RelativeLayout {
             }
         };
 
+        // Fired when user taps the hover price pill (long-press selector).
+        configManager.onNewOrder = new Callback() {
+            @Override
+            public void invoke(Object... args) {
+                double price = 0;
+                if (args != null && args.length > 0 && args[0] instanceof Number) {
+                    price = ((Number) args[0]).doubleValue();
+                }
+                WritableMap map = Arguments.createMap();
+                map.putDouble("price", price);
+                reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
+                        id,
+                        RNKLineView.onNewOrderKey,
+                        map
+                );
+            }
+        };
+
         int reloadIndex = configManager.shouldReloadDrawItemIndex;
         if (reloadIndex >= 0 && reloadIndex < klineView.drawContext.drawItemList.size()) {
             HTDrawItem drawItem = klineView.drawContext.drawItemList.get(reloadIndex);

@@ -1281,6 +1281,11 @@ class App extends Component {
     // then call reloadKLineData() or update modelArray via the new prop.
   };
 
+  // Tap on the hover price pill (right side) → create a new order at that price.
+  onNewOrder = (price: number) => {
+    console.log('onNewOrder price:', price);
+  };
+
   render() {
     const theme = ThemeManager.getCurrentTheme(this.state.isDarkTheme);
     const styles = this.getStyles(theme);
@@ -1330,6 +1335,7 @@ class App extends Component {
         style={styles.chart}
         optionList={this.state.optionList}
         modelArray={this.state.modelArrayJson}
+        onNewOrder={this.onNewOrder}
         onDrawItemDidTouch={this.onDrawItemDidTouch}
         onDrawItemMove={this.onDrawItemMove}
         onDrawItemComplete={this.onDrawItemComplete}

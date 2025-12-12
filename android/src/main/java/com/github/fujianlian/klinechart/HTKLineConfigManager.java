@@ -82,6 +82,10 @@ public class HTKLineConfigManager {
 
     public Callback onDrawPointComplete;
 
+    // Fired when the user taps the hover price pill (long-press selector).
+    // Callback receives: (price: double)
+    public Callback onNewOrder;
+
 
 
 

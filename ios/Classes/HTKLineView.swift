@@ -29,6 +29,10 @@ class HTKLineView: UIScrollView {
     /// Stored in view coordinates (same space as drawing).
     var selectedY: CGFloat = .nan
 
+    // Hit target for the right-side hover price pill (used to trigger `onNewOrder`).
+    private var selectedPricePillRect: CGRect = .zero
+    private var selectedPriceValue: CGFloat = .nan
+
     var scale: CGFloat = 1
 
     let mainDraw = HTMainDraw.init()
@@ -526,6 +530,8 @@ class HTKLineView: UIScrollView {
 
     func drawSelectedLine(_ context: CGContext) {
         guard visibleRange.contains(selectedIndex) else {
+            selectedPricePillRect = .zero
+            selectedPriceValue = .nan
             return
         }
         let candleClose = visibleModelArray[selectedIndex - visibleRange.lowerBound].close
@@ -541,6 +547,7 @@ class HTKLineView: UIScrollView {
             y = yFromValue(candleClose)
         }
         let value = valueFromY(y)
+        selectedPriceValue = value
 
         context.setStrokeColor(configManager.candleTextColor.cgColor)
         context.setLineWidth(configManager.lineWidth / 2)
@@ -566,45 +573,92 @@ class HTKLineView: UIScrollView {
             context.resetClip()
         }
 
-        let offset = CGFloat(selectedIndex) * configManager.itemWidth - contentOffset.x
-        let halfWidth = allWidth / 2
-        let leftAlign = offset < halfWidth
-
+        // Right-side hover price pill (always on the right, inset so it doesn't cover y-axis labels).
         let title = configManager.precision(value, configManager.price)
-        let paddingVertical: CGFloat = 3
-        let paddingHorizontal: CGFloat = 3
-        let triangleWidth: CGFloat = 5
         let font = configManager.createFont(configManager.candleTextFontSize)
-        let width = mainDraw.textWidth(title: title, font: font)
-        let height = mainDraw.textHeight(font: font)
-        let startX = leftAlign ? 0 : allWidth - width - paddingHorizontal * 2
-        let rect = CGRect.init(x: startX, y: y - height / 2 - paddingVertical, width: width + paddingHorizontal * 2, height: height + paddingVertical * 2)
-        let bezierPath = UIBezierPath.init()
-        if (leftAlign) {
-            bezierPath.move(to: CGPoint.init(x: rect.maxX, y: rect.minY))
-            bezierPath.addLine(to: CGPoint.init(x: rect.minX, y: rect.minY))
-            bezierPath.addLine(to: CGPoint.init(x: rect.minX, y: rect.maxY))
-            bezierPath.move(to: CGPoint.init(x: rect.maxX, y: rect.minY))
-            bezierPath.addLine(to: CGPoint.init(x: rect.maxX + triangleWidth, y: y))
-            bezierPath.addLine(to: CGPoint.init(x: rect.maxX, y: rect.maxY))
-            bezierPath.addLine(to: CGPoint.init(x: rect.minX, y: rect.maxY))
-        } else {
-            bezierPath.move(to: CGPoint.init(x: rect.minX, y: rect.minY))
-            bezierPath.addLine(to: CGPoint.init(x: rect.maxX, y: rect.minY))
-            bezierPath.addLine(to: CGPoint.init(x: rect.maxX, y: rect.maxY))
-            bezierPath.move(to: CGPoint.init(x: rect.minX, y: rect.minY))
-            bezierPath.addLine(to: CGPoint.init(x: rect.minX - triangleWidth, y: y))
-            bezierPath.addLine(to: CGPoint.init(x: rect.minX, y: rect.maxY))
-            bezierPath.addLine(to: CGPoint.init(x: rect.maxX, y: rect.maxY))
+        let textWidth = mainDraw.textWidth(title: title, font: font)
+        let textHeight = mainDraw.textHeight(font: font)
+
+        // Estimate how much space the right y-axis labels occupy so our hover pill doesn't cover them.
+        let maxLabel = configManager.precision(mainMinMaxRange.upperBound, configManager.price)
+        let minLabel = configManager.precision(mainMinMaxRange.lowerBound, configManager.price)
+        let axisLabelWidth = max(
+            mainDraw.textWidth(title: maxLabel, font: font),
+            mainDraw.textWidth(title: minLabel, font: font)
+        )
+        let axisInset: CGFloat = axisLabelWidth + 10
+
+        let pillPaddingV: CGFloat = 6
+        let pillHeight: CGFloat = max(26, textHeight + pillPaddingV * 2)
+        let iconInset: CGFloat = 4
+        let iconAreaWidth: CGFloat = pillHeight // square area on the left for the plus icon
+        let textPaddingH: CGFloat = 12
+        let dividerWidth: CGFloat = 1 / UIScreen.main.scale
+
+        let pillWidth = iconAreaWidth + dividerWidth + textWidth + textPaddingH * 2
+        let rightMargin: CGFloat = 6
+        let rightEdge = allWidth - rightMargin - axisInset
+        var pillRect = CGRect(x: rightEdge - pillWidth, y: y - pillHeight / 2, width: pillWidth, height: pillHeight)
+
+        // Clamp vertically inside the view.
+        let marginY: CGFloat = 2
+        if pillRect.minY < marginY {
+            pillRect.origin.y = marginY
         }
-        context.setFillColor(configManager.panelBackgroundColor.cgColor)
-        context.setLineWidth(configManager.lineWidth / 2)
-        context.setStrokeColor(configManager.candleTextColor.cgColor)
-        context.addPath(bezierPath.cgPath)
+        if pillRect.maxY > bounds.size.height - marginY {
+            pillRect.origin.y = bounds.size.height - marginY - pillRect.height
+        }
+
+        selectedPricePillRect = pillRect
+
+        context.saveGState()
+
+        // Background (white pill) + subtle border.
+        let radius = pillRect.height / 2
+        let pillPath = UIBezierPath(roundedRect: pillRect, cornerRadius: radius)
+        context.setFillColor(UIColor.white.cgColor)
+        context.addPath(pillPath.cgPath)
+        context.drawPath(using: .fill)
+
+        context.setStrokeColor(UIColor(white: 0.85, alpha: 1).cgColor)
+        context.setLineWidth(1 / UIScreen.main.scale)
+        context.addPath(pillPath.cgPath)
+        context.drawPath(using: .stroke)
+
+        // Plus icon: black circle + white plus.
+        let iconCenter = CGPoint(x: pillRect.minX + iconAreaWidth / 2, y: pillRect.midY)
+        let circleRadius = (pillHeight - iconInset * 2) / 2
+        context.addArc(center: iconCenter, radius: circleRadius, startAngle: 0, endAngle: CGFloat(Double.pi * 2), clockwise: true)
+        context.setFillColor(UIColor.black.cgColor)
         context.fillPath()
-        context.addPath(bezierPath.cgPath)
+
+        let plusStroke: CGFloat = max(1.5, circleRadius * 0.18)
+        let plusLen: CGFloat = circleRadius * 1.0
+        context.setStrokeColor(UIColor.white.cgColor)
+        context.setLineWidth(plusStroke)
+        context.setLineCap(.round)
+        context.move(to: CGPoint(x: iconCenter.x - plusLen / 2, y: iconCenter.y))
+        context.addLine(to: CGPoint(x: iconCenter.x + plusLen / 2, y: iconCenter.y))
+        context.move(to: CGPoint(x: iconCenter.x, y: iconCenter.y - plusLen / 2))
+        context.addLine(to: CGPoint(x: iconCenter.x, y: iconCenter.y + plusLen / 2))
         context.strokePath()
-        mainDraw.drawText(title: title, point: CGPoint.init(x: startX + paddingHorizontal, y: y - height / 2), color: configManager.candleTextColor, font: font, context: context, configManager: configManager)
+
+        // Divider.
+        let dividerX = pillRect.minX + iconAreaWidth
+        context.setStrokeColor(UIColor(white: 0.85, alpha: 1).cgColor)
+        context.setLineWidth(dividerWidth)
+        context.move(to: CGPoint(x: dividerX, y: pillRect.minY + 6))
+        context.addLine(to: CGPoint(x: dividerX, y: pillRect.maxY - 6))
+        context.strokePath()
+
+        // Price text (black).
+        let textPoint = CGPoint(
+            x: dividerX + textPaddingH,
+            y: pillRect.midY - textHeight / 2
+        )
+        mainDraw.drawText(title: title, point: textPoint, color: UIColor.black, font: font, context: context, configManager: configManager)
+
+        context.restoreGState()
 
     }
 
@@ -758,8 +812,24 @@ extension HTKLineView: UIScrollViewDelegate {
 
     @objc
     func tapSelector(_ gesture: UITapGestureRecognizer) {
+        let location = gesture.location(in: self)
+
+        // If a hover price pill is visible and tapped, trigger onNewOrder(price) and keep the selector.
+        if visibleRange.contains(selectedIndex),
+           !selectedPricePillRect.isEmpty,
+           selectedPricePillRect.contains(location),
+           selectedPriceValue.isFinite {
+            containerView?.onNewOrder?([
+                "price": Double(selectedPriceValue)
+            ])
+            return
+        }
+
+        // Otherwise, clear selection.
         selectedIndex = -1
         selectedY = .nan
+        selectedPricePillRect = .zero
+        selectedPriceValue = .nan
         self.setNeedsDisplay()
     }
 

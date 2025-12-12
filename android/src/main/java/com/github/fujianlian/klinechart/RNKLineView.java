@@ -35,6 +35,9 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
     // Fired when user scrolls to the left edge (older candles requested)
     public static String onEndReachedKey = "onEndReached";
 
+    // Fired when the user taps the hover price pill (long-press selector)
+    public static String onNewOrderKey = "onNewOrder";
+
     @Nonnull
     @Override
     public String getName() {
@@ -56,6 +59,7 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
         builder.put(onDrawPointCompleteKey, MapBuilder.of("registrationName", onDrawPointCompleteKey));
         builder.put(onEndReachedKey, MapBuilder.of("registrationName", onEndReachedKey));
         builder.put(onDrawItemMoveKey, MapBuilder.of("registrationName", onDrawItemMoveKey));
+        builder.put(onNewOrderKey, MapBuilder.of("registrationName", onNewOrderKey));
         return builder.build();
 	}
 
