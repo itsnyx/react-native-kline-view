@@ -449,7 +449,7 @@ class HTDrawContext {
             ]
 
             let priceSize = (priceText as NSString).size(withAttributes: priceAttributes)
-            let paddingH: CGFloat = 8
+            let paddingH: CGFloat = 4
             let paddingV: CGFloat = 4
             let marginX: CGFloat = 4
 

@@ -440,7 +440,7 @@ public class HTDrawContext {
 
             Paint.FontMetrics fm = paint.getFontMetrics();
             float textHeight = fm.descent - fm.ascent;
-            float paddingH = 8f;
+            float paddingH = 4f;
             float paddingV = 4f;
             float marginX = 4f;
 
