@@ -8,6 +8,7 @@ import com.github.fujianlian.klinechart.BaseKLineChartView;
 import com.github.fujianlian.klinechart.HTKLineConfigManager;
 import com.github.fujianlian.klinechart.KLineChartView;
 import com.github.fujianlian.klinechart.KLineEntity;
+import com.github.fujianlian.klinechart.utils.ViewUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -443,22 +444,44 @@ public class HTDrawContext {
             float paddingV = 4f;
             float marginX = 4f;
 
-            // Baseline above the line so labels do not overlap the stroke.
-            float baseLineY = viewPoint.y - textHeight - paddingV - fm.descent;
-            if (baseLineY < textHeight) {
-                baseLineY = textHeight;
+            // Center labels on the line (vertically), not hovering above it.
+            // Baseline that centers glyphs around viewPoint.y:
+            // baseline = centerY - (ascent + descent)/2
+            float centerY = viewPoint.y;
+            float baseLineY = centerY - (fm.ascent + fm.descent) / 2f;
+
+            // Bubble rect vertically centered on the line.
+            float topY = centerY - (textHeight / 2f + paddingV);
+            float bottomY = centerY + (textHeight / 2f + paddingV);
+
+            // Clamp to view bounds to avoid drawing offscreen (e.g. near top/bottom).
+            float viewH = klineView.getHeight();
+            if (topY < 0) {
+                float dy = -topY;
+                topY += dy;
+                bottomY += dy;
+                baseLineY += dy;
+            } else if (bottomY > viewH) {
+                float dy = bottomY - viewH;
+                topY -= dy;
+                bottomY -= dy;
+                baseLineY -= dy;
             }
+
+            // Border + corner radius styling tweaks requested for 303.
+            float borderWidth = (float) ViewUtil.Dp2Px(klineView.getContext(), 2f);
+            float cornerRadius = (bottomY - topY) / 4f; // half of the previous pill radius (height/2)
 
             // Left label (custom text), if any.
             if (drawItem.drawType == HTDrawType.globalHorizontalLineWithLabel && leftText != null) {
                 float leftTextWidth = paint.measureText(leftText);
                 float left = marginX;
                 float right = left + leftTextWidth + paddingH * 2f;
-                float top = baseLineY + fm.top - paddingV;
-                float bottom = baseLineY + fm.bottom + paddingV;
+                float top = topY;
+                float bottom = bottomY;
 
                 android.graphics.RectF rect = new android.graphics.RectF(left, top, right, bottom);
-                float radius = (bottom - top) / 2f;
+                float radius = cornerRadius;
 
                 // Background
                 paint.setColor(configManager.panelBackgroundColor);
@@ -467,7 +490,7 @@ public class HTDrawContext {
 
                 // Border – use line color
                 paint.setStyle(Paint.Style.STROKE);
-                paint.setStrokeWidth(1f);
+                paint.setStrokeWidth(borderWidth);
                 paint.setColor(drawItem.drawColor);
                 canvas.drawRoundRect(rect, radius, radius, paint);
 
@@ -484,11 +507,11 @@ public class HTDrawContext {
             float priceTextWidth = paint.measureText(priceText);
             float rightRectRight = klineView.getWidth() - marginX;
             float rightRectLeft = rightRectRight - (priceTextWidth + paddingH * 2f);
-            float top = baseLineY + fm.top - paddingV;
-            float bottom = baseLineY + fm.bottom + paddingV;
+            float top = topY;
+            float bottom = bottomY;
 
             android.graphics.RectF priceRect = new android.graphics.RectF(rightRectLeft, top, rightRectRight, bottom);
-            float priceRadius = (bottom - top) / 2f;
+            float priceRadius = cornerRadius;
 
             // Background
             paint.setColor(configManager.panelBackgroundColor);
@@ -497,7 +520,7 @@ public class HTDrawContext {
 
             // Border
             paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(1f);
+            paint.setStrokeWidth(borderWidth);
             paint.setColor(configManager.panelBorderColor);
             canvas.drawRoundRect(priceRect, priceRadius, priceRadius, paint);
 

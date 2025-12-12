@@ -453,32 +453,37 @@ class HTDrawContext {
             let paddingV: CGFloat = 4
             let marginX: CGFloat = 4
 
-            // Baseline above the line so the labels do not overlap the stroke.
-            let textHeight = priceSize.height
-            var baseLineY = viewPoint.y - textHeight - paddingV
-            if baseLineY < textHeight {
-                baseLineY = textHeight
+            // Place labels centered on the line (vertically), not hovering above it.
+            // Each bubble rect is vertically centered on viewPoint.y.
+            let centerY = viewPoint.y
+            let viewH = klineView.bounds.size.height
+            let borderWidth: CGFloat = 2
+            let clampTop: (CGFloat, CGFloat) -> CGFloat = { top, height in
+                if height >= viewH { return 0 }
+                return min(max(top, 0), viewH - height)
             }
 
             // Left label (custom text), only for globalHorizontalLineWithLabel.
             if drawItem.drawType == .globalHorizontalLineWithLabel, let label = leftText {
                 let leftSize = (label as NSString).size(withAttributes: leftAttributes)
                 let left = marginX
-                let top = baseLineY - leftSize.height - paddingV
+                let rectHeight = leftSize.height + paddingV * 2
+                let top = clampTop(centerY - rectHeight / 2, rectHeight)
                 let rect = CGRect(
                     x: left,
                     y: top,
                     width: leftSize.width + paddingH * 2,
-                    height: leftSize.height + paddingV * 2
+                    height: rectHeight
                 )
 
                 context.setFillColor(configManager.panelBackgroundColor.cgColor)
-                let radius = rect.height / 2
+                let radius = rect.height / 4 // half of previous pill radius
                 let path = UIBezierPath(roundedRect: rect, cornerRadius: radius)
                 context.addPath(path.cgPath)
                 context.drawPath(using: .fill)
 
                 // Border – use line color
+                context.setLineWidth(borderWidth)
                 context.setStrokeColor(drawItem.drawColor.cgColor)
                 context.addPath(path.cgPath)
                 context.drawPath(using: .stroke)
@@ -491,20 +496,22 @@ class HTDrawContext {
             let rightRectWidth = priceSize.width + paddingH * 2
             let rightRectRight = klineView.bounds.size.width - marginX
             let rightRectLeft = rightRectRight - rightRectWidth
-            let rightTop = baseLineY - priceSize.height - paddingV
+            let rightRectHeight = priceSize.height + paddingV * 2
+            let rightTop = clampTop(centerY - rightRectHeight / 2, rightRectHeight)
             let priceRect = CGRect(
                 x: rightRectLeft,
                 y: rightTop,
                 width: rightRectWidth,
-                height: priceSize.height + paddingV * 2
+                height: rightRectHeight
             )
 
             context.setFillColor(configManager.panelBackgroundColor.cgColor)
-            let priceRadius = priceRect.height / 2
+            let priceRadius = priceRect.height / 4 // half of previous pill radius
             let pricePath = UIBezierPath(roundedRect: priceRect, cornerRadius: priceRadius)
             context.addPath(pricePath.cgPath)
             context.drawPath(using: .fill)
 
+            context.setLineWidth(borderWidth)
             context.setStrokeColor(configManager.panelBorderColor.cgColor)
             context.addPath(pricePath.cgPath)
             context.drawPath(using: .stroke)
