@@ -248,11 +248,12 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
             drawHighLow(context)
             drawTime(context)
             drawClosePrice(context)
+            // Draw user drawings (lines/labels/etc.) below the hover selector overlays.
+            // This ensures the right-side hover price pill is always rendered on top.
+            drawContext.draw(contentOffset.x)
             drawSelectedLine(context)
             drawSelectedBoard(context)
             drawSelectedTime(context)
-            
-            drawContext.draw(contentOffset.x)
         })
 
         

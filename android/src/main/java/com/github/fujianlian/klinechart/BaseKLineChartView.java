@@ -329,7 +329,6 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             drawMaxAndMin(canvas);
             drawValue(canvas, isLongPress ? mSelectedIndex : mStopIndex);
             drawClosePriceLine(canvas);
-            drawSelector(canvas);
         }
         canvas.restore();
 
@@ -337,7 +336,13 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 //        Path path = new Path();
 //        path.addRect(0, mMainRect.top, getMaxScrollX() + getWidth(), mMainRect.bottom, Path.Direction.CW);
 //        canvas.clipPath(path);
+        // Draw user drawings (lines/labels/etc.) below the hover selector overlays.
+        // This ensures the right-side hover price pill is always rendered on top.
         drawContext.onDraw(canvas);
+
+        if (mItemCount > 0) {
+            drawSelector(canvas);
+        }
     }
 
     /**
