@@ -1661,6 +1661,11 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         return mTextPaint;
     }
 
+    // Left edge of the hover price pill (right side). Used so selector panels can avoid it.
+    public float getSelectedPricePillLeft() {
+        return mSelectedPricePillRect.isEmpty() ? -1f : mSelectedPricePillRect.left;
+    }
+
     // Expose y-axis range so selector panels can keep clear of the y-axis labels.
     public float getMainMaxValue() {
         return mMainMaxValue;

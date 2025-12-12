@@ -692,7 +692,14 @@ class HTKLineView: UIScrollView {
         )
         let axisInset: CGFloat = axisLabelWidth + 10
 
-        let x = leftAlign ? margin : max(margin, allWidth - width - margin - axisInset)
+        var x = leftAlign ? margin : max(margin, allWidth - width - margin - axisInset)
+
+        // Also keep the hover info panel clear of the hover price pill (+ icon) on the right.
+        // drawSelectedLine() runs before drawSelectedBoard(), so `selectedPricePillRect` is already updated.
+        let pillGap: CGFloat = 8
+        if !selectedPricePillRect.isEmpty {
+            x = min(x, max(margin, selectedPricePillRect.minX - pillGap - width))
+        }
         context.setFillColor(configManager.panelBackgroundColor.cgColor)
         context.setLineWidth(configManager.lineWidth / 2.0)
         context.setStrokeColor(configManager.panelBorderColor.cgColor)

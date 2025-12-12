@@ -348,6 +348,16 @@ public class MainDraw implements IChartDraw<ICandle> {
             }
         }
 
+        // Also keep the hover info panel clear of the hover price pill (+ icon) on the right.
+        float pillLeft = view.getSelectedPricePillLeft();
+        if (pillLeft > 0) {
+            float gap = ViewUtil.Dp2Px(mContext, 8);
+            float maxLeft = pillLeft - gap - width;
+            if (left > maxLeft) {
+                left = Math.max(margin, maxLeft);
+            }
+        }
+
         RectF r = new RectF(left, top, left + width, top + height);
 
         mSelectorBackgroundPaint.setStyle(Paint.Style.FILL);
