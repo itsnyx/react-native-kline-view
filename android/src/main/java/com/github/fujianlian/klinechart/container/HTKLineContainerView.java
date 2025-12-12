@@ -529,8 +529,8 @@ public class HTKLineContainerView extends RelativeLayout {
                 closest = entity;
             }
         }
-        float bodyLow = Math.min(closest.Open, closest.Close);
-        float bodyHigh = Math.max(closest.Open, closest.Close);
+        float bodyLow = closest.Low;
+        float bodyHigh = closest.High;
         return useTop ? bodyHigh : bodyLow;
     }
 

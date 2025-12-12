@@ -200,7 +200,7 @@ public class HTDrawContext {
 
     /**
      * For a given X-value (timestamp), find the candle whose id is closest and
-     * return the bottom of its real body (min(open, close)) in value-space.
+     * return the candle's low in value-space.
      * This is used to anchor candleMarker pointers to the corresponding candle
      * when position == "bottom".
      */
@@ -217,13 +217,13 @@ public class HTDrawContext {
                 closest = entity;
             }
         }
-        float bodyLow = Math.min(closest.Open, closest.Close);
+        float bodyLow = closest.Low;
         return bodyLow;
     }
 
     /**
      * For a given X-value (timestamp), find the candle whose id is closest and
-     * return the top of its real body (max(open, close)) in value-space.
+     * return the candle's high in value-space.
      * This is used to anchor candleMarker pointers when position == "top".
      */
     private float bodyTopValueForX(float valueX) {
@@ -239,7 +239,7 @@ public class HTDrawContext {
                 closest = entity;
             }
         }
-        float bodyHigh = Math.max(closest.Open, closest.Close);
+        float bodyHigh = closest.High;
         return bodyHigh;
     }
 
@@ -290,15 +290,19 @@ public class HTDrawContext {
             }
 
             boolean isTop = "top".equalsIgnoreCase(drawItem.position);
+            float candleMargin = 4f;
+            float tipY;
             float triangleBaseY;
             float top;
             float bottom;
             if (isTop) {
-                triangleBaseY = viewPoint.y - gap;
+                tipY = viewPoint.y - candleMargin;
+                triangleBaseY = tipY - gap;
                 bottom = triangleBaseY - triangleHeight;
                 top = bottom - bubbleHeight;
             } else {
-                triangleBaseY = viewPoint.y + gap;
+                tipY = viewPoint.y + candleMargin;
+                triangleBaseY = tipY + gap;
                 top = triangleBaseY + triangleHeight;
                 bottom = top + bubbleHeight;
             }
@@ -322,7 +326,7 @@ public class HTDrawContext {
 
             // Pointer triangle from bubble to candle/price
             Path triangle = new Path();
-            triangle.moveTo(viewPoint.x, viewPoint.y);
+            triangle.moveTo(viewPoint.x, tipY);
             triangle.lineTo(centerX - triangleHalfWidth, triangleBaseY);
             triangle.lineTo(centerX + triangleHalfWidth, triangleBaseY);
             triangle.close();

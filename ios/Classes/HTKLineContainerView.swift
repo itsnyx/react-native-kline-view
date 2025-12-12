@@ -448,8 +448,8 @@ class HTKLineContainerView: UIView {
                 closest = model
             }
         }
-        let bodyLow = min(closest.open, closest.close)
-        let bodyHigh = max(closest.open, closest.close)
+        let bodyLow = closest.low
+        let bodyHigh = closest.high
         return useTop ? bodyHigh : bodyLow
     }
 

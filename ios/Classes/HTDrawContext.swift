@@ -212,7 +212,7 @@ class HTDrawContext {
     }
 
     /// For a given X-value (timestamp), find the candle whose id is closest and
-    /// return the bottom of its real body (min(open, close)) in value-space.
+    /// return the candle's low in value-space.
     /// This is used to anchor candleMarker pointers to the corresponding candle
     /// when position == "bottom".
     private func bodyBottomValue(forX value: CGFloat) -> CGFloat {
@@ -228,11 +228,11 @@ class HTDrawContext {
                 closest = model
             }
         }
-        return min(closest.open, closest.close)
+        return closest.low
     }
 
     /// For a given X-value (timestamp), find the candle whose id is closest and
-    /// return the top of its real body (max(open, close)) in value-space.
+    /// return the candle's high in value-space.
     /// This is used to anchor candleMarker pointers when position == "top".
     private func bodyTopValue(forX value: CGFloat) -> CGFloat {
         guard !configManager.modelArray.isEmpty else {
@@ -247,7 +247,7 @@ class HTDrawContext {
                 closest = model
             }
         }
-        return max(closest.open, closest.close)
+        return closest.high
     }
     
     func setNeedsDisplay() {
@@ -305,10 +305,13 @@ class HTDrawContext {
             }
 
             let isTop = drawItem.position.lowercased() == "top"
+            let candleMargin: CGFloat = 4
+            let tipY: CGFloat
             let triangleBaseY: CGFloat
             let rect: CGRect
             if isTop {
-                triangleBaseY = viewPoint.y - gap
+                tipY = viewPoint.y - candleMargin
+                triangleBaseY = tipY - gap
                 let bottom = triangleBaseY - triangleHeight
                 let top = bottom - bubbleHeight
                 rect = CGRect(
@@ -318,7 +321,8 @@ class HTDrawContext {
                     height: bubbleHeight
                 )
             } else {
-                triangleBaseY = viewPoint.y + gap
+                tipY = viewPoint.y + candleMargin
+                triangleBaseY = tipY + gap
                 rect = CGRect(
                     x: left,
                     y: triangleBaseY + triangleHeight,
@@ -338,7 +342,7 @@ class HTDrawContext {
 
             // Pointer triangle from bubble to candle/price
             let trianglePath = UIBezierPath()
-            trianglePath.move(to: viewPoint)
+            trianglePath.move(to: CGPoint(x: viewPoint.x, y: tipY))
             trianglePath.addLine(to: CGPoint(x: centerX - triangleHalfWidth, y: triangleBaseY))
             trianglePath.addLine(to: CGPoint(x: centerX + triangleHalfWidth, y: triangleBaseY))
             trianglePath.close()
