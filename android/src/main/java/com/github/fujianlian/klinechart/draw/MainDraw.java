@@ -334,7 +334,18 @@ public class MainDraw implements IChartDraw<ICandle> {
         if (x > view.getChartWidth() / 2) {
             left = margin;
         } else {
-            left = view.getChartWidth() - width - margin;
+            // Keep the hover info panel clear of the right-side y-axis labels.
+            String maxAxis = view.formatValue(view.getMainMaxValue());
+            String minAxis = view.formatValue(view.getMainMinValue());
+            float axisLabelWidth = Math.max(
+                    view.getTextPaint().measureText(maxAxis),
+                    view.getTextPaint().measureText(minAxis)
+            );
+            float axisInset = axisLabelWidth + ViewUtil.Dp2Px(mContext, 10);
+            left = view.getChartWidth() - width - margin - axisInset;
+            if (left < margin) {
+                left = margin;
+            }
         }
 
         RectF r = new RectF(left, top, left + width, top + height);

@@ -701,25 +701,18 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         String text = formatValue(selectedValue);
         float textWidth = mTextPaint.measureText(text);
 
-        // Right-side hover price pill (always on the right, inset so it doesn't cover y-axis labels).
+        // Right-side hover price pill (always on the right, over the y-axis labels).
         mSelectedPriceValue = selectedValue;
 
-        // Estimate how much space the right y-axis labels occupy so our hover pill doesn't cover them.
-        String maxAxis = formatValue(mMainMaxValue);
-        String minAxis = formatValue(mMainMinValue);
-        float axisWidth = Math.max(calculateWidth(maxAxis), calculateWidth(minAxis));
-        float axisInset = axisWidth + ViewUtil.Dp2Px(getContext(), 6);
-
-        float pillPaddingV = ViewUtil.Dp2Px(getContext(), 6);
-        float pillHeight = Math.max(ViewUtil.Dp2Px(getContext(), 26), textHeight + pillPaddingV * 2f);
-        float iconInset = ViewUtil.Dp2Px(getContext(), 4);
+        float pillPaddingV = ViewUtil.Dp2Px(getContext(), 4);
+        float pillHeight = Math.max(ViewUtil.Dp2Px(getContext(), 22), textHeight + pillPaddingV * 2f);
+        float iconInset = ViewUtil.Dp2Px(getContext(), 3);
         float iconAreaWidth = pillHeight; // square area on the left for the plus icon
-        float textPaddingH = ViewUtil.Dp2Px(getContext(), 12);
+        float textPaddingH = ViewUtil.Dp2Px(getContext(), 8);
         float dividerWidth = 1f;
 
         float pillWidth = iconAreaWidth + dividerWidth + textWidth + textPaddingH * 2f;
-        float rightMargin = ViewUtil.Dp2Px(getContext(), 6);
-        float rightEdge = mWidth - rightMargin - axisInset;
+        float rightEdge = mWidth;
         float left = rightEdge - pillWidth;
         float top = y - pillHeight / 2f;
         float bottom = y + pillHeight / 2f;
@@ -1666,6 +1659,15 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
     public Paint getTextPaint() {
         return mTextPaint;
+    }
+
+    // Expose y-axis range so selector panels can keep clear of the y-axis labels.
+    public float getMainMaxValue() {
+        return mMainMaxValue;
+    }
+
+    public float getMainMinValue() {
+        return mMainMinValue;
     }
 
     public Paint getBackgroundPaint() {

@@ -573,31 +573,21 @@ class HTKLineView: UIScrollView {
             context.resetClip()
         }
 
-        // Right-side hover price pill (always on the right, inset so it doesn't cover y-axis labels).
+        // Right-side hover price pill (always on the right, over the y-axis labels).
         let title = configManager.precision(value, configManager.price)
         let font = configManager.createFont(configManager.candleTextFontSize)
         let textWidth = mainDraw.textWidth(title: title, font: font)
         let textHeight = mainDraw.textHeight(font: font)
 
-        // Estimate how much space the right y-axis labels occupy so our hover pill doesn't cover them.
-        let maxLabel = configManager.precision(mainMinMaxRange.upperBound, configManager.price)
-        let minLabel = configManager.precision(mainMinMaxRange.lowerBound, configManager.price)
-        let axisLabelWidth = max(
-            mainDraw.textWidth(title: maxLabel, font: font),
-            mainDraw.textWidth(title: minLabel, font: font)
-        )
-        let axisInset: CGFloat = axisLabelWidth + 10
-
-        let pillPaddingV: CGFloat = 6
-        let pillHeight: CGFloat = max(26, textHeight + pillPaddingV * 2)
-        let iconInset: CGFloat = 4
+        let pillPaddingV: CGFloat = 4
+        let pillHeight: CGFloat = max(22, textHeight + pillPaddingV * 2)
+        let iconInset: CGFloat = 3
         let iconAreaWidth: CGFloat = pillHeight // square area on the left for the plus icon
-        let textPaddingH: CGFloat = 12
+        let textPaddingH: CGFloat = 8
         let dividerWidth: CGFloat = 1 / UIScreen.main.scale
 
         let pillWidth = iconAreaWidth + dividerWidth + textWidth + textPaddingH * 2
-        let rightMargin: CGFloat = 6
-        let rightEdge = allWidth - rightMargin - axisInset
+        let rightEdge = allWidth
         var pillRect = CGRect(x: rightEdge - pillWidth, y: y - pillHeight / 2, width: pillWidth, height: pillHeight)
 
         // Clamp vertically inside the view.
@@ -632,7 +622,7 @@ class HTKLineView: UIScrollView {
         context.setFillColor(UIColor.black.cgColor)
         context.fillPath()
 
-        let plusStroke: CGFloat = max(1.5, circleRadius * 0.18)
+        let plusStroke: CGFloat = max(1.2, circleRadius * 0.18)
         let plusLen: CGFloat = circleRadius * 1.0
         context.setStrokeColor(UIColor.white.cgColor)
         context.setLineWidth(plusStroke)
@@ -692,7 +682,17 @@ class HTKLineView: UIScrollView {
             textY += detailHeight
             textY += lineSpace
         }
-        let x = leftAlign ? margin : allWidth - width - margin
+        // Keep the hover info panel clear of the right-side y-axis labels.
+        let axisFont = configManager.createFont(configManager.candleTextFontSize)
+        let maxLabel = configManager.precision(mainMinMaxRange.upperBound, configManager.price)
+        let minLabel = configManager.precision(mainMinMaxRange.lowerBound, configManager.price)
+        let axisLabelWidth = max(
+            mainDraw.textWidth(title: maxLabel, font: axisFont),
+            mainDraw.textWidth(title: minLabel, font: axisFont)
+        )
+        let axisInset: CGFloat = axisLabelWidth + 10
+
+        let x = leftAlign ? margin : max(margin, allWidth - width - margin - axisInset)
         context.setFillColor(configManager.panelBackgroundColor.cgColor)
         context.setLineWidth(configManager.lineWidth / 2.0)
         context.setStrokeColor(configManager.panelBorderColor.cgColor)
