@@ -704,12 +704,14 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         // Right-side hover price pill (always on the right, over the y-axis labels).
         mSelectedPriceValue = selectedValue;
 
+        boolean showPlus = configManager == null || configManager.showPlusIcon;
+
         float pillPaddingV = ViewUtil.Dp2Px(getContext(), 4);
         float pillHeight = Math.max(ViewUtil.Dp2Px(getContext(), 22), textHeight + pillPaddingV * 2f);
         float iconInset = ViewUtil.Dp2Px(getContext(), 3);
-        float iconAreaWidth = pillHeight; // square area on the left for the plus icon
+        float iconAreaWidth = showPlus ? pillHeight : 0; // square area on the left for the plus icon
         float textPaddingH = ViewUtil.Dp2Px(getContext(), 8);
-        float dividerWidth = 1f;
+        float dividerWidth = showPlus ? 1f : 0f;
 
         float pillWidth = iconAreaWidth + dividerWidth + textWidth + textPaddingH * 2f;
         float rightEdge = mWidth;
@@ -747,35 +749,37 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         paint.setColor(Color.argb(255, 217, 217, 217)); // light gray
         canvas.drawRoundRect(mSelectedPricePillRect, radius, radius, paint);
 
-        // Plus icon: black circle + white plus.
-        float iconCx = left + iconAreaWidth / 2f;
-        float iconCy = (top + bottom) / 2f;
-        float circleRadius = (pillHeight - iconInset * 2f) / 2f;
-        paint.setStyle(Paint.Style.FILL);
-        paint.setColor(Color.BLACK);
-        canvas.drawCircle(iconCx, iconCy, circleRadius, paint);
-
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setColor(Color.WHITE);
-        paint.setStrokeWidth(Math.max(2f, circleRadius * 0.18f));
-        paint.setStrokeCap(Paint.Cap.ROUND);
-        float plusLen = circleRadius;
-        canvas.drawLine(iconCx - plusLen / 2f, iconCy, iconCx + plusLen / 2f, iconCy, paint);
-        canvas.drawLine(iconCx, iconCy - plusLen / 2f, iconCx, iconCy + plusLen / 2f, paint);
-
-        // Divider.
         float dividerX = left + iconAreaWidth;
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setColor(Color.argb(255, 217, 217, 217));
-        paint.setStrokeWidth(dividerWidth);
-        canvas.drawLine(dividerX, top + ViewUtil.Dp2Px(getContext(), 6), dividerX, bottom - ViewUtil.Dp2Px(getContext(), 6), paint);
+        if (showPlus) {
+            // Plus icon: black circle + white plus.
+            float iconCx = left + iconAreaWidth / 2f;
+            float iconCy = (top + bottom) / 2f;
+            float circleRadius = (pillHeight - iconInset * 2f) / 2f;
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(Color.BLACK);
+            canvas.drawCircle(iconCx, iconCy, circleRadius, paint);
+
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setColor(Color.WHITE);
+            paint.setStrokeWidth(Math.max(2f, circleRadius * 0.18f));
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            float plusLen = circleRadius;
+            canvas.drawLine(iconCx - plusLen / 2f, iconCy, iconCx + plusLen / 2f, iconCy, paint);
+            canvas.drawLine(iconCx, iconCy - plusLen / 2f, iconCx, iconCy + plusLen / 2f, paint);
+
+            // Divider.
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setColor(Color.argb(255, 217, 217, 217));
+            paint.setStrokeWidth(dividerWidth);
+            canvas.drawLine(dividerX, top + ViewUtil.Dp2Px(getContext(), 6), dividerX, bottom - ViewUtil.Dp2Px(getContext(), 6), paint);
+        }
 
         // Price text (black).
         int oldTextColor = mMaxMinPaint.getColor();
         Paint.Align oldAlign = mMaxMinPaint.getTextAlign();
         mMaxMinPaint.setColor(Color.BLACK);
         mMaxMinPaint.setTextAlign(Paint.Align.LEFT);
-        float textX = dividerX + textPaddingH;
+        float textX = (showPlus ? dividerX : left) + textPaddingH;
         canvas.drawText(text, textX, fixTextY1((top + bottom) / 2f), mMaxMinPaint);
         mMaxMinPaint.setColor(oldTextColor);
         mMaxMinPaint.setTextAlign(oldAlign);

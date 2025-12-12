@@ -230,6 +230,10 @@ class HTKLineConfigManager: NSObject {
 
     var closePriceRightLightLottieSource = ""
     
+    // Whether to show the "+" icon inside the right-side hover price pill.
+    // Controlled from JS via optionList.configList.showPlusIcon (default: true).
+    var showPlusIcon: Bool = true
+    
     // Optional base64-encoded logo image drawn in the center of the main chart,
     // behind the candles. Provided from JS via configList["centerLogoSource"].
     // Expected to be a plain base64 string, or a data-URL string like:
@@ -481,6 +485,7 @@ class HTKLineConfigManager: NSObject {
         closePriceRightLightLottieScale = configList["closePriceRightLightLottieScale"] as? CGFloat ?? 0
         closePriceRightLightLottieSource = configList["closePriceRightLightLottieSource"] as? String ?? ""
         centerLogoSource = configList["centerLogoSource"] as? String ?? ""
+        showPlusIcon = configList["showPlusIcon"] as? Bool ?? true
     }
 
 }

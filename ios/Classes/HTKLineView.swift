@@ -582,9 +582,10 @@ class HTKLineView: UIScrollView {
         let pillPaddingV: CGFloat = 4
         let pillHeight: CGFloat = max(22, textHeight + pillPaddingV * 2)
         let iconInset: CGFloat = 3
-        let iconAreaWidth: CGFloat = pillHeight // square area on the left for the plus icon
+        let showPlus = configManager.showPlusIcon
+        let iconAreaWidth: CGFloat = showPlus ? pillHeight : 0 // square area on the left for the plus icon
         let textPaddingH: CGFloat = 8
-        let dividerWidth: CGFloat = 1 / UIScreen.main.scale
+        let dividerWidth: CGFloat = showPlus ? (1 / UIScreen.main.scale) : 0
 
         let pillWidth = iconAreaWidth + dividerWidth + textWidth + textPaddingH * 2
         let rightEdge = allWidth
@@ -615,35 +616,37 @@ class HTKLineView: UIScrollView {
         context.addPath(pillPath.cgPath)
         context.drawPath(using: .stroke)
 
-        // Plus icon: black circle + white plus.
-        let iconCenter = CGPoint(x: pillRect.minX + iconAreaWidth / 2, y: pillRect.midY)
-        let circleRadius = (pillHeight - iconInset * 2) / 2
-        context.addArc(center: iconCenter, radius: circleRadius, startAngle: 0, endAngle: CGFloat(Double.pi * 2), clockwise: true)
-        context.setFillColor(UIColor.black.cgColor)
-        context.fillPath()
-
-        let plusStroke: CGFloat = max(1.2, circleRadius * 0.18)
-        let plusLen: CGFloat = circleRadius * 1.0
-        context.setStrokeColor(UIColor.white.cgColor)
-        context.setLineWidth(plusStroke)
-        context.setLineCap(.round)
-        context.move(to: CGPoint(x: iconCenter.x - plusLen / 2, y: iconCenter.y))
-        context.addLine(to: CGPoint(x: iconCenter.x + plusLen / 2, y: iconCenter.y))
-        context.move(to: CGPoint(x: iconCenter.x, y: iconCenter.y - plusLen / 2))
-        context.addLine(to: CGPoint(x: iconCenter.x, y: iconCenter.y + plusLen / 2))
-        context.strokePath()
-
-        // Divider.
         let dividerX = pillRect.minX + iconAreaWidth
-        context.setStrokeColor(UIColor(white: 0.85, alpha: 1).cgColor)
-        context.setLineWidth(dividerWidth)
-        context.move(to: CGPoint(x: dividerX, y: pillRect.minY + 6))
-        context.addLine(to: CGPoint(x: dividerX, y: pillRect.maxY - 6))
-        context.strokePath()
+        if showPlus {
+            // Plus icon: black circle + white plus.
+            let iconCenter = CGPoint(x: pillRect.minX + iconAreaWidth / 2, y: pillRect.midY)
+            let circleRadius = (pillHeight - iconInset * 2) / 2
+            context.addArc(center: iconCenter, radius: circleRadius, startAngle: 0, endAngle: CGFloat(Double.pi * 2), clockwise: true)
+            context.setFillColor(UIColor.black.cgColor)
+            context.fillPath()
+
+            let plusStroke: CGFloat = max(1.2, circleRadius * 0.18)
+            let plusLen: CGFloat = circleRadius * 1.0
+            context.setStrokeColor(UIColor.white.cgColor)
+            context.setLineWidth(plusStroke)
+            context.setLineCap(.round)
+            context.move(to: CGPoint(x: iconCenter.x - plusLen / 2, y: iconCenter.y))
+            context.addLine(to: CGPoint(x: iconCenter.x + plusLen / 2, y: iconCenter.y))
+            context.move(to: CGPoint(x: iconCenter.x, y: iconCenter.y - plusLen / 2))
+            context.addLine(to: CGPoint(x: iconCenter.x, y: iconCenter.y + plusLen / 2))
+            context.strokePath()
+
+            // Divider.
+            context.setStrokeColor(UIColor(white: 0.85, alpha: 1).cgColor)
+            context.setLineWidth(dividerWidth)
+            context.move(to: CGPoint(x: dividerX, y: pillRect.minY + 6))
+            context.addLine(to: CGPoint(x: dividerX, y: pillRect.maxY - 6))
+            context.strokePath()
+        }
 
         // Price text (black).
         let textPoint = CGPoint(
-            x: dividerX + textPaddingH,
+            x: (showPlus ? dividerX : pillRect.minX) + textPaddingH,
             y: pillRect.midY - textHeight / 2
         )
         mainDraw.drawText(title: title, point: textPoint, color: UIColor.black, font: font, context: context, configManager: configManager)

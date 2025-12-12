@@ -763,6 +763,8 @@ class App extends Component {
       ), // 95% opacity
       panelBorderColor: processColor(theme.detailColor),
       panelTextColor: processColor(theme.titleColor),
+      // Hover price pill: show/hide the plus icon (default true on native if omitted)
+      showPlusIcon: true,
       selectedPointContainerColor: processColor('transparent'),
       selectedPointContentColor: processColor(
         this.state.isDarkTheme ? theme.titleColor : 'white',

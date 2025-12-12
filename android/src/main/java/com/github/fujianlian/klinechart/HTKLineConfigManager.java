@@ -86,6 +86,10 @@ public class HTKLineConfigManager {
     // Callback receives: (price: double)
     public Callback onNewOrder;
 
+    // Whether to show the "+" icon inside the right-side hover price pill.
+    // Controlled from JS via optionList.configList.showPlusIcon (default: true).
+    public boolean showPlusIcon = true;
+
 
 
 
@@ -481,6 +485,16 @@ public class HTKLineConfigManager {
         this.selectedPointContentColor = ((Number) configList.get("selectedPointContentColor")).intValue();
         this.panelMinWidth = ((Number)configList.get("panelMinWidth")).floatValue();
         this.panelTextFontSize = ((Number)configList.get("panelTextFontSize")).floatValue();
+
+        Object showPlusIconObj = configList.get("showPlusIcon");
+        if (showPlusIconObj instanceof Boolean) {
+            this.showPlusIcon = (Boolean) showPlusIconObj;
+        } else if (showPlusIconObj instanceof Number) {
+            // allow 0/1
+            this.showPlusIcon = ((Number) showPlusIconObj).intValue() != 0;
+        } else {
+            this.showPlusIcon = true;
+        }
 
 
 
