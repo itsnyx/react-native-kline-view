@@ -39,6 +39,12 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     // the right-side price pill (+ icon) or inspect values without immediately returning to scroll mode.
     private var isHoverModeLocked: Bool = false
 
+    // `shouldScrollToEnd` can be requested before RN lays out the view (bounds.width == 0).
+    // Defer the initial scroll-to-end until we have a real size.
+    private var didApplyInitialScrollToEnd: Bool = false
+    private var lastKnownBoundsSize: CGSize = .zero
+    private var lastKnownContentSize: CGSize = .zero
+
     // Hit target for the right-side hover price pill (used to trigger `onNewOrder`).
     private var selectedPricePillRect: CGRect = .zero
     private var selectedPriceValue: CGFloat = .nan
@@ -159,14 +165,24 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         let isEnd = contentOffset.x + 1 + bounds.size.width >= contentSize.width
         reloadContentSize()
 
-        if (configManager.shouldScrollToEnd || isEnd) {
-            let toEndContentOffset = contentSize.width - bounds.size.width
-            let distance = abs(contentOffset.x - toEndContentOffset)
-            let animated = distance <= configManager.itemWidth
-            reloadContentOffset(toEndContentOffset, animated)
+        // Reset deferral marker when JS asks for "keep at end".
+        if configManager.shouldScrollToEnd {
+            didApplyInitialScrollToEnd = false
         }
 
-        scrollViewDidScroll(self)
+        if (configManager.shouldScrollToEnd || isEnd) {
+            // If layout hasn't happened yet (width == 0), defer to layoutSubviews().
+            if bounds.size.width > 0 {
+                let toEndContentOffset = contentSize.width - bounds.size.width
+                let distance = abs(contentOffset.x - toEndContentOffset)
+                let animated = distance <= configManager.itemWidth
+                scrollToEndIfPossible(animated: animated)
+            } else {
+                scrollViewDidScroll(self)
+            }
+        } else {
+            scrollViewDidScroll(self)
+        }
 
         // (1) Reload/prepare the Lottie "live price" animation when source changes.
         if lastLoadAnimationSource != configManager.closePriceRightLightLottieSource {
@@ -425,6 +441,42 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
             parent.panGestureRecognizer.require(toFail: longPressGesture)
             parentScrollViewDuringLongPress = parent
         }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+
+        let boundsChanged = lastKnownBoundsSize != bounds.size
+        let contentChanged = lastKnownContentSize != contentSize
+        guard boundsChanged || contentChanged else { return }
+
+        lastKnownBoundsSize = bounds.size
+        lastKnownContentSize = contentSize
+
+        // Clamp any invalid contentOffset that could have been set while bounds were 0.
+        let maxOffsetX = max(0, contentSize.width - bounds.size.width)
+        if contentOffset.x.isFinite, contentOffset.x > maxOffsetX + 0.5 {
+            setContentOffset(CGPoint(x: maxOffsetX, y: 0), animated: false)
+        }
+
+        // Apply initial "scroll to end" once we have a real width & content.
+        if configManager.shouldScrollToEnd,
+           !didApplyInitialScrollToEnd,
+           bounds.size.width > 0,
+           contentSize.width > bounds.size.width {
+            scrollToEndIfPossible(animated: false)
+        } else {
+            // Ensure visibleRange matches the latest layout/offset (also triggers redraw).
+            scrollViewDidScroll(self)
+        }
+    }
+
+    private func scrollToEndIfPossible(animated: Bool) {
+        guard bounds.size.width > 0 else { return }
+        let maxOffsetX = max(0, contentSize.width - bounds.size.width)
+        didApplyInitialScrollToEnd = true
+        setContentOffset(CGPoint(x: maxOffsetX, y: 0), animated: animated)
+        scrollViewDidScroll(self)
     }
 
     private func enterHoverModeIfNeeded() {
