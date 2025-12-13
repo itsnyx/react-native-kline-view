@@ -270,7 +270,20 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     }
 
     func calculateBaseHeight() {
-        self.visibleModelArray = configManager.modelArray.count > 0 ? Array(configManager.modelArray[visibleRange]) : configManager.modelArray
+        // Be defensive: `visibleRange` can temporarily be out of bounds during updates/zoom.
+        // Clamp it to a valid range before slicing to avoid crashes.
+        let count = configManager.modelArray.count
+        if count > 0 {
+            let lower = max(0, min(visibleRange.lowerBound, count - 1))
+            let upper = max(0, min(visibleRange.upperBound, count - 1))
+            let lo = min(lower, upper)
+            let hi = max(lower, upper)
+            visibleRange = lo...hi
+            self.visibleModelArray = Array(configManager.modelArray[lo...hi])
+        } else {
+            visibleRange = 0...0
+            self.visibleModelArray = []
+        }
         // Layout:
         // - main section: [0 .. mainBoundary)
         // - volume section: [mainBoundary .. volumeBoundary) (optional)
@@ -994,11 +1007,21 @@ extension HTKLineView: UIScrollViewDelegate {
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        // If there is no data yet, don't compute indices against an empty array.
+        // Otherwise `count - 1` becomes -1, and `visibleRange` can become negative
+        // which later crashes when slicing `modelArray[visibleRange]`.
+        let count = configManager.modelArray.count
+        guard count > 0 else {
+            visibleRange = 0...0
+            self.setNeedsDisplay()
+            return
+        }
+
         let contentOffsetX = scrollView.contentOffset.x
         var visibleStartIndex = Int(floor(contentOffsetX / configManager.itemWidth))
         var visibleEndIndex = Int(ceil((contentOffsetX + scrollView.bounds.size.width) / configManager.itemWidth))
-        visibleStartIndex = min(max(0, visibleStartIndex), configManager.modelArray.count - 1)
-        visibleEndIndex = min(max(0, visibleEndIndex), configManager.modelArray.count - 1)
+        visibleStartIndex = min(max(0, visibleStartIndex), count - 1)
+        visibleEndIndex = min(max(0, visibleEndIndex), count - 1)
         visibleRange = visibleStartIndex...visibleEndIndex
         self.setNeedsDisplay()
 
