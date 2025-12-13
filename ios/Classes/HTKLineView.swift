@@ -125,6 +125,10 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         addGestureRecognizer(UITapGestureRecognizer.init(target: self, action: #selector(tapSelector)))
         addGestureRecognizer(UIPinchGestureRecognizer.init(target: self, action: #selector(pinchSelector)))
         addGestureRecognizer(yAxisPanGesture)
+
+        // Prefer long-press hover over horizontal scrolling. This prevents the scroll view pan
+        // from beginning immediately (due to tiny finger movement) and causing long-press to fail.
+        panGestureRecognizer.require(toFail: longPressGesture)
     }
 
     required init?(coder: NSCoder) {
@@ -1026,10 +1030,10 @@ extension HTKLineView: UIScrollViewDelegate {
     @objc
     func longPressSelector(_ gesture: UILongPressGestureRecognizer) {
         let location = gesture.location(in: self)
-        // Convert finger position to *content* coordinates so it maps to the correct candle
-        // even when the scroll view is scrolled.
+        // `location(in: self)` is already in this scroll view’s coordinate space which tracks
+        // content (i.e. it naturally reflects scrolling). Do NOT add `contentOffset` again.
         let itemWidth = configManager.itemWidth
-        let xInContent = location.x + contentOffset.x
+        let xInContent = location.x
 
         if itemWidth > 0, !configManager.modelArray.isEmpty {
             // X snaps to candle index; Y follows the finger (clamped during draw).
