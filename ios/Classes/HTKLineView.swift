@@ -35,6 +35,9 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     // Nearest parent scroll view (e.g. RN vertical ScrollView) we temporarily disable during hover.
     private weak var parentScrollViewDuringLongPress: UIScrollView?
     private var parentWasScrollEnabledBeforeLongPress: Bool = true
+    // When true, hover mode stays active after the user lifts their finger, so they can tap
+    // the right-side price pill (+ icon) or inspect values without immediately returning to scroll mode.
+    private var isHoverModeLocked: Bool = false
 
     // Hit target for the right-side hover price pill (used to trigger `onNewOrder`).
     private var selectedPricePillRect: CGRect = .zero
@@ -412,6 +415,41 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
             v = view.superview
         }
         return nil
+    }
+
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        // Improve long-press reliability when embedded inside a parent (vertical) ScrollView.
+        // We don't want to fully block scrolling; long-press will quickly fail if the user drags.
+        if let parent = nearestParentScrollView() {
+            parent.panGestureRecognizer.require(toFail: longPressGesture)
+            parentScrollViewDuringLongPress = parent
+        }
+    }
+
+    private func enterHoverModeIfNeeded() {
+        guard !isHoverModeLocked else { return }
+        isHoverModeLocked = true
+
+        wasScrollEnabledBeforeLongPress = isScrollEnabled
+        isScrollEnabled = false
+
+        let parent = parentScrollViewDuringLongPress ?? nearestParentScrollView()
+        parentScrollViewDuringLongPress = parent
+        if let parent {
+            parentWasScrollEnabledBeforeLongPress = parent.isScrollEnabled
+            parent.isScrollEnabled = false
+        }
+    }
+
+    private func exitHoverModeIfNeeded() {
+        guard isHoverModeLocked else { return }
+        isHoverModeLocked = false
+
+        isScrollEnabled = wasScrollEnabledBeforeLongPress
+        if let parent = parentScrollViewDuringLongPress {
+            parent.isScrollEnabled = parentWasScrollEnabledBeforeLongPress
+        }
     }
 
     @objc private func yAxisPanSelector(_ pan: UIPanGestureRecognizer) {
@@ -1070,22 +1108,23 @@ extension HTKLineView: UIScrollViewDelegate {
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-        // If the user is hovering via long-press, don't clear selection.
-        // (In hover mode we also disable scrolling, but this is an extra safety net.)
-        if longPressGesture.state == .began || longPressGesture.state == .changed {
+        // If hover mode is active (either finger-down or locked), don't clear selection.
+        // This prevents the selector from disappearing when the scroll view pan begins.
+        if isHoverModeLocked || longPressGesture.state == .began || longPressGesture.state == .changed {
             return
         }
         selectedIndex = -1
+        selectedY = .nan
         self.setNeedsDisplay()
     }
 
     @objc
     func longPressSelector(_ gesture: UILongPressGestureRecognizer) {
         let location = gesture.location(in: self)
-        // `location(in: self)` is already in this scroll view’s coordinate space which tracks
-        // content (i.e. it naturally reflects scrolling). Do NOT add `contentOffset` again.
+        // IMPORTANT: `location(in: self)` is in the scroll view's *view/bounds* coordinate space
+        // (0...bounds.width). To map to candle indices we need *content* X, so we add contentOffset.x.
         let itemWidth = configManager.itemWidth
-        let xInContent = location.x
+        let xInContent = location.x + contentOffset.x
 
         if itemWidth > 0, !configManager.modelArray.isEmpty {
             // X snaps to candle index; Y follows the finger (clamped during draw).
@@ -1100,24 +1139,15 @@ extension HTKLineView: UIScrollViewDelegate {
         // Update continuously while holding/dragging.
         switch gesture.state {
         case .began:
-            wasScrollEnabledBeforeLongPress = isScrollEnabled
-            isScrollEnabled = false
-            // Also disable the nearest parent UIScrollView (commonly the RN vertical ScrollView),
-            // otherwise iOS will scroll the page while dragging the hover selector.
-            let parent = parentScrollViewDuringLongPress ?? nearestParentScrollView()
-            parentScrollViewDuringLongPress = parent
-            if let parent {
-                parentWasScrollEnabledBeforeLongPress = parent.isScrollEnabled
-                parent.isScrollEnabled = false
-            }
+            // Enter "locked" hover mode: it stays active after finger-up until user taps to dismiss.
+            enterHoverModeIfNeeded()
             setNeedsDisplay()
         case .changed:
+            // Ensure hover mode is entered even if iOS transitions directly to .changed in some edge cases.
+            enterHoverModeIfNeeded()
             setNeedsDisplay()
         case .ended, .cancelled, .failed:
-            isScrollEnabled = wasScrollEnabledBeforeLongPress
-            if let parent = parentScrollViewDuringLongPress {
-                parent.isScrollEnabled = parentWasScrollEnabledBeforeLongPress
-            }
+            // Keep hover mode visible after finger-up so the user can tap the price pill icon.
             setNeedsDisplay()
         default:
             break
@@ -1144,6 +1174,7 @@ extension HTKLineView: UIScrollViewDelegate {
         selectedY = .nan
         selectedPricePillRect = .zero
         selectedPriceValue = .nan
+        exitHoverModeIfNeeded()
         self.setNeedsDisplay()
     }
 
