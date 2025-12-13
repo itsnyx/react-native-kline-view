@@ -383,16 +383,27 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         return point.x >= (bounds.size.width - width)
     }
 
+    /// Convert gesture location to view-relative coordinates (not affected by scroll offset).
+    /// In UIScrollView, location(in: self) returns bounds coordinates where origin = contentOffset.
+    private func viewLocationFrom(_ gestureRecognizer: UIGestureRecognizer) -> CGPoint {
+        let locationInSuperview = gestureRecognizer.location(in: superview ?? self)
+        let viewOriginInSuperview = superview != nil ? frame.origin : CGPoint.zero
+        return CGPoint(
+            x: locationInSuperview.x - viewOriginInSuperview.x,
+            y: locationInSuperview.y - viewOriginInSuperview.y
+        )
+    }
+
     // Only begin our y-axis pan when user drags vertically inside the right y-axis region.
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         if gestureRecognizer === yAxisPanGesture {
-            let p = gestureRecognizer.location(in: self)
+            let p = viewLocationFrom(gestureRecognizer)
             guard isInRightYAxisArea(p) else { return false }
             let v = (gestureRecognizer as? UIPanGestureRecognizer)?.velocity(in: self) ?? .zero
             return abs(v.y) > abs(v.x)
         }
         if gestureRecognizer === longPressGesture {
-            let p = gestureRecognizer.location(in: self)
+            let p = viewLocationFrom(gestureRecognizer)
             // Never allow the long-press hover selector to start from the y-axis area.
             return !isInRightYAxisArea(p)
         }
@@ -505,7 +516,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     }
 
     @objc private func yAxisPanSelector(_ pan: UIPanGestureRecognizer) {
-        let point = pan.location(in: self)
+        let point = viewLocationFrom(pan)
 
         switch pan.state {
         case .began:
@@ -1172,17 +1183,25 @@ extension HTKLineView: UIScrollViewDelegate {
 
     @objc
     func longPressSelector(_ gesture: UILongPressGestureRecognizer) {
-        let location = gesture.location(in: self)
-        // IMPORTANT: `location(in: self)` is in the scroll view's *view/bounds* coordinate space
-        // (0...bounds.width). To map to candle indices we need *content* X, so we add contentOffset.x.
+        // Use location in the superview (or window) to get coordinates relative to the visible
+        // viewport, then manually add contentOffset to convert to content coordinates.
+        // NOTE: In a UIScrollView, `location(in: self)` returns coordinates in the scroll view's
+        // bounds coordinate system, which already incorporates contentOffset (bounds.origin = contentOffset).
+        // Using the superview gives us pure view-space coordinates that we then convert ourselves.
+        let locationInSuperview = gesture.location(in: superview ?? self)
+        let viewOriginInSuperview = superview != nil ? frame.origin : CGPoint.zero
+        let viewX = locationInSuperview.x - viewOriginInSuperview.x
+        let viewY = locationInSuperview.y - viewOriginInSuperview.y
+        
         let itemWidth = configManager.itemWidth
-        let xInContent = location.x + contentOffset.x
+        // Convert view X to content X by adding the scroll offset
+        let xInContent = viewX + contentOffset.x
 
         if itemWidth > 0, !configManager.modelArray.isEmpty {
             // X snaps to candle index; Y follows the finger (clamped during draw).
             let index = Int(floor(xInContent / itemWidth))
             selectedIndex = max(0, min(index, configManager.modelArray.count - 1))
-            selectedY = location.y
+            selectedY = viewY
         } else {
             selectedIndex = -1
             selectedY = .nan
@@ -1208,12 +1227,19 @@ extension HTKLineView: UIScrollViewDelegate {
 
     @objc
     func tapSelector(_ gesture: UITapGestureRecognizer) {
-        let location = gesture.location(in: self)
+        // Use superview to get view-relative coordinates (not affected by scroll offset).
+        // selectedPricePillRect is in view coordinates, so we need view-relative tap location.
+        let locationInSuperview = gesture.location(in: superview ?? self)
+        let viewOriginInSuperview = superview != nil ? frame.origin : CGPoint.zero
+        let viewLocation = CGPoint(
+            x: locationInSuperview.x - viewOriginInSuperview.x,
+            y: locationInSuperview.y - viewOriginInSuperview.y
+        )
 
         // If a hover price pill is visible and tapped, trigger onNewOrder(price) and keep the selector.
         if visibleRange.contains(selectedIndex),
            !selectedPricePillRect.isEmpty,
-           selectedPricePillRect.contains(location),
+           selectedPricePillRect.contains(viewLocation),
            selectedPriceValue.isFinite {
             containerView?.onNewOrder?([
                 "price": Double(selectedPriceValue)
