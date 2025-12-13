@@ -134,7 +134,14 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         backgroundColor = UIColor.clear
 
         addGestureRecognizer(longPressGesture)
-        addGestureRecognizer(UITapGestureRecognizer.init(target: self, action: #selector(tapSelector)))
+        
+        // Tap gesture should only fire if the long press fails (i.e., user lifted finger
+        // before the long press minimum duration). This prevents a tap from clearing
+        // the hover selection immediately after the user lifts their finger from a long press.
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(tapSelector))
+        tapGesture.require(toFail: longPressGesture)
+        addGestureRecognizer(tapGesture)
+        
         addGestureRecognizer(UIPinchGestureRecognizer.init(target: self, action: #selector(pinchSelector)))
         addGestureRecognizer(yAxisPanGesture)
 
