@@ -32,6 +32,9 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     // While long-press hovering, temporarily disable scrolling so the scroll view pan
     // doesn’t steal the gesture (and clear selection via scroll callbacks).
     private var wasScrollEnabledBeforeLongPress: Bool = true
+    // Nearest parent scroll view (e.g. RN vertical ScrollView) we temporarily disable during hover.
+    private weak var parentScrollViewDuringLongPress: UIScrollView?
+    private var parentWasScrollEnabledBeforeLongPress: Bool = true
 
     // Hit target for the right-side hover price pill (used to trigger `onNewOrder`).
     private var selectedPricePillRect: CGRect = .zero
@@ -382,7 +385,33 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         if gestureRecognizer === yAxisPanGesture || otherGestureRecognizer === yAxisPanGesture {
             return false
         }
+        // While long-press hovering, do NOT allow other scroll views (e.g. parent vertical ScrollView)
+        // to recognize their pan simultaneously. Otherwise dragging the crosshair scrolls the page.
+        if gestureRecognizer === longPressGesture || otherGestureRecognizer === longPressGesture {
+            if isScrollViewPanGesture(otherGestureRecognizer) || isScrollViewPanGesture(gestureRecognizer) {
+                return false
+            }
+        }
         return true
+    }
+
+    private func isScrollViewPanGesture(_ gesture: UIGestureRecognizer) -> Bool {
+        // Match UIScrollView pan gestures, including RN's internal scroll view subclasses.
+        guard let pan = gesture as? UIPanGestureRecognizer else { return false }
+        guard let v = pan.view else { return false }
+        // `HTKLineView` is also a UIScrollView; we only care about OTHER scroll views here.
+        return (v is UIScrollView) && (v !== self)
+    }
+
+    private func nearestParentScrollView() -> UIScrollView? {
+        var v = superview
+        while let view = v {
+            if let sv = view as? UIScrollView, sv !== self {
+                return sv
+            }
+            v = view.superview
+        }
+        return nil
     }
 
     @objc private func yAxisPanSelector(_ pan: UIPanGestureRecognizer) {
@@ -1073,11 +1102,22 @@ extension HTKLineView: UIScrollViewDelegate {
         case .began:
             wasScrollEnabledBeforeLongPress = isScrollEnabled
             isScrollEnabled = false
+            // Also disable the nearest parent UIScrollView (commonly the RN vertical ScrollView),
+            // otherwise iOS will scroll the page while dragging the hover selector.
+            let parent = parentScrollViewDuringLongPress ?? nearestParentScrollView()
+            parentScrollViewDuringLongPress = parent
+            if let parent {
+                parentWasScrollEnabledBeforeLongPress = parent.isScrollEnabled
+                parent.isScrollEnabled = false
+            }
             setNeedsDisplay()
         case .changed:
             setNeedsDisplay()
         case .ended, .cancelled, .failed:
             isScrollEnabled = wasScrollEnabledBeforeLongPress
+            if let parent = parentScrollViewDuringLongPress {
+                parent.isScrollEnabled = parentWasScrollEnabledBeforeLongPress
+            }
             setNeedsDisplay()
         default:
             break
