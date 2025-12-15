@@ -461,7 +461,7 @@ class HTDrawContext {
 
             let priceAttributes: [NSAttributedString.Key: Any] = [
                 .font: font,
-                .foregroundColor: drawItem.textColor
+                .foregroundColor: configManager.textColor
             ]
             let leftAttributes: [NSAttributedString.Key: Any] = [
                 .font: font,
