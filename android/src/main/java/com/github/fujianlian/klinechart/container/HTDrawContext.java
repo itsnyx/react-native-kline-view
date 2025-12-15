@@ -542,13 +542,11 @@ public class HTDrawContext {
             paint.setStrokeWidth(borderWidth);
             paint.setColor(drawItem.drawColor);
             canvas.drawRoundRect(priceRect, priceRadius, priceRadius, paint);
-
-            // Text
+            
+            // Text – use configManager.textColor to match yAxis panel colors (like iOS)
             paint.setStyle(Paint.Style.FILL);
-            int priceTextColor = drawItem.textColor != 0
-                    ? drawItem.textColor
-                    : configManager.drawTextColor;
-            paint.setColor(priceTextColor);
+            paint.setColor(configManager.textColor);
+
             canvas.drawText(priceText, rightRectLeft + paddingH, baseLineY, paint);
 
             if (itemIndex == configManager.shouldReloadDrawItemIndex) {
