@@ -49,6 +49,9 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     private var selectedPricePillRect: CGRect = .zero
     private var selectedPriceValue: CGFloat = .nan
 
+    // Hit target for the close price center pill (shown when scrolled left, tap to scroll to present).
+    private var closePriceCenterPillRect: CGRect = .zero
+
     var scale: CGFloat = 1
 
     // --- Right y-axis drag scaling (vertical zoom) ---
@@ -795,6 +798,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
     func drawClosePrice(_ context: CGContext) {
         guard let lastModel = configManager.modelArray.last else {
+            closePriceCenterPillRect = .zero
             return
         }
         let offset = CGFloat(visibleRange.upperBound) * configManager.itemWidth - contentOffset.x
@@ -804,6 +808,8 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         if (showCenter) {
             drawClosePriceCenter(context, lastModel)
         } else {
+            // Clear the tap target when viewing the present (center pill not shown).
+            closePriceCenterPillRect = .zero
             drawClosePriceRight(context, lastModel, offset)
         }
     }
@@ -823,6 +829,9 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         let y = max(mainBaseY - textHeight + rectHeight / 2, min(mainBaseY + mainHeight + textHeight - rectHeight / 2, yFromValue(lastModel.close)))
         let rectWidth = paddingHorizontal + width + triangleMarginLeft + triangleWidth + paddingHorizontal
         let rect = CGRect.init(x: x - rectWidth / 2, y: y - height / 2 - paddingVertical, width: rectWidth, height: rectHeight)
+
+        // Save the pill rect for tap-to-scroll-to-present detection.
+        closePriceCenterPillRect = rect
 
         context.saveGState()
         context.setLineDash(phase: 0, lengths: [4, 4])
@@ -1242,6 +1251,13 @@ extension HTKLineView: UIScrollViewDelegate {
             x: locationInSuperview.x - viewOriginInSuperview.x,
             y: locationInSuperview.y - viewOriginInSuperview.y
         )
+
+        // If the close price center pill (shown when scrolled left) is tapped, scroll to present.
+        if !closePriceCenterPillRect.isEmpty,
+           closePriceCenterPillRect.contains(viewLocation) {
+            scrollToEndIfPossible(animated: true)
+            return
+        }
 
         // If a hover price pill is visible and tapped, trigger onNewOrder(price) and keep the selector.
         if visibleRange.contains(selectedIndex),

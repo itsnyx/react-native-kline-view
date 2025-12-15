@@ -184,6 +184,9 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
     private final RectF mSelectedPricePillRect = new RectF();
     private float mSelectedPriceValue = Float.NaN;
 
+    // Hit target for the close price center pill (shown when scrolled left, tap to scroll to present).
+    private final RectF mClosePriceCenterPillRect = new RectF();
+
     public BaseKLineChartView(Context context, HTKLineConfigManager configManager) {
         super(context);
         this.configManager = configManager;
@@ -501,6 +504,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
     private void drawClosePriceLine(Canvas canvas) {
         if (mItemCount <= 0) {
+            mClosePriceCenterPillRect.setEmpty();
             return;
         }
         float paddingRight = this.configManager.paddingRight;
@@ -532,6 +536,8 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             float textX = mWidth - paddingRight - containerWidth / 2 + paddingX;
 
             RectF rect = new RectF(textX - paddingX, y - height / 2 - paddingY, mWidth - marginRight, y + height / 2 + paddingY);
+            // Save the pill rect for tap-to-scroll-to-present detection.
+            mClosePriceCenterPillRect.set(rect);
             canvas.drawLine(0, y, mWidth, y, mClosePriceLinePaint);
             float radius = (paddingY * 2 + height) / 2;
             mClosePricePointPaint.setColor(configManager.closePriceCenterBackgroundColor);
@@ -549,6 +555,8 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             path.close();
             canvas.drawPath(path, mClosePriceTrianglePaint);
         } else {
+            // Clear the tap target when viewing the present (center pill not shown).
+            mClosePriceCenterPillRect.setEmpty();
             mClosePriceLinePaint.setColor(configManager.closePriceRightSeparatorColor);
             mClosePricePointPaint.setColor(configManager.closePriceRightBackgroundColor);
             mClosePricePointPaint.setStyle(Paint.Style.FILL);
@@ -940,6 +948,16 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             return true;
         }
         return super.onTouchEvent(event);
+    }
+
+    @Override
+    public boolean onSingleTapUp(MotionEvent e) {
+        // If the close price center pill (shown when scrolled left) is tapped, scroll to present.
+        if (!mClosePriceCenterPillRect.isEmpty() && mClosePriceCenterPillRect.contains(e.getX(), e.getY())) {
+            setScrollX(getMaxScrollX());
+            return true;
+        }
+        return super.onSingleTapUp(e);
     }
 
     private boolean isInRightYAxisArea(float x, float y) {
