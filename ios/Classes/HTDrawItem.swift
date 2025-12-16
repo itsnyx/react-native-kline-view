@@ -30,6 +30,9 @@ enum HTDrawType: Int {
     // Single-candle marker with label bubble and pointer to a candle
     case candleMarker = 304
 
+    // Right horizontal line with label: starts from selected X and extends to right edge
+    case rightHorizontalLineWithLabel = 305
+
     // Global time-level vertical line (spans entire chart vertically, 1 anchor point)
     case globalVerticalLine = 302
 
@@ -294,6 +297,20 @@ class HTDrawItem: NSObject {
 
                 if abs(loc.y - anchor.y) <= tolerance &&
                     loc.x >= 0 &&
+                    loc.x <= klineView.bounds.size.width {
+                    drawItem.touchMoveIndexList = [index]
+                    return true
+                }
+            }
+
+            // Hit-testing for right horizontal line: allow tapping from anchor X to right edge.
+            if drawItem.drawType == .rightHorizontalLineWithLabel {
+                let anchor = klineView.viewPointFromValuePoint(point)
+                let loc = klineView.viewPointFromValuePoint(location)
+                let tolerance: CGFloat = 12
+
+                if abs(loc.y - anchor.y) <= tolerance &&
+                    loc.x >= anchor.x &&
                     loc.x <= klineView.bounds.size.width {
                     drawItem.touchMoveIndexList = [index]
                     return true

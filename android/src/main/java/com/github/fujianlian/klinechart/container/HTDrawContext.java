@@ -565,6 +565,159 @@ public class HTDrawContext {
             return;
         }
 
+        // Right horizontal line with label: starts from selected X and extends to the right edge.
+        if (drawItem.drawType == HTDrawType.rightHorizontalLineWithLabel) {
+            // Hide this line completely when its price is outside the current visible
+            // main (price) pane range. This prevents the line from "sticking" and
+            // rendering into the volume/child panes when off-range.
+            float mainMin = Math.min(klineView.getMainMinValue(), klineView.getMainMaxValue());
+            float mainMax = Math.max(klineView.getMainMinValue(), klineView.getMainMaxValue());
+            float priceValue = point.y;
+            if (priceValue < mainMin || priceValue > mainMax) {
+                return;
+            }
+
+            HTPoint viewPoint = klineView.viewPointFromValuePoint(point);
+
+            // Clip drawing to the main (price) chart rect so the line/labels never
+            // render under the volume chart.
+            android.graphics.Rect mainRect = klineView.getMainRect();
+            canvas.save();
+            canvas.clipRect(mainRect.left, mainRect.top, mainRect.right, mainRect.bottom);
+
+            paint.setColor(drawItem.drawColor);
+            paint.setStrokeWidth(drawItem.drawLineHeight);
+            paint.setStyle(Paint.Style.STROKE);
+            if (drawItem.drawDashSpace != 0) {
+                paint.setPathEffect(new DashPathEffect(new float[] { drawItem.drawDashWidth, drawItem.drawDashSpace }, 0));
+            } else {
+                paint.setPathEffect(null);
+            }
+
+            // Draw line from the selected X position to the right edge
+            Path path = new Path();
+            path.moveTo(viewPoint.x, viewPoint.y);
+            path.lineTo(klineView.getWidth(), viewPoint.y);
+            canvas.drawPath(path, paint);
+
+            // Labels: optional text on the left (at anchor point), price on the right.
+            String priceText = klineView.formatValue(priceValue);
+            String leftText = (drawItem.text != null && drawItem.text.length() > 0)
+                    ? drawItem.text
+                    : null;
+
+            paint.setPathEffect(null);
+            paint.setStyle(Paint.Style.FILL);
+            paint.setTextSize(configManager.candleTextFontSize);
+
+            Paint.FontMetrics fm = paint.getFontMetrics();
+            float textHeight = fm.descent - fm.ascent;
+            float paddingH = 6f;
+            float paddingV = 4f;
+            float marginX = 4f;
+
+            // Center labels on the line (vertically), not hovering above it.
+            float centerY = viewPoint.y;
+            float baseLineY = centerY - (fm.ascent + fm.descent) / 2f;
+
+            // Bubble rect vertically centered on the line.
+            float topY = centerY - (textHeight / 2f + paddingV);
+            float bottomY = centerY + (textHeight / 2f + paddingV);
+
+            // Clamp within the main (price) rect
+            float topBound = mainRect.top;
+            float bottomBound = mainRect.bottom;
+            if (topY < topBound) {
+                float dy = topBound - topY;
+                topY += dy;
+                bottomY += dy;
+                baseLineY += dy;
+            } else if (bottomY > bottomBound) {
+                float dy = bottomY - bottomBound;
+                topY -= dy;
+                bottomY -= dy;
+                baseLineY -= dy;
+            }
+
+            float borderWidth = (float) ViewUtil.Dp2Px(klineView.getContext(), 1f);
+            float cornerRadius = (bottomY - topY) / 4f;
+
+            // Left label (custom text) at the anchor X position, if any.
+            if (leftText != null) {
+                float leftTextWidth = paint.measureText(leftText);
+                float left = viewPoint.x + marginX;
+                float right = left + leftTextWidth + paddingH * 2f;
+                float top = topY;
+                float bottom = bottomY;
+
+                android.graphics.RectF rect = new android.graphics.RectF(left, top, right, bottom);
+                float radius = cornerRadius;
+
+                // Background
+                paint.setColor(drawItem.textBackgroundColor != 0
+                        ? drawItem.textBackgroundColor
+                        : configManager.drawTextBackgroundColor);
+                paint.setStyle(Paint.Style.FILL);
+                canvas.drawRoundRect(rect, radius, radius, paint);
+
+                // Border – use line color
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(borderWidth);
+                paint.setColor(drawItem.drawColor);
+                canvas.drawRoundRect(rect, radius, radius, paint);
+
+                // Text – use textColor (or global drawTextColor fallback)
+                paint.setStyle(Paint.Style.FILL);
+                int leftTextColor = drawItem.textColor != 0
+                        ? drawItem.textColor
+                        : configManager.drawTextColor;
+                paint.setColor(leftTextColor);
+                canvas.drawText(leftText, left + paddingH, baseLineY, paint);
+            }
+
+            // Right price label.
+            float priceTextWidth = paint.measureText(priceText);
+            float rightRectRight = klineView.getWidth() - marginX;
+            float rightRectLeft = rightRectRight - (priceTextWidth + paddingH * 2f);
+            float top = topY;
+            float bottom = bottomY;
+
+            android.graphics.RectF priceRect = new android.graphics.RectF(rightRectLeft, top, rightRectRight, bottom);
+            float priceRadius = cornerRadius;
+
+            // Background
+            paint.setColor(configManager.panelBackgroundColor);
+            paint.setStyle(Paint.Style.FILL);
+            canvas.drawRoundRect(priceRect, priceRadius, priceRadius, paint);
+
+            // Border
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(borderWidth);
+            paint.setColor(drawItem.drawColor);
+            canvas.drawRoundRect(priceRect, priceRadius, priceRadius, paint);
+            
+            // Text – use configManager.textColor to match yAxis panel colors
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(configManager.textColor);
+
+            canvas.drawText(priceText, rightRectLeft + paddingH, baseLineY, paint);
+
+            if (itemIndex == configManager.shouldReloadDrawItemIndex) {
+                Path highlight = new Path();
+                paint.setStyle(Paint.Style.FILL);
+                highlight.addCircle(viewPoint.x, viewPoint.y, 20, Path.Direction.CW);
+                paint.setColor(colorWithAlphaComponent(drawItem.drawColor, 0.5));
+                canvas.drawPath(highlight, paint);
+
+                highlight = new Path();
+                highlight.addCircle(viewPoint.x, viewPoint.y, 8, Path.Direction.CW);
+                paint.setColor(drawItem.drawColor);
+                canvas.drawPath(highlight, paint);
+            }
+            canvas.restore();
+            return;
+        }
+
         // Global time-level vertical line: spans full chart height at a given timestamp.
         if (drawItem.drawType == HTDrawType.globalVerticalLine) {
             HTPoint viewPoint = klineView.viewPointFromValuePoint(point);

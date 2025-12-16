@@ -554,6 +554,146 @@ class HTDrawContext {
             return
         }
 
+        // Right horizontal line with label: starts from selected X and extends to right edge.
+        if drawItem.drawType == .rightHorizontalLineWithLabel {
+            // Hide the line when its price is outside the current visible main (price)
+            // pane range.
+            let priceValue = point.y
+            let minPrice = min(klineView.mainMinMaxRange.lowerBound, klineView.mainMinMaxRange.upperBound)
+            let maxPrice = max(klineView.mainMinMaxRange.lowerBound, klineView.mainMinMaxRange.upperBound)
+            if priceValue < minPrice || priceValue > maxPrice {
+                return
+            }
+
+            // Clip to the main (price) pane so this tool can never render under volume.
+            let mainRect = CGRect(
+                x: 0,
+                y: klineView.mainBaseY,
+                width: klineView.bounds.size.width,
+                height: klineView.mainHeight
+            )
+            if mainRect.height <= 0 || mainRect.width <= 0 {
+                return
+            }
+
+            let viewPoint = klineView.viewPointFromValuePoint(point)
+            // Line starts from anchor X and extends to the right edge
+            let start = CGPoint(x: viewPoint.x, y: viewPoint.y)
+            let end = CGPoint(x: klineView.bounds.size.width, y: viewPoint.y)
+
+            context.saveGState()
+            context.clip(to: mainRect)
+            context.setStrokeColor(drawItem.drawColor.cgColor)
+            context.setLineWidth(drawItem.drawLineHeight)
+            var dashList = [drawItem.drawDashWidth, drawItem.drawDashSpace]
+            if drawItem.drawDashSpace == 0 {
+                dashList = []
+            }
+            context.setLineDash(phase: 0, lengths: dashList)
+            context.move(to: start)
+            context.addLine(to: end)
+            context.drawPath(using: .stroke)
+
+            // Labels: optional custom text at the anchor and price on the right.
+            let priceText = configManager.precision(priceValue, configManager.price)
+            let leftText = (drawItem.text.isEmpty ? nil : drawItem.text)
+
+            let font = configManager.createFont(configManager.candleTextFontSize)
+
+            let priceAttributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: configManager.textColor
+            ]
+            let leftAttributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: (drawItem.textColor)
+            ]
+
+            let priceSize = (priceText as NSString).size(withAttributes: priceAttributes)
+            let paddingH: CGFloat = 6
+            let paddingV: CGFloat = 4
+            let marginX: CGFloat = 4
+
+            // Place labels centered on the line (vertically).
+            let centerY = viewPoint.y
+            let viewH = mainRect.height
+            let borderWidth: CGFloat = 1
+            let clampTop: (CGFloat, CGFloat) -> CGFloat = { top, height in
+                if height >= viewH { return mainRect.minY }
+                return min(max(top, mainRect.minY), mainRect.maxY - height)
+            }
+
+            // Left label (custom text) at the anchor X position.
+            if let label = leftText {
+                let leftSize = (label as NSString).size(withAttributes: leftAttributes)
+                let left = viewPoint.x + marginX
+                let rectHeight = leftSize.height + paddingV * 2
+                let top = clampTop(centerY - rectHeight / 2, rectHeight)
+                let rect = CGRect(
+                    x: left,
+                    y: top,
+                    width: leftSize.width + paddingH * 2,
+                    height: rectHeight
+                )
+
+                context.setFillColor(drawItem.textBackgroundColor.cgColor)
+                let radius = rect.height / 4
+                let path = UIBezierPath(roundedRect: rect, cornerRadius: radius)
+                context.addPath(path.cgPath)
+                context.drawPath(using: .fill)
+
+                // Border – use line color
+                context.setLineWidth(borderWidth)
+                context.setStrokeColor(drawItem.drawColor.cgColor)
+                context.addPath(path.cgPath)
+                context.drawPath(using: .stroke)
+
+                let textPoint = CGPoint(x: rect.minX + paddingH, y: rect.minY + paddingV)
+                (label as NSString).draw(at: textPoint, withAttributes: leftAttributes)
+            }
+
+            // Right price label.
+            let rightRectWidth = priceSize.width + paddingH * 2
+            let rightRectRight = klineView.bounds.size.width - marginX
+            let rightRectLeft = rightRectRight - rightRectWidth
+            let rightRectHeight = priceSize.height + paddingV * 2
+            let rightTop = clampTop(centerY - rightRectHeight / 2, rightRectHeight)
+            let priceRect = CGRect(
+                x: rightRectLeft,
+                y: rightTop,
+                width: rightRectWidth,
+                height: rightRectHeight
+            )
+
+            context.setFillColor(configManager.panelBackgroundColor.cgColor)
+            let priceRadius = priceRect.height / 4
+            let pricePath = UIBezierPath(roundedRect: priceRect, cornerRadius: priceRadius)
+            context.addPath(pricePath.cgPath)
+            context.drawPath(using: .fill)
+
+            context.setLineWidth(borderWidth)
+            context.setStrokeColor(drawItem.drawColor.cgColor)
+            context.addPath(pricePath.cgPath)
+            context.drawPath(using: .stroke)
+
+            let priceTextPoint = CGPoint(
+                x: priceRect.minX + paddingH,
+                y: priceRect.minY + paddingV
+            )
+            (priceText as NSString).draw(at: priceTextPoint, withAttributes: priceAttributes)
+
+            if itemIndex == configManager.shouldReloadDrawItemIndex {
+                context.addArc(center: viewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
+                context.setFillColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
+                context.drawPath(using: .fill)
+                context.addArc(center: viewPoint, radius: 4, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
+                context.setFillColor(drawItem.drawColor.cgColor)
+                context.drawPath(using: .fill)
+            }
+            context.restoreGState()
+            return
+        }
+
         // Global time-level vertical line: spans full chart height at a given timestamp.
         if case .globalVerticalLine = drawItem.drawType {
             let viewPoint = klineView.viewPointFromValuePoint(point)

@@ -26,6 +26,9 @@ public enum HTDrawType {
     // Single-candle marker with label bubble and pointer to a candle
     candleMarker,
 
+    // Right horizontal line with label: starts from selected X and extends to the right edge
+    rightHorizontalLineWithLabel,
+
     rectangle,
 
     parallelogram,
@@ -61,6 +64,9 @@ public enum HTDrawType {
             }
             case 304: {
                 return candleMarker;
+            }
+            case 305: {
+                return rightHorizontalLineWithLabel;
             }
             case 201: {
                 return text;
@@ -120,6 +126,9 @@ public enum HTDrawType {
             }
             case candleMarker: {
                 return 304;
+            }
+            case rightHorizontalLineWithLabel: {
+                return 305;
             }
             case text: {
                 return 201;

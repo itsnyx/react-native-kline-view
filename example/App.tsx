@@ -342,6 +342,8 @@ const DrawTypeConstants = {
   globalVerticalLine: 302,
   // Single-candle marker with label bubble and pointer to a candle
   candleMarker: 304,
+  // Right horizontal line with label: starts from selected X and extends to right edge
+  rightHorizontalLineWithLabel: 305,
 };
 
 // Drawing State Constants
@@ -401,6 +403,10 @@ const DrawToolTypes = {
   [DrawTypeConstants.candleMarker]: {
     label: 'Candle Marker',
     value: DrawTypeConstants.candleMarker,
+  },
+  [DrawTypeConstants.rightHorizontalLineWithLabel]: {
+    label: 'Right H-Line',
+    value: DrawTypeConstants.rightHorizontalLineWithLabel,
   },
 };
 

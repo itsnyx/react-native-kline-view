@@ -253,6 +253,21 @@ public class HTDrawItem {
                 }
             }
 
+            // Hit-testing for right horizontal line: allow tapping from anchor X to right edge.
+            if (drawItem.drawType == HTDrawType.rightHorizontalLineWithLabel) {
+                HTPoint anchor = klineView.viewPointFromValuePoint(point);
+                HTPoint loc = klineView.viewPointFromValuePoint(location);
+                float tolerance = 30f;
+
+                if (Math.abs(loc.y - anchor.y) <= tolerance &&
+                    loc.x >= anchor.x &&
+                    loc.x <= klineView.getWidth()) {
+                    drawItem.touchMoveIndexList.clear();
+                    drawItem.touchMoveIndexList.add(index);
+                    return true;
+                }
+            }
+
             if (distance(klineView.viewPointFromValuePoint(point), klineView.viewPointFromValuePoint(location)) <= 30) {
                 drawItem.touchMoveIndexList.clear();
                 drawItem.touchMoveIndexList.add(index);
