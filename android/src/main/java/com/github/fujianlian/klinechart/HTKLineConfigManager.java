@@ -94,10 +94,6 @@ public class HTKLineConfigManager {
     // Controlled from JS via optionList.configList.showVolume (default: true).
     public boolean showVolume = true;
 
-    // Whether to show the remaining time until the next candle close time below the last price line.
-    // Controlled from JS via optionList.configList.showCandleRemainingCloseTime (default: false).
-    public boolean showCandleRemainingCloseTime = false;
-
 
 
 
@@ -515,16 +511,6 @@ public class HTKLineConfigManager {
             this.showVolume = ((Number) showVolumeObj).intValue() != 0;
         } else {
             this.showVolume = true;
-        }
-
-        Object showCandleRemainingCloseTimeObj = configList.get("showCandleRemainingCloseTime");
-        if (showCandleRemainingCloseTimeObj instanceof Boolean) {
-            this.showCandleRemainingCloseTime = (Boolean) showCandleRemainingCloseTimeObj;
-        } else if (showCandleRemainingCloseTimeObj instanceof Number) {
-            // allow 0/1
-            this.showCandleRemainingCloseTime = ((Number) showCandleRemainingCloseTimeObj).intValue() != 0;
-        } else {
-            this.showCandleRemainingCloseTime = false;
         }
 
 
