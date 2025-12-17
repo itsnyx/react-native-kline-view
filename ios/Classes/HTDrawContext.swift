@@ -784,7 +784,8 @@ class HTDrawContext {
             }
             
             // Format time string
-            let hours = Int(timeDiff / 3600)
+            // timeDiff is in milliseconds, convert to hours
+            let hours = Int(timeDiff / 3600000)
             let timeString = hours > 0 ? "\(barCount) bars, \(hours)h" : "\(barCount) bars"
             
             // Calculate box that stretches from start to end point

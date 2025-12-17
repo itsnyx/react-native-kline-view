@@ -812,7 +812,8 @@ public class HTDrawContext {
             }
             
             // Format time string
-            int hours = (int)(timeDiff / 3600);
+            // timeDiff is in milliseconds, convert to hours
+            int hours = (int)(timeDiff / 3600000);
             String timeString = hours > 0 ? barCount + " bars, " + hours + "h" : barCount + " bars";
             
             // Calculate box that stretches from start to end point
