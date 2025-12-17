@@ -577,6 +577,11 @@ class HTDrawContext {
             }
 
             let viewPoint = klineView.viewPointFromValuePoint(point)
+            // If the anchor X is completely to the right of the viewport, the segment
+            // [anchorX, +inf) doesn't intersect the visible area at all.
+            if viewPoint.x > klineView.bounds.size.width {
+                return
+            }
             // Line starts from anchor X and extends to the right edge
             let start = CGPoint(x: viewPoint.x, y: viewPoint.y)
             let end = CGPoint(x: klineView.bounds.size.width, y: viewPoint.y)
@@ -626,13 +631,21 @@ class HTDrawContext {
             // Left label (custom text) at the anchor X position.
             if let label = leftText {
                 let leftSize = (label as NSString).size(withAttributes: leftAttributes)
-                // Clamp horizontally so the label stays visible near the right edge (e.g. "present").
-                let rectWidth = leftSize.width + paddingH * 2
-                let minLeft = marginX
-                let maxLeft = klineView.bounds.size.width - marginX - rectWidth
-                let left = min(max(viewPoint.x + marginX, minLeft), maxLeft)
                 let rectHeight = leftSize.height + paddingV * 2
                 let top = clampTop(centerY - rectHeight / 2, rectHeight)
+                let rectWidth = leftSize.width + paddingH * 2
+
+                // "Sticky left": if anchorX < 0, keep label at the viewport's left edge.
+                var left = max(viewPoint.x, mainRect.minX) + marginX
+
+                // Avoid overlapping the right-side price bubble.
+                let rightRectWidth = priceSize.width + paddingH * 2
+                let rightRectRight = klineView.bounds.size.width - marginX
+                let rightRectLeft = rightRectRight - rightRectWidth
+                let maxLeft = rightRectLeft - marginX - rectWidth
+                if left > maxLeft {
+                    left = maxLeft
+                }
                 let rect = CGRect(
                     x: left,
                     y: top,

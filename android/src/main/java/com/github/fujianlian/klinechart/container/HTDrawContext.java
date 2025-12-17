@@ -578,6 +578,11 @@ public class HTDrawContext {
             }
 
             HTPoint viewPoint = klineView.viewPointFromValuePoint(point);
+            // If the anchor X is completely to the right of the viewport, the segment
+            // [anchorX, +inf) doesn't intersect the visible area at all.
+            if (viewPoint.x > klineView.getWidth()) {
+                return;
+            }
 
             // Clip drawing to the main (price) chart rect so the line/labels never
             // render under the volume chart.
@@ -642,17 +647,20 @@ public class HTDrawContext {
             float borderWidth = (float) ViewUtil.Dp2Px(klineView.getContext(), 1f);
             float cornerRadius = (bottomY - topY) / 4f;
 
-            // Left label (custom text) at the anchor X position, if any.
+            // Left label (custom text): keep it visible by clamping to the left edge
+            // when the anchor scrolls off-screen left, as long as the line is visible.
             if (leftText != null) {
                 float leftTextWidth = paint.measureText(leftText);
                 float rectWidth = leftTextWidth + paddingH * 2f;
-                float left = viewPoint.x + marginX;
-                // Clamp horizontally so the label stays visible near the right edge (e.g. "present").
-                float minLeft = marginX;
-                float maxLeft = klineView.getWidth() - marginX - rectWidth;
-                if (left < minLeft) {
-                    left = minLeft;
-                } else if (left > maxLeft) {
+                // "Sticky left": if anchorX < 0, keep label at the viewport's left edge.
+                float left = Math.max(viewPoint.x, mainRect.left) + marginX;
+
+                // Avoid overlapping the right-side price bubble.
+                float priceTextWidth = paint.measureText(priceText);
+                float rightRectRight = klineView.getWidth() - marginX;
+                float rightRectLeft = rightRectRight - (priceTextWidth + paddingH * 2f);
+                float maxLeft = rightRectLeft - marginX - rectWidth;
+                if (left > maxLeft) {
                     left = maxLeft;
                 }
                 float right = left + rectWidth;
