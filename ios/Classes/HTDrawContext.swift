@@ -813,6 +813,11 @@ class HTDrawContext {
             context.setFillColor(boxColor.cgColor)
             context.fill(boxRect)
             
+            // Draw border with width 1
+            context.setStrokeColor(drawItem.drawColor.cgColor)
+            context.setLineWidth(1)
+            context.stroke(boxRect)
+            
             // Draw crosshairs with arrows pointing from start to end
             context.setStrokeColor(drawItem.drawColor.cgColor)
             context.setLineWidth(1.5)
@@ -890,7 +895,7 @@ class HTDrawContext {
             let paddingH: CGFloat = 8
             let paddingV: CGFloat = 6
             let textBoxRect = CGRect(
-                x: endViewPoint.x - textWidth / 2 - paddingH,
+                x: centerX - textWidth / 2 - paddingH,
                 y: boxRect.maxY + 8,
                 width: textWidth + paddingH * 2,
                 height: textHeight + paddingV * 2

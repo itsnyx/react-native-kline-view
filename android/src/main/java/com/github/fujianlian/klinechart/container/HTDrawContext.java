@@ -839,6 +839,13 @@ public class HTDrawContext {
             android.graphics.RectF boxRect = new android.graphics.RectF(boxLeft, boxTop, boxRight, boxBottom);
             canvas.drawRect(boxRect, paint);
             
+            // Draw border with width 1
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setColor(drawItem.drawColor);
+            paint.setStrokeWidth(1f);
+            paint.setPathEffect(null);
+            canvas.drawRect(boxRect, paint);
+            
             // Draw crosshairs with arrows pointing from start to end
             paint.setStyle(Paint.Style.STROKE);
             paint.setColor(drawItem.drawColor);
@@ -906,9 +913,9 @@ public class HTDrawContext {
             
             float paddingH = 8f;
             float paddingV = 6f;
-            float textBoxLeft = endViewPoint.x - textWidth / 2 - paddingH;
+            float textBoxLeft = centerX - textWidth / 2 - paddingH;
             float textBoxTop = (float)boxBottom + 8;
-            float textBoxRight = endViewPoint.x + textWidth / 2 + paddingH;
+            float textBoxRight = centerX + textWidth / 2 + paddingH;
             float textBoxBottom = textBoxTop + textHeight + paddingV * 2;
             
             android.graphics.RectF textBoxRect = new android.graphics.RectF(textBoxLeft, textBoxTop, textBoxRight, textBoxBottom);
