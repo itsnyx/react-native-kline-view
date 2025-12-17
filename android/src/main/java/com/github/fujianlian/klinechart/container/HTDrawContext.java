@@ -815,16 +815,22 @@ public class HTDrawContext {
             int hours = (int)(timeDiff / 3600);
             String timeString = hours > 0 ? barCount + " bars, " + hours + "h" : barCount + " bars";
             
+            // Calculate box that stretches from start to end point
+            float minX = Math.min(startViewPoint.x, endViewPoint.x);
+            float maxX = Math.max(startViewPoint.x, endViewPoint.x);
+            float minY = Math.min(startViewPoint.y, endViewPoint.y);
+            float maxY = Math.max(startViewPoint.y, endViewPoint.y);
+            
+            // Add some padding for the box
+            float padding = 20f;
+            float boxLeft = minX - padding;
+            float boxTop = minY - padding;
+            float boxRight = maxX + padding;
+            float boxBottom = maxY + padding;
+            
             // Calculate center point
             float centerX = (startViewPoint.x + endViewPoint.x) / 2;
             float centerY = (startViewPoint.y + endViewPoint.y) / 2;
-            
-            // Box size
-            float boxSize = 80f;
-            float boxLeft = centerX - boxSize / 2;
-            float boxTop = centerY - boxSize / 2;
-            float boxRight = centerX + boxSize / 2;
-            float boxBottom = centerY + boxSize / 2;
             
             // Draw semi-transparent box
             paint.setStyle(Paint.Style.FILL);
@@ -833,36 +839,40 @@ public class HTDrawContext {
             android.graphics.RectF boxRect = new android.graphics.RectF(boxLeft, boxTop, boxRight, boxBottom);
             canvas.drawRect(boxRect, paint);
             
-            // Draw crosshairs
+            // Draw crosshairs with arrows pointing from start to end
             paint.setStyle(Paint.Style.STROKE);
             paint.setColor(drawItem.drawColor);
             paint.setStrokeWidth(1.5f);
             paint.setPathEffect(null);
             
             Path crosshairPath = new Path();
-            
-            // Vertical arrow (down)
             float arrowHeadSize = 6f;
-            float vStartY = boxTop + boxSize * 0.15f;
-            float vEndY = boxBottom - boxSize * 0.15f;
+            
+            // Vertical arrow: from startY to endY
+            float vStartY = boxTop;
+            float vEndY = boxBottom;
             crosshairPath.moveTo(centerX, vStartY);
             crosshairPath.lineTo(centerX, vEndY);
-            // Arrow head
-            crosshairPath.moveTo(centerX, vEndY);
-            crosshairPath.lineTo(centerX - arrowHeadSize / 2, vEndY - arrowHeadSize);
-            crosshairPath.moveTo(centerX, vEndY);
-            crosshairPath.lineTo(centerX + arrowHeadSize / 2, vEndY - arrowHeadSize);
+            // Arrow head at endY (pointing in direction of endPoint.y)
+            float vArrowY = endViewPoint.y < startViewPoint.y ? vStartY : vEndY;
+            float vArrowDirection = endViewPoint.y < startViewPoint.y ? 1 : -1;
+            crosshairPath.moveTo(centerX, vArrowY);
+            crosshairPath.lineTo(centerX - arrowHeadSize / 2, vArrowY + vArrowDirection * arrowHeadSize);
+            crosshairPath.moveTo(centerX, vArrowY);
+            crosshairPath.lineTo(centerX + arrowHeadSize / 2, vArrowY + vArrowDirection * arrowHeadSize);
             
-            // Horizontal arrow (right)
-            float hStartX = boxLeft + boxSize * 0.15f;
-            float hEndX = boxRight - boxSize * 0.15f;
+            // Horizontal arrow: from startX to endX
+            float hStartX = boxLeft;
+            float hEndX = boxRight;
             crosshairPath.moveTo(hStartX, centerY);
             crosshairPath.lineTo(hEndX, centerY);
-            // Arrow head
-            crosshairPath.moveTo(hEndX, centerY);
-            crosshairPath.lineTo(hEndX - arrowHeadSize, centerY - arrowHeadSize / 2);
-            crosshairPath.moveTo(hEndX, centerY);
-            crosshairPath.lineTo(hEndX - arrowHeadSize, centerY + arrowHeadSize / 2);
+            // Arrow head at endX (pointing in direction of endPoint.x)
+            float hArrowX = endViewPoint.x < startViewPoint.x ? hStartX : hEndX;
+            float hArrowDirection = endViewPoint.x < startViewPoint.x ? 1 : -1;
+            crosshairPath.moveTo(hArrowX, centerY);
+            crosshairPath.lineTo(hArrowX + hArrowDirection * arrowHeadSize, centerY - arrowHeadSize / 2);
+            crosshairPath.moveTo(hArrowX, centerY);
+            crosshairPath.lineTo(hArrowX + hArrowDirection * arrowHeadSize, centerY + arrowHeadSize / 2);
             
             canvas.drawPath(crosshairPath, paint);
             
@@ -883,7 +893,7 @@ public class HTDrawContext {
             bottomLine.lineTo(boxRight + 10, boxBottom);
             canvas.drawPath(bottomLine, paint);
             
-            // Draw text box below
+            // Draw text box below (positioned at end point)
             paint.setPathEffect(null);
             paint.setTextSize(configManager.candleTextFontSize);
             String priceText = String.format("%.4f (%.2f%%) %.0f", priceDiff, pricePercent, priceDiff * 1000);
@@ -896,17 +906,19 @@ public class HTDrawContext {
             
             float paddingH = 8f;
             float paddingV = 6f;
-            float textBoxLeft = centerX - textWidth / 2 - paddingH;
-            float textBoxTop = boxBottom + 8;
-            float textBoxRight = centerX + textWidth / 2 + paddingH;
+            float textBoxLeft = endViewPoint.x - textWidth / 2 - paddingH;
+            float textBoxTop = (float)boxBottom + 8;
+            float textBoxRight = endViewPoint.x + textWidth / 2 + paddingH;
             float textBoxBottom = textBoxTop + textHeight + paddingV * 2;
             
             android.graphics.RectF textBoxRect = new android.graphics.RectF(textBoxLeft, textBoxTop, textBoxRight, textBoxBottom);
             
-            // Background
+            // Background color: blue if price increased, red if decreased
             paint.setStyle(Paint.Style.FILL);
-            int redColor = Color.argb(204, 255, 0, 0); // Red with alpha (0xCC = 204)
-            paint.setColor(redColor);
+            int textBgColor = endPoint.y > startPoint.y 
+                ? Color.rgb(41, 98, 255)  // Blue
+                : Color.rgb(247, 82, 95);  // Red
+            paint.setColor(textBgColor);
             canvas.drawRoundRect(textBoxRect, 6, 6, paint);
             
             // Text

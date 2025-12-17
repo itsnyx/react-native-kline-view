@@ -787,18 +787,24 @@ class HTDrawContext {
             let hours = Int(timeDiff / 3600)
             let timeString = hours > 0 ? "\(barCount) bars, \(hours)h" : "\(barCount) bars"
             
+            // Calculate box that stretches from start to end point
+            let minX = min(startViewPoint.x, endViewPoint.x)
+            let maxX = max(startViewPoint.x, endViewPoint.x)
+            let minY = min(startViewPoint.y, endViewPoint.y)
+            let maxY = max(startViewPoint.y, endViewPoint.y)
+            
+            // Add some padding for the box
+            let padding: CGFloat = 20
+            let boxRect = CGRect(
+                x: minX - padding,
+                y: minY - padding,
+                width: maxX - minX + padding * 2,
+                height: maxY - minY + padding * 2
+            )
+            
             // Calculate center point
             let centerX = (startViewPoint.x + endViewPoint.x) / 2
             let centerY = (startViewPoint.y + endViewPoint.y) / 2
-            
-            // Box size
-            let boxSize: CGFloat = 80
-            let boxRect = CGRect(
-                x: centerX - boxSize / 2,
-                y: centerY - boxSize / 2,
-                width: boxSize,
-                height: boxSize
-            )
             
             context.saveGState()
             
@@ -807,33 +813,37 @@ class HTDrawContext {
             context.setFillColor(boxColor.cgColor)
             context.fill(boxRect)
             
-            // Draw crosshairs
+            // Draw crosshairs with arrows pointing from start to end
             context.setStrokeColor(drawItem.drawColor.cgColor)
             context.setLineWidth(1.5)
             
-            // Vertical arrow (down)
-            let arrowLength: CGFloat = boxSize * 0.35
             let arrowHeadSize: CGFloat = 6
-            let vStartY = boxRect.minY + boxSize * 0.15
-            let vEndY = boxRect.maxY - boxSize * 0.15
+            
+            // Vertical arrow: from startY to endY
+            let vStartY = boxRect.minY
+            let vEndY = boxRect.maxY
             context.move(to: CGPoint(x: centerX, y: vStartY))
             context.addLine(to: CGPoint(x: centerX, y: vEndY))
-            // Arrow head
-            context.move(to: CGPoint(x: centerX, y: vEndY))
-            context.addLine(to: CGPoint(x: centerX - arrowHeadSize / 2, y: vEndY - arrowHeadSize))
-            context.move(to: CGPoint(x: centerX, y: vEndY))
-            context.addLine(to: CGPoint(x: centerX + arrowHeadSize / 2, y: vEndY - arrowHeadSize))
+            // Arrow head at endY (pointing in direction of endPoint.y)
+            let vArrowY = endViewPoint.y < startViewPoint.y ? vStartY : vEndY
+            let vArrowDirection: CGFloat = endViewPoint.y < startViewPoint.y ? 1 : -1
+            context.move(to: CGPoint(x: centerX, y: vArrowY))
+            context.addLine(to: CGPoint(x: centerX - arrowHeadSize / 2, y: vArrowY + vArrowDirection * arrowHeadSize))
+            context.move(to: CGPoint(x: centerX, y: vArrowY))
+            context.addLine(to: CGPoint(x: centerX + arrowHeadSize / 2, y: vArrowY + vArrowDirection * arrowHeadSize))
             
-            // Horizontal arrow (right)
-            let hStartX = boxRect.minX + boxSize * 0.15
-            let hEndX = boxRect.maxX - boxSize * 0.15
+            // Horizontal arrow: from startX to endX
+            let hStartX = boxRect.minX
+            let hEndX = boxRect.maxX
             context.move(to: CGPoint(x: hStartX, y: centerY))
             context.addLine(to: CGPoint(x: hEndX, y: centerY))
-            // Arrow head
-            context.move(to: CGPoint(x: hEndX, y: centerY))
-            context.addLine(to: CGPoint(x: hEndX - arrowHeadSize, y: centerY - arrowHeadSize / 2))
-            context.move(to: CGPoint(x: hEndX, y: centerY))
-            context.addLine(to: CGPoint(x: hEndX - arrowHeadSize, y: centerY + arrowHeadSize / 2))
+            // Arrow head at endX (pointing in direction of endPoint.x)
+            let hArrowX = endViewPoint.x < startViewPoint.x ? hStartX : hEndX
+            let hArrowDirection: CGFloat = endViewPoint.x < startViewPoint.x ? 1 : -1
+            context.move(to: CGPoint(x: hArrowX, y: centerY))
+            context.addLine(to: CGPoint(x: hArrowX + hArrowDirection * arrowHeadSize, y: centerY - arrowHeadSize / 2))
+            context.move(to: CGPoint(x: hArrowX, y: centerY))
+            context.addLine(to: CGPoint(x: hArrowX + hArrowDirection * arrowHeadSize, y: centerY + arrowHeadSize / 2))
             
             context.drawPath(using: .stroke)
             
@@ -858,7 +868,7 @@ class HTDrawContext {
             
             context.restoreGState()
             
-            // Draw text box below
+            // Draw text box below (positioned at end point)
             let font = configManager.createFont(configManager.candleTextFontSize)
             let priceText = String(format: "%.4f (%.2f%%) %.0f", priceDiff, pricePercent, priceDiff * 1000)
             let timeText = timeString
@@ -880,14 +890,18 @@ class HTDrawContext {
             let paddingH: CGFloat = 8
             let paddingV: CGFloat = 6
             let textBoxRect = CGRect(
-                x: centerX - textWidth / 2 - paddingH,
+                x: endViewPoint.x - textWidth / 2 - paddingH,
                 y: boxRect.maxY + 8,
                 width: textWidth + paddingH * 2,
                 height: textHeight + paddingV * 2
             )
             
             context.saveGState()
-            context.setFillColor(UIColor.red.withAlphaComponent(0.8).cgColor)
+            // Background color: blue if price increased, red if decreased
+            let textBgColor = endPoint.y > startPoint.y 
+                ? UIColor(red: 41/255.0, green: 98/255.0, blue: 255/255.0, alpha: 1.0)
+                : UIColor(red: 247/255.0, green: 82/255.0, blue: 95/255.0, alpha: 1.0)
+            context.setFillColor(textBgColor.cgColor)
             let textBoxPath = UIBezierPath(roundedRect: textBoxRect, cornerRadius: 6)
             context.addPath(textBoxPath.cgPath)
             context.drawPath(using: .fill)
