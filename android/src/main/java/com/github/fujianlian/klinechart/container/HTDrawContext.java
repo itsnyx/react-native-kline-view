@@ -643,7 +643,9 @@ public class HTDrawContext {
             float cornerRadius = (bottomY - topY) / 4f;
 
             // Left label (custom text) at the anchor X position, if any.
-            if (leftText != null) {
+            // Only draw it when the anchor X is on-screen; this way the title appears
+            // only after scrolling right enough to reveal the start of the ray.
+            if (leftText != null && viewPoint.x >= 0 && viewPoint.x <= klineView.getWidth()) {
                 float leftTextWidth = paint.measureText(leftText);
                 float left = viewPoint.x + marginX;
                 float right = left + leftTextWidth + paddingH * 2f;

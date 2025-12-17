@@ -624,7 +624,11 @@ class HTDrawContext {
             }
 
             // Left label (custom text) at the anchor X position.
-            if let label = leftText {
+            // Only draw it when the anchor X is on-screen; this way the title appears
+            // only after scrolling right enough to reveal the start of the ray.
+            if let label = leftText,
+               viewPoint.x >= 0,
+               viewPoint.x <= klineView.bounds.size.width {
                 let leftSize = (label as NSString).size(withAttributes: leftAttributes)
                 let left = viewPoint.x + marginX
                 let rectHeight = leftSize.height + paddingV * 2
