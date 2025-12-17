@@ -741,6 +741,189 @@ class HTDrawContext {
             return
         }
 
+        // Ruler tool: measures distance between two points with price and time difference.
+        if drawItem.drawType == .ruler && index == 1 && drawItem.pointList.count >= 2 {
+            let startPoint = drawItem.pointList[0]
+            let endPoint = drawItem.pointList[1]
+            
+            let startViewPoint = klineView.viewPointFromValuePoint(startPoint)
+            let endViewPoint = klineView.viewPointFromValuePoint(endPoint)
+            
+            // Calculate price difference
+            let priceDiff = endPoint.y - startPoint.y
+            let pricePercent = startPoint.y != 0 ? (priceDiff / startPoint.y) * 100 : 0
+            
+            // Calculate time difference (bars)
+            var barCount = 0
+            var timeDiff: TimeInterval = 0
+            if !configManager.modelArray.isEmpty {
+                var startIndex = 0
+                var startMinDiff = abs(configManager.modelArray[0].id - startPoint.x)
+                var endIndex = 0
+                var endMinDiff = abs(configManager.modelArray[0].id - endPoint.x)
+                
+                for (i, model) in configManager.modelArray.enumerated() {
+                    let startDiff = abs(model.id - startPoint.x)
+                    let endDiff = abs(model.id - endPoint.x)
+                    if startDiff < startMinDiff {
+                        startMinDiff = startDiff
+                        startIndex = i
+                    }
+                    if endDiff < endMinDiff {
+                        endMinDiff = endDiff
+                        endIndex = i
+                    }
+                }
+                
+                barCount = abs(endIndex - startIndex)
+                if startIndex < configManager.modelArray.count && endIndex < configManager.modelArray.count {
+                    let startTime = configManager.modelArray[startIndex].id
+                    let endTime = configManager.modelArray[endIndex].id
+                    timeDiff = abs(endTime - startTime)
+                }
+            }
+            
+            // Format time string
+            let hours = Int(timeDiff / 3600)
+            let timeString = hours > 0 ? "\(barCount) bars, \(hours)h" : "\(barCount) bars"
+            
+            // Calculate center point
+            let centerX = (startViewPoint.x + endViewPoint.x) / 2
+            let centerY = (startViewPoint.y + endViewPoint.y) / 2
+            
+            // Box size
+            let boxSize: CGFloat = 80
+            let boxRect = CGRect(
+                x: centerX - boxSize / 2,
+                y: centerY - boxSize / 2,
+                width: boxSize,
+                height: boxSize
+            )
+            
+            context.saveGState()
+            
+            // Draw semi-transparent box
+            let boxColor = drawItem.drawColor.withAlphaComponent(0.2)
+            context.setFillColor(boxColor.cgColor)
+            context.fill(boxRect)
+            
+            // Draw crosshairs
+            context.setStrokeColor(drawItem.drawColor.cgColor)
+            context.setLineWidth(1.5)
+            
+            // Vertical arrow (down)
+            let arrowLength: CGFloat = boxSize * 0.35
+            let arrowHeadSize: CGFloat = 6
+            let vStartY = boxRect.minY + boxSize * 0.15
+            let vEndY = boxRect.maxY - boxSize * 0.15
+            context.move(to: CGPoint(x: centerX, y: vStartY))
+            context.addLine(to: CGPoint(x: centerX, y: vEndY))
+            // Arrow head
+            context.move(to: CGPoint(x: centerX, y: vEndY))
+            context.addLine(to: CGPoint(x: centerX - arrowHeadSize / 2, y: vEndY - arrowHeadSize))
+            context.move(to: CGPoint(x: centerX, y: vEndY))
+            context.addLine(to: CGPoint(x: centerX + arrowHeadSize / 2, y: vEndY - arrowHeadSize))
+            
+            // Horizontal arrow (right)
+            let hStartX = boxRect.minX + boxSize * 0.15
+            let hEndX = boxRect.maxX - boxSize * 0.15
+            context.move(to: CGPoint(x: hStartX, y: centerY))
+            context.addLine(to: CGPoint(x: hEndX, y: centerY))
+            // Arrow head
+            context.move(to: CGPoint(x: hEndX, y: centerY))
+            context.addLine(to: CGPoint(x: hEndX - arrowHeadSize, y: centerY - arrowHeadSize / 2))
+            context.move(to: CGPoint(x: hEndX, y: centerY))
+            context.addLine(to: CGPoint(x: hEndX - arrowHeadSize, y: centerY + arrowHeadSize / 2))
+            
+            context.drawPath(using: .stroke)
+            
+            // Draw dashed lines at top and bottom
+            context.setLineWidth(1)
+            var dashPattern: [CGFloat] = [4, 2]
+            context.setLineDash(phase: 0, lengths: dashPattern)
+            
+            // Top dashed line
+            let topLineY = boxRect.minY
+            context.move(to: CGPoint(x: boxRect.minX - 10, y: topLineY))
+            context.addLine(to: CGPoint(x: boxRect.maxX + 10, y: topLineY))
+            
+            // Bottom dotted line
+            dashPattern = [2, 2]
+            context.setLineDash(phase: 0, lengths: dashPattern)
+            let bottomLineY = boxRect.maxY
+            context.move(to: CGPoint(x: boxRect.minX - 10, y: bottomLineY))
+            context.addLine(to: CGPoint(x: boxRect.maxX + 10, y: bottomLineY))
+            
+            context.drawPath(using: .stroke)
+            
+            context.restoreGState()
+            
+            // Draw text box below
+            let font = configManager.createFont(configManager.candleTextFontSize)
+            let priceText = String(format: "%.4f (%.2f%%) %.0f", priceDiff, pricePercent, priceDiff * 1000)
+            let timeText = timeString
+            
+            let priceAttributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: UIColor.white
+            ]
+            let timeAttributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: UIColor.white
+            ]
+            
+            let priceSize = (priceText as NSString).size(withAttributes: priceAttributes)
+            let timeSize = (timeText as NSString).size(withAttributes: timeAttributes)
+            let textWidth = max(priceSize.width, timeSize.width)
+            let textHeight = priceSize.height + timeSize.height + 4
+            
+            let paddingH: CGFloat = 8
+            let paddingV: CGFloat = 6
+            let textBoxRect = CGRect(
+                x: centerX - textWidth / 2 - paddingH,
+                y: boxRect.maxY + 8,
+                width: textWidth + paddingH * 2,
+                height: textHeight + paddingV * 2
+            )
+            
+            context.saveGState()
+            context.setFillColor(UIColor.red.withAlphaComponent(0.8).cgColor)
+            let textBoxPath = UIBezierPath(roundedRect: textBoxRect, cornerRadius: 6)
+            context.addPath(textBoxPath.cgPath)
+            context.drawPath(using: .fill)
+            
+            // Draw text
+            let priceTextPoint = CGPoint(
+                x: textBoxRect.minX + paddingH,
+                y: textBoxRect.minY + paddingV
+            )
+            let timeTextPoint = CGPoint(
+                x: textBoxRect.minX + paddingH,
+                y: textBoxRect.minY + paddingV + priceSize.height + 2
+            )
+            (priceText as NSString).draw(at: priceTextPoint, withAttributes: priceAttributes)
+            (timeText as NSString).draw(at: timeTextPoint, withAttributes: timeAttributes)
+            
+            context.restoreGState()
+            
+            if itemIndex == configManager.shouldReloadDrawItemIndex {
+                context.addArc(center: startViewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
+                context.setFillColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
+                context.drawPath(using: .fill)
+                context.addArc(center: startViewPoint, radius: 4, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
+                context.setFillColor(drawItem.drawColor.cgColor)
+                context.drawPath(using: .fill)
+                
+                context.addArc(center: endViewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
+                context.setFillColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
+                context.drawPath(using: .fill)
+                context.addArc(center: endViewPoint, radius: 4, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
+                context.setFillColor(drawItem.drawColor.cgColor)
+                context.drawPath(using: .fill)
+            }
+            return
+        }
+
         // Special handling for text annotations: draw text at the anchor point with background.
         if case .text = drawItem.drawType {
             let viewPoint = klineView.viewPointFromValuePoint(point)

@@ -33,6 +33,9 @@ enum HTDrawType: Int {
     // Right horizontal line with label: starts from selected X and extends to right edge
     case rightHorizontalLineWithLabel = 305
 
+    // Ruler tool: measures distance between two points with price and time difference
+    case ruler = 306
+
     // Global time-level vertical line (spans entire chart vertically, 1 anchor point)
     case globalVerticalLine = 302
 
@@ -46,7 +49,7 @@ enum HTDrawType: Int {
     // 最多可以有多少个点, 超过就直接跳到下一次绘画
     var count: Int {
         switch self {
-        case .line, .horizontalLine, .verticalLine, .halfLine, .rectangle:
+        case .line, .horizontalLine, .verticalLine, .halfLine, .rectangle, .ruler:
             return 2
         case .parallelLine, .parallelogram:
             return 3

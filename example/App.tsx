@@ -344,6 +344,8 @@ const DrawTypeConstants = {
   candleMarker: 304,
   // Right horizontal line with label: starts from selected X and extends to right edge
   rightHorizontalLineWithLabel: 305,
+  // Ruler tool: measures distance between two points with price and time difference
+  ruler: 306,
 };
 
 // Drawing State Constants
@@ -408,6 +410,10 @@ const DrawToolTypes = {
     label: 'Right H-Line',
     value: DrawTypeConstants.rightHorizontalLineWithLabel,
   },
+  [DrawTypeConstants.ruler]: {
+    label: 'Ruler',
+    value: DrawTypeConstants.ruler,
+  },
 };
 
 // Drawing Tool Helper Methods
@@ -438,6 +444,10 @@ const DrawToolHelper = {
         return FORMAT('Time Line');
       case DrawTypeConstants.candleMarker:
         return FORMAT('Candle Marker');
+      case DrawTypeConstants.rightHorizontalLineWithLabel:
+        return FORMAT('Right H-Line');
+      case DrawTypeConstants.ruler:
+        return FORMAT('Ruler');
     }
     return '';
   },
@@ -448,7 +458,8 @@ const DrawToolHelper = {
       type === DrawTypeConstants.horizontalLine ||
       type === DrawTypeConstants.verticalLine ||
       type === DrawTypeConstants.halfLine ||
-      type === DrawTypeConstants.rectangle
+      type === DrawTypeConstants.rectangle ||
+      type === DrawTypeConstants.ruler
     ) {
       return 2;
     }

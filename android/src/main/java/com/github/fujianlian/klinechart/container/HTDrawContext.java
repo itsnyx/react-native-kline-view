@@ -768,6 +768,180 @@ public class HTDrawContext {
             return;
         }
 
+        // Ruler tool: measures distance between two points with price and time difference.
+        if (drawItem.drawType == HTDrawType.ruler && index == 1 && drawItem.pointList.size() >= 2) {
+            HTPoint startPoint = drawItem.pointList.get(0);
+            HTPoint endPoint = drawItem.pointList.get(1);
+            
+            HTPoint startViewPoint = klineView.viewPointFromValuePoint(startPoint);
+            HTPoint endViewPoint = klineView.viewPointFromValuePoint(endPoint);
+            
+            // Calculate price difference
+            float priceDiff = endPoint.y - startPoint.y;
+            float pricePercent = startPoint.y != 0 ? (priceDiff / startPoint.y) * 100 : 0;
+            
+            // Calculate time difference (bars)
+            int barCount = 0;
+            float timeDiff = 0;
+            if (configManager != null && configManager.modelArray != null && configManager.modelArray.size() > 0) {
+                int startIndex = 0;
+                float startMinDiff = Math.abs(configManager.modelArray.get(0).id - startPoint.x);
+                int endIndex = 0;
+                float endMinDiff = Math.abs(configManager.modelArray.get(0).id - endPoint.x);
+                
+                for (int i = 0; i < configManager.modelArray.size(); i++) {
+                    KLineEntity model = configManager.modelArray.get(i);
+                    float startDiff = Math.abs(model.id - startPoint.x);
+                    float endDiff = Math.abs(model.id - endPoint.x);
+                    if (startDiff < startMinDiff) {
+                        startMinDiff = startDiff;
+                        startIndex = i;
+                    }
+                    if (endDiff < endMinDiff) {
+                        endMinDiff = endDiff;
+                        endIndex = i;
+                    }
+                }
+                
+                barCount = Math.abs(endIndex - startIndex);
+                if (startIndex < configManager.modelArray.size() && endIndex < configManager.modelArray.size()) {
+                    float startTime = configManager.modelArray.get(startIndex).id;
+                    float endTime = configManager.modelArray.get(endIndex).id;
+                    timeDiff = Math.abs(endTime - startTime);
+                }
+            }
+            
+            // Format time string
+            int hours = (int)(timeDiff / 3600);
+            String timeString = hours > 0 ? barCount + " bars, " + hours + "h" : barCount + " bars";
+            
+            // Calculate center point
+            float centerX = (startViewPoint.x + endViewPoint.x) / 2;
+            float centerY = (startViewPoint.y + endViewPoint.y) / 2;
+            
+            // Box size
+            float boxSize = 80f;
+            float boxLeft = centerX - boxSize / 2;
+            float boxTop = centerY - boxSize / 2;
+            float boxRight = centerX + boxSize / 2;
+            float boxBottom = centerY + boxSize / 2;
+            
+            // Draw semi-transparent box
+            paint.setStyle(Paint.Style.FILL);
+            int boxColor = colorWithAlphaComponent(drawItem.drawColor, 0.2);
+            paint.setColor(boxColor);
+            android.graphics.RectF boxRect = new android.graphics.RectF(boxLeft, boxTop, boxRight, boxBottom);
+            canvas.drawRect(boxRect, paint);
+            
+            // Draw crosshairs
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setColor(drawItem.drawColor);
+            paint.setStrokeWidth(1.5f);
+            paint.setPathEffect(null);
+            
+            Path crosshairPath = new Path();
+            
+            // Vertical arrow (down)
+            float arrowHeadSize = 6f;
+            float vStartY = boxTop + boxSize * 0.15f;
+            float vEndY = boxBottom - boxSize * 0.15f;
+            crosshairPath.moveTo(centerX, vStartY);
+            crosshairPath.lineTo(centerX, vEndY);
+            // Arrow head
+            crosshairPath.moveTo(centerX, vEndY);
+            crosshairPath.lineTo(centerX - arrowHeadSize / 2, vEndY - arrowHeadSize);
+            crosshairPath.moveTo(centerX, vEndY);
+            crosshairPath.lineTo(centerX + arrowHeadSize / 2, vEndY - arrowHeadSize);
+            
+            // Horizontal arrow (right)
+            float hStartX = boxLeft + boxSize * 0.15f;
+            float hEndX = boxRight - boxSize * 0.15f;
+            crosshairPath.moveTo(hStartX, centerY);
+            crosshairPath.lineTo(hEndX, centerY);
+            // Arrow head
+            crosshairPath.moveTo(hEndX, centerY);
+            crosshairPath.lineTo(hEndX - arrowHeadSize, centerY - arrowHeadSize / 2);
+            crosshairPath.moveTo(hEndX, centerY);
+            crosshairPath.lineTo(hEndX - arrowHeadSize, centerY + arrowHeadSize / 2);
+            
+            canvas.drawPath(crosshairPath, paint);
+            
+            // Draw dashed lines at top and bottom
+            paint.setStrokeWidth(1f);
+            
+            // Top dashed line
+            paint.setPathEffect(new DashPathEffect(new float[] { 4f, 2f }, 0));
+            Path topLine = new Path();
+            topLine.moveTo(boxLeft - 10, boxTop);
+            topLine.lineTo(boxRight + 10, boxTop);
+            canvas.drawPath(topLine, paint);
+            
+            // Bottom dotted line
+            paint.setPathEffect(new DashPathEffect(new float[] { 2f, 2f }, 0));
+            Path bottomLine = new Path();
+            bottomLine.moveTo(boxLeft - 10, boxBottom);
+            bottomLine.lineTo(boxRight + 10, boxBottom);
+            canvas.drawPath(bottomLine, paint);
+            
+            // Draw text box below
+            paint.setPathEffect(null);
+            paint.setTextSize(configManager.candleTextFontSize);
+            String priceText = String.format("%.4f (%.2f%%) %.0f", priceDiff, pricePercent, priceDiff * 1000);
+            
+            Paint.FontMetrics fm = paint.getFontMetrics();
+            float priceTextWidth = paint.measureText(priceText);
+            float timeTextWidth = paint.measureText(timeString);
+            float textWidth = Math.max(priceTextWidth, timeTextWidth);
+            float textHeight = (fm.bottom - fm.top) * 2 + 4;
+            
+            float paddingH = 8f;
+            float paddingV = 6f;
+            float textBoxLeft = centerX - textWidth / 2 - paddingH;
+            float textBoxTop = boxBottom + 8;
+            float textBoxRight = centerX + textWidth / 2 + paddingH;
+            float textBoxBottom = textBoxTop + textHeight + paddingV * 2;
+            
+            android.graphics.RectF textBoxRect = new android.graphics.RectF(textBoxLeft, textBoxTop, textBoxRight, textBoxBottom);
+            
+            // Background
+            paint.setStyle(Paint.Style.FILL);
+            int redColor = Color.argb(204, 255, 0, 0); // Red with alpha (0xCC = 204)
+            paint.setColor(redColor);
+            canvas.drawRoundRect(textBoxRect, 6, 6, paint);
+            
+            // Text
+            paint.setColor(Color.WHITE);
+            float priceTextY = textBoxTop + paddingV - fm.top;
+            float timeTextY = priceTextY + (fm.bottom - fm.top) + 2;
+            canvas.drawText(priceText, textBoxLeft + paddingH, priceTextY, paint);
+            canvas.drawText(timeString, textBoxLeft + paddingH, timeTextY, paint);
+            
+            if (itemIndex == configManager.shouldReloadDrawItemIndex) {
+                Path highlight = new Path();
+                paint.setStyle(Paint.Style.FILL);
+                highlight.addCircle(startViewPoint.x, startViewPoint.y, 20, Path.Direction.CW);
+                paint.setColor(colorWithAlphaComponent(drawItem.drawColor, 0.5));
+                canvas.drawPath(highlight, paint);
+                
+                highlight = new Path();
+                highlight.addCircle(startViewPoint.x, startViewPoint.y, 8, Path.Direction.CW);
+                paint.setColor(drawItem.drawColor);
+                canvas.drawPath(highlight, paint);
+                
+                highlight = new Path();
+                paint.setStyle(Paint.Style.FILL);
+                highlight.addCircle(endViewPoint.x, endViewPoint.y, 20, Path.Direction.CW);
+                paint.setColor(colorWithAlphaComponent(drawItem.drawColor, 0.5));
+                canvas.drawPath(highlight, paint);
+                
+                highlight = new Path();
+                highlight.addCircle(endViewPoint.x, endViewPoint.y, 8, Path.Direction.CW);
+                paint.setColor(drawItem.drawColor);
+                canvas.drawPath(highlight, paint);
+            }
+            return;
+        }
+
         // Special handling for text annotations: draw text at the anchor point with background.
         if (drawItem.drawType == HTDrawType.text) {
             HTPoint viewPoint = klineView.viewPointFromValuePoint(point);

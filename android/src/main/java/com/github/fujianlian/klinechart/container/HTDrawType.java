@@ -29,6 +29,9 @@ public enum HTDrawType {
     // Right horizontal line with label: starts from selected X and extends to the right edge
     rightHorizontalLineWithLabel,
 
+    // Ruler tool: measures distance between two points with price and time difference
+    ruler,
+
     rectangle,
 
     parallelogram,
@@ -68,6 +71,9 @@ public enum HTDrawType {
             case 305: {
                 return rightHorizontalLineWithLabel;
             }
+            case 306: {
+                return ruler;
+            }
             case 201: {
                 return text;
             }
@@ -84,7 +90,7 @@ public enum HTDrawType {
     }
 
     public int count() {
-        if (this == line || this == horizontalLine || this == verticalLine || this == halfLine || this == rectangle) {
+        if (this == line || this == horizontalLine || this == verticalLine || this == halfLine || this == rectangle || this == ruler) {
             return 2;
         }
         if (this == parallelLine || this == parallelogram) {
@@ -129,6 +135,9 @@ public enum HTDrawType {
             }
             case rightHorizontalLineWithLabel: {
                 return 305;
+            }
+            case ruler: {
+                return 306;
             }
             case text: {
                 return 201;
