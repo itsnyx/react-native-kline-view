@@ -238,6 +238,10 @@ class HTKLineConfigManager: NSObject {
     // Controlled from JS via optionList.configList.showVolume (default: true).
     var showVolume: Bool = true
     
+    // Whether to show the remaining time until the next candle close time below the last price line.
+    // Controlled from JS via optionList.configList.showCandleRemainingCloseTime (default: false).
+    var showCandleRemainingCloseTime: Bool = false
+    
     // Optional base64-encoded logo image drawn in the center of the main chart,
     // behind the candles. Provided from JS via configList["centerLogoSource"].
     // Expected to be a plain base64 string, or a data-URL string like:
@@ -491,6 +495,7 @@ class HTKLineConfigManager: NSObject {
         centerLogoSource = configList["centerLogoSource"] as? String ?? ""
         showPlusIcon = configList["showPlusIcon"] as? Bool ?? true
         showVolume = configList["showVolume"] as? Bool ?? true
+        showCandleRemainingCloseTime = configList["showCandleRemainingCloseTime"] as? Bool ?? false
     }
 
 }

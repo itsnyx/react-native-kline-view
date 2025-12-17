@@ -554,6 +554,30 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             path.lineTo(rect.right - paddingX, (rect.bottom - rect.top) / 2 + rect.top);
             path.close();
             canvas.drawPath(path, mClosePriceTrianglePaint);
+
+            // Draw remaining time below the price line if enabled
+            if (configManager.showCandleRemainingCloseTime && !isMinute && point instanceof KLineEntity) {
+                KLineEntity lastEntity = (KLineEntity) point;
+                String remainingTimeText = calculateRemainingCloseTime(lastEntity);
+                if (remainingTimeText != null && !remainingTimeText.isEmpty()) {
+                    float timeFontSize = configManager.rightTextFontSize * 0.85f;
+                    mTextPaint.setTextSize(timeFontSize);
+                    Paint.FontMetrics timeFm = mTextPaint.getFontMetrics();
+                    float timeHeight = timeFm.descent - timeFm.ascent;
+                    float timeWidth = mTextPaint.measureText(remainingTimeText);
+                    float timeY = y + (rect.bottom - rect.top) / 2 + 2;
+                    RectF timeRect = new RectF(textX - timeWidth / 2, timeY, textX + timeWidth / 2, timeY + timeHeight);
+                    mClosePricePointPaint.setColor(configManager.closePriceCenterBackgroundColor);
+                    mClosePricePointPaint.setStyle(Paint.Style.FILL);
+                    float timeRadius = timeHeight / 2;
+                    canvas.drawRoundRect(timeRect, timeRadius, timeRadius, mClosePricePointPaint);
+                    mTextPaint.setColor(configManager.textColor);
+                    mTextPaint.setAlpha((int)(255 * 0.8f));
+                    canvas.drawText(remainingTimeText, textX - timeWidth / 2, fixTextY1(timeY + timeHeight / 2), mTextPaint);
+                    mTextPaint.setAlpha(255);
+                    mTextPaint.setTextSize(configManager.rightTextFontSize);
+                }
+            }
         } else {
             // Clear the tap target when viewing the present (center pill not shown).
             mClosePriceCenterPillRect.setEmpty();
@@ -565,6 +589,28 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             canvas.drawLine(x, y, mWidth, y, mClosePriceLinePaint);
             canvas.drawRect(mWidth - width, y - height / 2, mWidth, y + height / 2, mClosePricePointPaint);
             canvas.drawText(text, mWidth - width, fixTextY1(y), mClosePriceRightTextPaint);
+
+            // Draw remaining time below the price line if enabled
+            if (configManager.showCandleRemainingCloseTime && !isMinute && point instanceof KLineEntity) {
+                KLineEntity lastEntity = (KLineEntity) point;
+                String remainingTimeText = calculateRemainingCloseTime(lastEntity);
+                if (remainingTimeText != null && !remainingTimeText.isEmpty()) {
+                    float timeFontSize = configManager.rightTextFontSize * 0.85f;
+                    mClosePriceRightTextPaint.setTextSize(timeFontSize);
+                    Paint.FontMetrics timeFm = mClosePriceRightTextPaint.getFontMetrics();
+                    float timeHeight = timeFm.descent - timeFm.ascent;
+                    float timeWidth = mClosePriceRightTextPaint.measureText(remainingTimeText);
+                    float timeY = y + height / 2 + 2;
+                    RectF timeRect = new RectF(mWidth - timeWidth, timeY, mWidth, timeY + timeHeight);
+                    mClosePricePointPaint.setColor(configManager.closePriceRightBackgroundColor);
+                    mClosePricePointPaint.setStyle(Paint.Style.FILL);
+                    canvas.drawRect(timeRect, mClosePricePointPaint);
+                    mClosePriceRightTextPaint.setAlpha((int)(255 * 0.8f));
+                    canvas.drawText(remainingTimeText, mWidth - timeWidth, fixTextY1(timeY + timeHeight / 2), mClosePriceRightTextPaint);
+                    mClosePriceRightTextPaint.setAlpha(255);
+                    mClosePriceRightTextPaint.setTextSize(configManager.rightTextFontSize);
+                }
+            }
 
             if (isMinute) {
                 int lottieWidth = lottieDrawable.getIntrinsicWidth();
@@ -1951,6 +1997,87 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
     public float getMainMinValue() {
         return mMainMinValue;
+    }
+
+    /**
+     * Calculate remaining time until next candle close
+     */
+    private String calculateRemainingCloseTime(KLineEntity lastEntity) {
+        if (isMinute) {
+            return null;
+        }
+
+        // Get timeframe interval in seconds
+        long intervalSeconds;
+        Integer timeValue = getTimeValue();
+        if (timeValue == null) {
+            return null;
+        }
+        switch (timeValue) {
+            case 1: intervalSeconds = 60; break; // 1 minute
+            case 2: intervalSeconds = 180; break; // 3 minutes
+            case 3: intervalSeconds = 300; break; // 5 minutes
+            case 4: intervalSeconds = 900; break; // 15 minutes
+            case 5: intervalSeconds = 1800; break; // 30 minutes
+            case 6: intervalSeconds = 3600; break; // 1 hour
+            case 7: intervalSeconds = 14400; break; // 4 hours
+            case 8: intervalSeconds = 21600; break; // 6 hours
+            case 9: intervalSeconds = 86400; break; // 1 day
+            case 10: intervalSeconds = 604800; break; // 1 week
+            case 11: intervalSeconds = 2592000; break; // 1 month (approx 30 days)
+            default: return null;
+        }
+
+        // Calculate next candle close time
+        // id is in milliseconds, convert to seconds
+        long lastCandleTimestamp = (long)(lastEntity.id / 1000.0);
+        long nextCloseTime = lastCandleTimestamp + intervalSeconds;
+
+        // Get current time in seconds
+        long currentTime = System.currentTimeMillis() / 1000;
+
+        // Calculate remaining time
+        long remainingSeconds = nextCloseTime - currentTime;
+
+        // If already past the close time, return null
+        if (remainingSeconds <= 0) {
+            return null;
+        }
+
+        // Format remaining time
+        return formatRemainingTime(remainingSeconds);
+    }
+
+    /**
+     * Get time value from configManager
+     */
+    private Integer getTimeValue() {
+        return configManager != null ? configManager.time : null;
+    }
+
+    /**
+     * Format remaining time as a string (e.g., "5m 30s", "1h 15m")
+     */
+    private String formatRemainingTime(long totalSeconds) {
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long secs = totalSeconds % 60;
+
+        if (hours > 0) {
+            if (minutes > 0) {
+                return hours + "h " + minutes + "m";
+            } else {
+                return hours + "h";
+            }
+        } else if (minutes > 0) {
+            if (secs > 0) {
+                return minutes + "m " + secs + "s";
+            } else {
+                return minutes + "m";
+            }
+        } else {
+            return secs + "s";
+        }
     }
 
     public Paint getBackgroundPaint() {

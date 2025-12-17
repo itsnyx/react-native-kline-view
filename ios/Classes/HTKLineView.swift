@@ -858,6 +858,23 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         context.setFillColor(configManager.closePriceCenterTriangleColor.cgColor)
         context.addPath(trianglePath.cgPath)
         context.fillPath()
+
+        // Draw remaining time below the price line if enabled
+        if configManager.showCandleRemainingCloseTime && !configManager.isMinute {
+            if let remainingTimeText = calculateRemainingCloseTime(lastModel: lastModel) {
+                let timeFont = configManager.createFont(configManager.candleTextFontSize * 0.85)
+                let timeColor = configManager.textColor.withAlphaComponent(0.8)
+                let timeWidth = mainDraw.textWidth(title: remainingTimeText, font: timeFont)
+                let timeHeight = mainDraw.textHeight(font: timeFont)
+                let timeY = y + rectHeight / 2 + 2
+                let timeRect = CGRect.init(x: x - timeWidth / 2, y: timeY, width: timeWidth, height: timeHeight)
+                context.setFillColor(configManager.closePriceCenterBackgroundColor.cgColor)
+                let timeRectPath = UIBezierPath.init(roundedRect: timeRect, cornerRadius: timeRect.size.height / 2)
+                context.addPath(timeRectPath.cgPath)
+                context.fillPath()
+                mainDraw.drawText(title: remainingTimeText, point: timeRect.origin, color: timeColor, font: timeFont, context: context, configManager: configManager)
+            }
+        }
     }
 
     func drawClosePriceRight(_ context: CGContext, _ lastModel: HTKLineModel, _ offset: CGFloat) {
@@ -882,6 +899,19 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         context.fill(rect)
         mainDraw.drawText(title: title, point: rect.origin, color: color, font: font, context: context, configManager: configManager)
 
+        // Draw remaining time below the price line if enabled
+        if configManager.showCandleRemainingCloseTime && !configManager.isMinute {
+            if let remainingTimeText = calculateRemainingCloseTime(lastModel: lastModel) {
+                let timeFont = configManager.createFont(configManager.rightTextFontSize * 0.85)
+                let timeColor = color.withAlphaComponent(0.8)
+                let timeWidth = mainDraw.textWidth(title: remainingTimeText, font: timeFont)
+                let timeHeight = mainDraw.textHeight(font: timeFont)
+                let timeRect = CGRect.init(x: allWidth - timeWidth, y: y + height / 2 + 2, width: timeWidth, height: timeHeight)
+                context.setFillColor(configManager.closePriceRightBackgroundColor.cgColor)
+                context.fill(timeRect)
+                mainDraw.drawText(title: remainingTimeText, point: timeRect.origin, color: timeColor, font: timeFont, context: context, configManager: configManager)
+            }
+        }
 
         if (configManager.isMinute) {
             animationView.isHidden = false
@@ -1137,6 +1167,71 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         return CGPoint.init(x: xFromValue(point.x), y: yFromValue(point.y))
     }
     
+    // Calculate remaining time until next candle close
+    func calculateRemainingCloseTime(lastModel: HTKLineModel) -> String? {
+        guard !configManager.isMinute else {
+            return nil
+        }
+        
+        // Get timeframe interval in seconds
+        let intervalSeconds: TimeInterval
+        switch configManager.time {
+        case 1: intervalSeconds = 60 // 1 minute
+        case 2: intervalSeconds = 180 // 3 minutes
+        case 3: intervalSeconds = 300 // 5 minutes
+        case 4: intervalSeconds = 900 // 15 minutes
+        case 5: intervalSeconds = 1800 // 30 minutes
+        case 6: intervalSeconds = 3600 // 1 hour
+        case 7: intervalSeconds = 14400 // 4 hours
+        case 8: intervalSeconds = 21600 // 6 hours
+        case 9: intervalSeconds = 86400 // 1 day
+        case 10: intervalSeconds = 604800 // 1 week
+        case 11: intervalSeconds = 2592000 // 1 month (approx 30 days)
+        default: return nil
+        }
+        
+        // Calculate next candle close time
+        let lastCandleTimestamp = TimeInterval(lastModel.id) / 1000.0 // Convert from milliseconds to seconds
+        let nextCloseTime = lastCandleTimestamp + intervalSeconds
+        
+        // Get current time
+        let currentTime = Date().timeIntervalSince1970
+        
+        // Calculate remaining time
+        let remainingSeconds = nextCloseTime - currentTime
+        
+        // If already past the close time, return nil
+        if remainingSeconds <= 0 {
+            return nil
+        }
+        
+        // Format remaining time
+        return formatRemainingTime(seconds: remainingSeconds)
+    }
+    
+    // Format remaining time as a string (e.g., "5m 30s", "1h 15m")
+    func formatRemainingTime(seconds: TimeInterval) -> String {
+        let totalSeconds = Int(seconds)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let secs = totalSeconds % 60
+        
+        if hours > 0 {
+            if minutes > 0 {
+                return "\(hours)h \(minutes)m"
+            } else {
+                return "\(hours)h"
+            }
+        } else if minutes > 0 {
+            if secs > 0 {
+                return "\(minutes)m \(secs)s"
+            } else {
+                return "\(minutes)m"
+            }
+        } else {
+            return "\(secs)s"
+        }
+    }
 
 }
 
