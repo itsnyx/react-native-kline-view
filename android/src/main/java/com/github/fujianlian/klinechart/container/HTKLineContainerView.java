@@ -120,6 +120,7 @@ public class HTKLineContainerView extends RelativeLayout {
                     map.putDouble("drawDashWidth", drawItem.drawDashWidth);
                     map.putDouble("drawDashSpace", drawItem.drawDashSpace);
                     map.putBoolean("drawIsLock", drawItem.drawIsLock);
+                    map.putInt("drawType", drawItem.drawType.rawValue());
                 }
                 // Expose the index and a stable id of the touched drawing item to React Native.
                 map.putInt("index", drawItemIndex);
@@ -127,6 +128,9 @@ public class HTKLineContainerView extends RelativeLayout {
                     map.putString("id", drawItem.uid);
                 }
                 map.putInt("shouldReloadDrawItemIndex", drawItemIndex);
+                if (drawItem == null) {
+                    map.putInt("drawType", 0);
+                }
                 reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
                         id,
                         RNKLineView.onDrawItemDidTouchKey,

@@ -268,7 +268,7 @@ public class HTDrawItem {
                 }
             }
 
-            if (distance(klineView.viewPointFromValuePoint(point), klineView.viewPointFromValuePoint(location)) <= 30) {
+            if (distance(klineView.viewPointFromValuePoint(point), klineView.viewPointFromValuePoint(location)) <= 50) {
                 drawItem.touchMoveIndexList.clear();
                 drawItem.touchMoveIndexList.add(index);
                 return true;
@@ -289,11 +289,11 @@ public class HTDrawItem {
             HTPoint viewLocation = klineView.viewPointFromValuePoint(location);
 
             float distance = pedalPoint(startViewPoint, endViewPoint, viewLocation);
-            float minX = Math.min(startViewPoint.x, endViewPoint.x) - 15;
-            float maxX = Math.max(startViewPoint.x, endViewPoint.x) + 15;
-            float minY = Math.min(startViewPoint.y, endViewPoint.y) - 15;
-            float maxY = Math.max(startViewPoint.y, endViewPoint.y) + 15;
-            if (distance <= 30 && viewLocation.x > minX && viewLocation.x < maxX && viewLocation.y > minY && viewLocation.y < maxY) {
+            float minX = Math.min(startViewPoint.x, endViewPoint.x) - 20;
+            float maxX = Math.max(startViewPoint.x, endViewPoint.x) + 20;
+            float minY = Math.min(startViewPoint.y, endViewPoint.y) - 20;
+            float maxY = Math.max(startViewPoint.y, endViewPoint.y) + 20;
+            if (distance <= 40 && viewLocation.x > minX && viewLocation.x < maxX && viewLocation.y > minY && viewLocation.y < maxY) {
                 fillAllTouchMoveItem(drawItem);
                 return true;
             }

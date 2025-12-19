@@ -336,7 +336,7 @@ class HTDrawItem: NSObject {
             if distance(
                 p1: klineView.viewPointFromValuePoint(point),
                 p2: klineView.viewPointFromValuePoint(location)
-            ) <= 10 {
+            ) <= 30 {
                 drawItem.touchMoveIndexList = [index]
                 return true
             }
@@ -353,11 +353,11 @@ class HTDrawItem: NSObject {
             let endValuePoint = klineView.viewPointFromValuePoint(endPoint)
             let valueLocation = klineView.viewPointFromValuePoint(location)
             let distance = pedalPoint(p1: startValuePoint, p2: endValuePoint, x0: valueLocation)
-            let minX = min(startValuePoint.x, endValuePoint.x) - 5
-            let maxX = max(startValuePoint.x, endValuePoint.x) + 5
-            let minY = min(startValuePoint.y, endValuePoint.y) - 5
-            let maxY = max(startValuePoint.y, endValuePoint.y) + 5
-            if distance <= 10, valueLocation.x > minX, valueLocation.x < maxX, valueLocation.y > minY, valueLocation.y < maxY {
+            let minX = min(startValuePoint.x, endValuePoint.x) - 10
+            let maxX = max(startValuePoint.x, endValuePoint.x) + 10
+            let minY = min(startValuePoint.y, endValuePoint.y) - 10
+            let maxY = max(startValuePoint.y, endValuePoint.y) + 10
+            if distance <= 20, valueLocation.x > minX, valueLocation.x < maxX, valueLocation.y > minY, valueLocation.y < maxY {
                 fillAllTouchMoveItem(drawItem)
                 return true
             }

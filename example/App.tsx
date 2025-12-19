@@ -1231,6 +1231,11 @@ class App extends Component {
   onDrawItemDidTouch = event => {
     const { nativeEvent } = event;
     console.log('Drawing item touched:', nativeEvent);
+    
+    // If a rectangle (drawType 101) is tapped, select the ruler tool (drawType 306)
+    if (nativeEvent.drawType === DrawTypeConstants.rectangle) {
+      this.selectDrawTool(DrawTypeConstants.ruler);
+    }
   };
 
   // Drawing Item Move Event (lines/text being dragged)

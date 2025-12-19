@@ -127,7 +127,8 @@ class HTKLineContainerView: UIView {
                 self?.onDrawItemDidTouch?([
                     "index": drawItemIndex,
                     "shouldReloadDrawItemIndex": drawItemIndex,
-                    "id": drawItem?.uid ?? ""
+                    "id": drawItem?.uid ?? "",
+                    "drawType": drawItem?.drawType.rawValue ?? 0
                 ])
                 return
             }
@@ -135,6 +136,7 @@ class HTKLineContainerView: UIView {
                 "index": drawItemIndex,
                 "shouldReloadDrawItemIndex": drawItemIndex,
                 "id": drawItem.uid,
+                "drawType": drawItem.drawType.rawValue,
                 "drawColor": colorList,
                 "drawLineHeight": drawItem.drawLineHeight,
                 "drawDashWidth": drawItem.drawDashWidth,
