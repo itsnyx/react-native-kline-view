@@ -59,7 +59,11 @@ class HTShotView: UIView {
         let scale = UIScreen.main.scale
         
         UIGraphicsBeginImageContextWithOptions(shotView.bounds.size, false, scale)
-        shotView.layer.render(in: UIGraphicsGetCurrentContext()!)
+        guard let context = UIGraphicsGetCurrentContext() else {
+            imageView.isHidden = true
+            return
+        }
+        shotView.layer.render(in: context)
         var image = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
         

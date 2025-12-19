@@ -258,6 +258,11 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     
 
     func contextTranslate(_ context: CGContext, _ x: CGFloat, _ block: (CGContext) -> Void) {
+        // Guard against NaN/infinity values that would crash Core Graphics
+        guard x.isFinite else {
+            block(context)
+            return
+        }
         context.saveGState()
         context.translateBy(x: x, y: 0)
         block(context)
@@ -266,6 +271,12 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
     override func draw(_ rect: CGRect) {
         guard let context = UIGraphicsGetCurrentContext(), configManager.modelArray.count > 0 else {
+            return
+        }
+        
+        // Guard against invalid dimensions that could cause NaN/infinity in calculations
+        guard configManager.itemWidth > 0, bounds.size.width > 0, bounds.size.height > 0,
+              contentOffset.x.isFinite else {
             return
         }
 
@@ -648,39 +659,57 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     }
 
     func yFromValue(_ value: CGFloat) -> CGFloat {
+        guard mainHeight > 0 else {
+            return mainBaseY
+        }
         let scale = (mainMinMaxRange.upperBound - mainMinMaxRange.lowerBound) / mainHeight
         var y = mainBaseY + mainHeight * 0.5
-        if (scale != 0) {
+        if scale.isFinite && scale != 0 {
             y = mainBaseY + (mainMinMaxRange.upperBound - value) / scale
         }
-        return y
+        return y.isFinite ? y : mainBaseY
     }
     
     func valueFromY(_ y: CGFloat) -> CGFloat {
+        guard mainHeight > 0 else {
+            return mainMinMaxRange.lowerBound
+        }
         let scale = (mainMinMaxRange.upperBound - mainMinMaxRange.lowerBound) / mainHeight
         var value = scale * mainHeight * 0.5
-        if (scale != 0) {
+        if scale.isFinite && scale != 0 {
             value = mainMinMaxRange.upperBound - (y - mainBaseY) * scale
         }
-        return value
+        return value.isFinite ? value : mainMinMaxRange.lowerBound
     }
     
     func xFromValue(_ value: CGFloat) -> CGFloat {
         guard let firstItem = configManager.modelArray.first, let lastItem = configManager.modelArray.last else {
             return 0
         }
+        guard configManager.modelArray.count > 1, configManager.itemWidth > 0 else {
+            return 0
+        }
         let scale = (lastItem.id - firstItem.id) / (configManager.itemWidth * CGFloat(configManager.modelArray.count - 1))
+        guard scale.isFinite && scale != 0 else {
+            return 0
+        }
         let x = (value - firstItem.id) / scale + configManager.itemWidth / 2.0 - contentOffset.x
-        return x
+        return x.isFinite ? x : 0
     }
     
     func valueFromX(_ x: CGFloat) -> CGFloat {
         guard let firstItem = configManager.modelArray.first, let lastItem = configManager.modelArray.last else {
             return 0
         }
+        guard configManager.modelArray.count > 1, configManager.itemWidth > 0 else {
+            return 0
+        }
         let scale = (lastItem.id - firstItem.id) / (configManager.itemWidth * CGFloat(configManager.modelArray.count - 1))
+        guard scale.isFinite && scale != 0 else {
+            return 0
+        }
         let value = scale * (x + contentOffset.x - configManager.itemWidth / 2.0) + firstItem.id
-        return value
+        return value.isFinite ? value : 0
     }
 
     func drawCandle(_ context: CGContext) {
@@ -1134,7 +1163,13 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     }
 
     func viewPointFromValuePoint(_ point: CGPoint) -> CGPoint {
-        return CGPoint.init(x: xFromValue(point.x), y: yFromValue(point.y))
+        let x = xFromValue(point.x)
+        let y = yFromValue(point.y)
+        // Guard against NaN/infinity values that would crash Core Graphics
+        guard x.isFinite && y.isFinite else {
+            return CGPoint.zero
+        }
+        return CGPoint.init(x: x, y: y)
     }
     
 

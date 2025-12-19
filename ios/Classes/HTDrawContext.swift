@@ -199,6 +199,11 @@ class HTDrawContext {
     }
     
     func drawLine(_ context: CGContext, _ drawItem: HTDrawItem, _ startPoint: CGPoint, _ endPoint: CGPoint) {
+        // Guard against NaN/infinity values that would crash Core Graphics
+        guard startPoint.x.isFinite && startPoint.y.isFinite &&
+              endPoint.x.isFinite && endPoint.y.isFinite else {
+            return
+        }
         context.move(to: startPoint)
         context.addLine(to: endPoint)
         context.setStrokeColor(drawItem.drawColor.cgColor)
@@ -1028,6 +1033,11 @@ class HTDrawContext {
         }
         for (itemIndex, drawItem) in drawItemList.enumerated() {
             for (index, _) in drawItem.pointList.enumerated() {
+                // Skip if point has invalid values (NaN/infinity)
+                let point = drawItem.pointList[index]
+                guard point.x.isFinite && point.y.isFinite else {
+                    continue
+                }
                 drawMapper(context, drawItem, index, itemIndex)
             }
         }
