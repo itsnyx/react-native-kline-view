@@ -316,12 +316,27 @@ class HTKLineConfigManager: NSObject {
 
     static func packColorList(_ value: Any?) -> [UIColor] {
         var colorList = [UIColor]()
-        guard let itemList = value as? [Int] else {
+        guard let itemArray = value as? [Any] else {
             return colorList
         }
-        for item in itemList {
-            if let color = RCTConvert.uiColor(item) {
+        // Use a default fallback color (orange) if conversion fails
+        let fallbackColor = UIColor.orange
+        for item in itemArray {
+            // Handle different number types (Int, Int64, NSNumber, etc.)
+            var colorInt: Int?
+            if let intValue = item as? Int {
+                colorInt = intValue
+            } else if let numberValue = item as? NSNumber {
+                colorInt = numberValue.intValue
+            } else if let int64Value = item as? Int64 {
+                colorInt = Int(int64Value)
+            }
+            
+            if let colorInt = colorInt, let color = RCTConvert.uiColor(colorInt) {
                 colorList.append(color)
+            } else {
+                // If conversion fails, append fallback color to maintain array size
+                colorList.append(fallbackColor)
             }
         }
         return colorList

@@ -31,6 +31,9 @@ class HTMacdDraw: NSObject, HTKLineDrawProtocol {
     }
 
     func drawLine(_ model: HTKLineModel, _ lastModel: HTKLineModel, _ maxValue: CGFloat, _ minValue: CGFloat, _ baseY: CGFloat, _ height: CGFloat, _ index: Int, _ lastIndex: Int, _ context: CGContext, _ configManager: HTKLineConfigManager) {
+        guard configManager.targetColorList.count >= 2 else {
+            return
+        }
         let itemList = [
             ["value": model.macdDif, "lastValue": lastModel.macdDif, "color": configManager.targetColorList[0]],
             ["value": model.macdDea, "lastValue": lastModel.macdDea, "color": configManager.targetColorList[1]],
@@ -42,9 +45,13 @@ class HTMacdDraw: NSObject, HTKLineDrawProtocol {
 
     func drawText(_ model: HTKLineModel, _ baseX: CGFloat, _ baseY: CGFloat, _ context: CGContext, _ configManager: HTKLineConfigManager) {
         var x = baseX
+        guard configManager.targetColorList.count >= 2 else {
+            return
+        }
+        let macdColor = configManager.targetColorList.count > 5 ? configManager.targetColorList[5] : configManager.textColor
         let itemList = [
             ["title": String(format: "MACD(%@,%@,%@)", configManager.macdS, configManager.macdL, configManager.macdM), "color": configManager.textColor],
-            ["title": String(format: "MACD:%@", configManager.precision(model.macdValue, -1)), "color": configManager.targetColorList[5]],
+            ["title": String(format: "MACD:%@", configManager.precision(model.macdValue, -1)), "color": macdColor],
             ["title": String(format: "DIF:%@", configManager.precision(model.macdDif, -1)), "color": configManager.targetColorList[0]],
             ["title": String(format: "DEA:%@", configManager.precision(model.macdDea, -1)), "color": configManager.targetColorList[1]],
         ]
