@@ -66,10 +66,52 @@ class HTKLineContainerView: UIView {
                           let list = try JSONSerialization.jsonObject(with: data, options: .allowFragments) as? [[String: Any]] else {
                         return
                     }
+                    
+                    // Capture previous state so we can preserve/adjust scroll position on the UI thread.
+                    let previousCount = self?.configManager.modelArray.count ?? 0
+                    let loadingMoreFromLeft = self?.configManager.loadingMoreFromLeft ?? false
+                    
                     self?.configManager.modelArray = HTKLineModel.packModelArray(list)
                     DispatchQueue.main.async {
                         guard let self = self else { return }
+                        
+                        // Capture scroll state before updating content size
+                        let oldContentOffsetX = self.klineView.contentOffset.x
+                        let oldContentSizeWidth = self.klineView.contentSize.width
+                        let oldMaxOffsetX = max(0, oldContentSizeWidth - self.klineView.bounds.size.width)
+                        let wasAtEnd = oldContentOffsetX >= oldMaxOffsetX - 1 // Use small tolerance for floating point
+                        
+                        let newCount = self.configManager.modelArray.count
+                        let addedCount = max(newCount - previousCount, 0)
+                        
                         self.klineView.reloadContentSize()
+                        
+                        // Handle scroll position adjustment
+                        // Check if user was at the left edge (with small tolerance for floating point precision)
+                        let wasAtLeftEdge = oldContentOffsetX <= 0.5
+                        if loadingMoreFromLeft && wasAtLeftEdge && addedCount > 0 {
+                            // We just prepended older candles while the user was sitting at the
+                            // very left edge. Shift scrollX so that the previously visible first
+                            // candle stays anchored in view instead of jumping to the new oldest.
+                            let shiftPx = CGFloat(addedCount) * self.configManager.itemWidth
+                            let newOffsetX = min(shiftPx, self.klineView.contentSize.width - self.klineView.bounds.size.width)
+                            self.klineView.setContentOffset(CGPoint(x: newOffsetX, y: 0), animated: false)
+                        } else if wasAtEnd {
+                            // If the user was at the right edge (latest candle) before the update,
+                            // keep them pinned to the newest candle after the data change.
+                            let maxOffsetX = max(0, self.klineView.contentSize.width - self.klineView.bounds.size.width)
+                            self.klineView.setContentOffset(CGPoint(x: maxOffsetX, y: 0), animated: false)
+                        } else if previousCount == 0 && newCount > 0 && self.configManager.shouldScrollToEnd && self.klineView.bounds.size.width > 0 {
+                            // Initial load: if this is the first time we have data and shouldScrollToEnd is true,
+                            // scroll to the end (most recent candle). Only do this if the view has been laid out.
+                            let maxOffsetX = max(0, self.klineView.contentSize.width - self.klineView.bounds.size.width)
+                            self.klineView.setContentOffset(CGPoint(x: maxOffsetX, y: 0), animated: false)
+                        }
+                        
+                        // Reset left-load flag so normal updates (e.g. live ticks on the right)
+                        // are not misinterpreted as "prepend" operations.
+                        self.configManager.loadingMoreFromLeft = false
+                        
                         self.klineView.scrollViewDidScroll(self.klineView)
                     }
                 } catch {

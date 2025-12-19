@@ -1212,6 +1212,10 @@ extension HTKLineView: UIScrollViewDelegate {
         if visibleStartIndex == 0 {
             if !hasFiredOnEndReached {
                 hasFiredOnEndReached = true
+                // Mark that the next modelArray update is the result of a "load older
+                // candles" flow so we can keep the user's visible range anchored when
+                // new data is prepended on the left.
+                configManager.loadingMoreFromLeft = true
                 containerView?.onEndReached?([:])
             }
         } else {
