@@ -300,7 +300,7 @@ class HTDrawContext {
             let font = configManager.createFont(fontSize)
             let text = drawItem.text as NSString
 
-            let paddingH: CGFloat = 12
+            let paddingH: CGFloat = 6
             let paddingV: CGFloat = 6
             let gap: CGFloat = 4
             let triangleHeight: CGFloat = 6
