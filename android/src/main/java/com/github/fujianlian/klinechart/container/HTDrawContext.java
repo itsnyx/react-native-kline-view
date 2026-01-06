@@ -284,8 +284,9 @@ public class HTDrawContext {
 
             HTPoint viewPoint = klineView.viewPointFromValuePoint(point);
 
-            // Get zoom scale to make marker smaller when zooming out
-            float scale = klineView.getScaleX();
+            // Get zoom scale to make marker smaller when zooming out (but not larger when zooming in)
+            float zoomScale = klineView.getScaleX();
+            float scale = Math.min(zoomScale, 1.0f);
 
             paint.setPathEffect(null);
             float baseFontSize = drawItem.textFontSize > 0 ? drawItem.textFontSize : configManager.candleTextFontSize;

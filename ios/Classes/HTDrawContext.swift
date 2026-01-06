@@ -294,8 +294,9 @@ class HTDrawContext {
 
             let viewPoint = klineView.viewPointFromValuePoint(point)
 
-            // Get zoom scale to make marker smaller when zooming out
-            let scale = klineView.scale
+            // Get zoom scale to make marker smaller when zooming out (but not larger when zooming in)
+            let zoomScale = klineView.scale
+            let scale = min(zoomScale, 1.0)
 
             let baseFontSize = drawItem.textFontSize > 0
                 ? drawItem.textFontSize
