@@ -294,18 +294,22 @@ class HTDrawContext {
 
             let viewPoint = klineView.viewPointFromValuePoint(point)
 
-            let fontSize = drawItem.textFontSize > 0
+            // Get zoom scale to make marker smaller when zooming out
+            let scale = klineView.scale
+
+            let baseFontSize = drawItem.textFontSize > 0
                 ? drawItem.textFontSize
                 : configManager.candleTextFontSize
+            let fontSize = baseFontSize * scale
             let font = configManager.createFont(fontSize)
             let text = drawItem.text as NSString
 
-            let paddingH: CGFloat = 6
-            let paddingV: CGFloat = 6
-            let gap: CGFloat = 4
-            let triangleHeight: CGFloat = 6
-            let triangleHalfWidth: CGFloat = 6
-            let marginX: CGFloat = 4
+            let paddingH: CGFloat = 6 * scale
+            let paddingV: CGFloat = 6 * scale
+            let gap: CGFloat = 4 * scale
+            let triangleHeight: CGFloat = 6 * scale
+            let triangleHalfWidth: CGFloat = 6 * scale
+            let marginX: CGFloat = 4 * scale
 
             let attributes: [NSAttributedString.Key: Any] = [
                 .font: font,
@@ -335,7 +339,7 @@ class HTDrawContext {
             }
 
             let isTop = drawItem.position.lowercased() == "top"
-            let candleMargin: CGFloat = 4
+            let candleMargin: CGFloat = 4 * scale
             var tipY: CGFloat
             var triangleBaseY: CGFloat
             var rect: CGRect
@@ -363,7 +367,7 @@ class HTDrawContext {
 
             // Clamp vertically inside the view so bottom markers stay visible
             // even when the candle is near the bottom of the chart.
-            let marginY: CGFloat = 4
+            let marginY: CGFloat = 4 * scale
             let viewHeight = klineView.bounds.size.height
             if rect.minY < marginY {
                 let shift = marginY - rect.minY

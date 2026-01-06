@@ -284,8 +284,12 @@ public class HTDrawContext {
 
             HTPoint viewPoint = klineView.viewPointFromValuePoint(point);
 
+            // Get zoom scale to make marker smaller when zooming out
+            float scale = klineView.getScaleX();
+
             paint.setPathEffect(null);
-            float fontSize = drawItem.textFontSize > 0 ? drawItem.textFontSize : configManager.candleTextFontSize;
+            float baseFontSize = drawItem.textFontSize > 0 ? drawItem.textFontSize : configManager.candleTextFontSize;
+            float fontSize = baseFontSize * scale;
             paint.setTextSize(fontSize);
 
             String text = (drawItem.text != null && drawItem.text.length() > 0) ? drawItem.text : "";
@@ -294,12 +298,12 @@ public class HTDrawContext {
             float textHeight = fm.bottom - fm.top;
             float textWidth = paint.measureText(text);
 
-            float paddingH = 12f;
-            float paddingV = 6f;
-            float gap = 4f;
-            float triangleHeight = 6f;
-            float triangleHalfWidth = 6f;
-            float marginX = 4f;
+            float paddingH = 12f * scale;
+            float paddingV = 6f * scale;
+            float gap = 4f * scale;
+            float triangleHeight = 6f * scale;
+            float triangleHalfWidth = 6f * scale;
+            float marginX = 4f * scale;
 
             float bubbleWidth = textWidth + paddingH * 2f;
             float bubbleHeight = textHeight + paddingV * 2f;
@@ -324,7 +328,7 @@ public class HTDrawContext {
             }
 
             boolean isTop = "top".equalsIgnoreCase(drawItem.position);
-            float candleMargin = 4f;
+            float candleMargin = 4f * scale;
             float tipY;
             float triangleBaseY;
             float top;
@@ -343,7 +347,7 @@ public class HTDrawContext {
 
             // Clamp vertically inside the view so bottom markers stay visible
             // even when the candle is near the bottom of the chart.
-            float marginY = 4f;
+            float marginY = 4f * scale;
             float viewHeight = klineView.getHeight();
             if (top < marginY) {
                 float shift = marginY - top;
