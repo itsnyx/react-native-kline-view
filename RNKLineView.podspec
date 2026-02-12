@@ -6,10 +6,10 @@ Pod::Spec.new do |s|
   s.description  = <<-DESC
                   RNKLineView
                    DESC
-  s.homepage     = "https://github.com/hellohublot"
+  s.homepage     = "https://github.com/itsnyx"
   s.license      = "MIT"
   # s.license      = { :type => "MIT", :file => "FILE_LICENSE" }
-  s.author             = { "hellohublot" => "hellohublot@gmail.com" }
+  s.author             = { "itsnyx" => "xitsnyx@gmail.com" }
   s.platform     = :ios, "9.0"
   s.source       = { :git => "oneMore", :tag => "master" }
   s.source_files  = "ios/Classes/**/*"
@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   s.swift_version = "4.0"
 
   s.dependency "React"
-  s.dependency 'lottie-ios', '~> 4.5.0'
+  s.dependency 'lottie-ios'
 
 end
 
