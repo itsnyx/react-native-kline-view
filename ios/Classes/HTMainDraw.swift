@@ -79,7 +79,19 @@ class HTMainDraw: NSObject, HTKLineDrawProtocol {
             case .none:
                 break
             case .ma:
+                guard !configManager.maList.isEmpty,
+                      !model.maList.isEmpty,
+                      !lastModel.maList.isEmpty else {
+                    return
+                }
                 for (i, itemModel) in configManager.maList.enumerated() {
+                    guard i >= 0,
+                          i < model.maList.count,
+                          i < lastModel.maList.count,
+                          itemModel.index >= 0,
+                          itemModel.index < configManager.targetColorList.count else {
+                        continue
+                    }
                     let color = configManager.targetColorList[itemModel.index]
                     drawLine(value: model.maList[i].value, lastValue: lastModel.maList[i].value, maxValue: maxValue, minValue: minValue, baseY: baseY, height: height, index: index, lastIndex: lastIndex, color: color, isBezier: false, context: context, configManager: configManager)
                 }
@@ -106,6 +118,12 @@ class HTMainDraw: NSObject, HTKLineDrawProtocol {
             case .ma:
                 var x = baseX
                 for (i, itemModel) in configManager.maList.enumerated() {
+                    guard i >= 0,
+                          i < model.maList.count,
+                          itemModel.index >= 0,
+                          itemModel.index < configManager.targetColorList.count else {
+                        continue
+                    }
                     let item = model.maList[i]
                     let title = String(format: "MA%@:%@", item.title, configManager.precision(item.value, configManager.price))
                     let color = configManager.targetColorList[itemModel.index]
