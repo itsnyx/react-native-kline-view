@@ -245,6 +245,26 @@ public class HTDrawContext {
     }
 
     /**
+     * Return the id (timestamp) of the candle closest to the given X-value (timestamp).
+     * Used to snap a candleMarker's horizontal position to the exact candle center.
+     */
+    private float closestCandleIdForX(float valueX) {
+        if (configManager == null || configManager.modelArray == null || configManager.modelArray.size() == 0) {
+            return valueX;
+        }
+        float closestId = configManager.modelArray.get(0).id;
+        float minDiff = Math.abs(closestId - valueX);
+        for (int i = 1; i < configManager.modelArray.size(); i++) {
+            float diff = Math.abs(configManager.modelArray.get(i).id - valueX);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestId = configManager.modelArray.get(i).id;
+            }
+        }
+        return closestId;
+    }
+
+    /**
      * Find the index of the candle whose id is closest to the given X-value (timestamp).
      * Used to make candleMarker visibility decisions based on visible candle indices.
      */
@@ -282,7 +302,11 @@ public class HTDrawContext {
                 }
             }
 
-            HTPoint viewPoint = klineView.viewPointFromValuePoint(point);
+            // Snap the X to the exact center of the closest candle so the marker
+            // always appears centered on its candle regardless of where the touch landed.
+            float snappedX = closestCandleIdForX(point.x);
+            HTPoint snappedPoint = new HTPoint(snappedX, point.y);
+            HTPoint viewPoint = klineView.viewPointFromValuePoint(snappedPoint);
 
             // Get zoom scale to make marker smaller when zooming out (but not larger when zooming in)
             float zoomScale = klineView.getScaleX();

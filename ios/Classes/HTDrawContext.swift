@@ -216,6 +216,22 @@ class HTDrawContext {
         context.drawPath(using: .stroke)
     }
 
+    /// Return the id (timestamp) of the candle closest to the given X-value.
+    /// Used to snap a candleMarker's horizontal position to the candle center.
+    private func closestCandleId(forX value: CGFloat) -> CGFloat {
+        guard !configManager.modelArray.isEmpty else { return value }
+        var closest = configManager.modelArray[0]
+        var minDiff = abs(closest.id - value)
+        for model in configManager.modelArray {
+            let diff = abs(model.id - value)
+            if diff < minDiff {
+                minDiff = diff
+                closest = model
+            }
+        }
+        return closest.id
+    }
+
     /// For a given X-value (timestamp), find the candle whose id is closest and
     /// return the candle's low in value-space.
     /// This is used to anchor candleMarker pointers to the corresponding candle
@@ -292,7 +308,11 @@ class HTDrawContext {
                 }
             }
 
-            let viewPoint = klineView.viewPointFromValuePoint(point)
+            // Snap the X to the exact center of the closest candle so the marker
+            // always appears centered on its candle regardless of where the touch landed.
+            let snappedX = closestCandleId(forX: point.x)
+            let snappedPoint = CGPoint(x: snappedX, y: point.y)
+            let viewPoint = klineView.viewPointFromValuePoint(snappedPoint)
 
             // Get zoom scale to make marker smaller when zooming out (but not larger when zooming in)
             let zoomScale = klineView.scale
