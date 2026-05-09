@@ -452,22 +452,16 @@ class HTDrawContext {
 
             context.saveGState()
             context.clip(to: mainRect)
-            context.setStrokeColor(drawItem.drawColor.cgColor)
-            context.setLineWidth(drawItem.drawLineHeight)
-            var dashList = [drawItem.drawDashWidth, drawItem.drawDashSpace]
-            if drawItem.drawDashSpace == 0 {
-                dashList = []
-            }
-            context.setLineDash(phase: 0, lengths: dashList)
-            context.move(to: start)
-            context.addLine(to: end)
-            context.drawPath(using: .stroke)
+
+            let font = configManager.createFont(configManager.candleTextFontSize)
+            let paddingH: CGFloat = 6
+            let paddingV: CGFloat = 4
+            let marginX: CGFloat = 4
+            let centerY = viewPoint.y
 
             // Labels: optional custom text on the left and price on the right.
             let priceText = configManager.precision(priceValue, configManager.price)
             let leftText = (drawItem.text.isEmpty ? nil : drawItem.text)
-
-            let font = configManager.createFont(configManager.candleTextFontSize)
 
             let priceAttributes: [NSAttributedString.Key: Any] = [
                 .font: font,
@@ -479,19 +473,35 @@ class HTDrawContext {
             ]
 
             let priceSize = (priceText as NSString).size(withAttributes: priceAttributes)
-            let paddingH: CGFloat = 6
-            let paddingV: CGFloat = 4
-            let marginX: CGFloat = 4
 
-            // Place labels centered on the line (vertically), not hovering above it.
-            // Each bubble rect is vertically centered on viewPoint.y.
-            let centerY = viewPoint.y
             let viewH = mainRect.height
             let borderWidth: CGFloat = 1
             let clampTop: (CGFloat, CGFloat) -> CGFloat = { top, height in
                 if height >= viewH { return mainRect.minY }
                 return min(max(top, mainRect.minY), mainRect.maxY - height)
             }
+
+            // Compute where the dashed line starts (after the left label, if any).
+            var dashLineStartX: CGFloat = 0
+            if drawItem.drawType == .globalHorizontalLineWithLabel, let label = leftText {
+                let leftSize = (label as NSString).size(withAttributes: leftAttributes)
+                dashLineStartX = marginX + leftSize.width + paddingH * 2 + marginX
+            }
+
+            // Draw the dashed line at 0.5 opacity, stopping before the left label.
+            context.setStrokeColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
+            context.setLineWidth(drawItem.drawLineHeight)
+            var dashList = [drawItem.drawDashWidth, drawItem.drawDashSpace]
+            if drawItem.drawDashSpace == 0 {
+                dashList = []
+            }
+            context.setLineDash(phase: 0, lengths: dashList)
+            context.move(to: CGPoint(x: dashLineStartX, y: viewPoint.y))
+            context.addLine(to: end)
+            context.drawPath(using: .stroke)
+
+            // Reset dash for solid borders drawn below.
+            context.setLineDash(phase: 0, lengths: [])
 
             // Left label (custom text), only for globalHorizontalLineWithLabel.
             if drawItem.drawType == .globalHorizontalLineWithLabel, let label = leftText {
@@ -507,12 +517,12 @@ class HTDrawContext {
                 )
 
                 context.setFillColor(drawItem.textBackgroundColor.cgColor)
-                let radius = rect.height / 4 // half of previous pill radius
+                let radius = rect.height / 4
                 let path = UIBezierPath(roundedRect: rect, cornerRadius: radius)
                 context.addPath(path.cgPath)
                 context.drawPath(using: .fill)
 
-                // Border – use line color
+                // Solid border – use line color
                 context.setLineWidth(borderWidth)
                 context.setStrokeColor(drawItem.drawColor.cgColor)
                 context.addPath(path.cgPath)
@@ -536,11 +546,12 @@ class HTDrawContext {
             )
 
             context.setFillColor(configManager.panelBackgroundColor.cgColor)
-            let priceRadius = priceRect.height / 4 // half of previous pill radius
+            let priceRadius = priceRect.height / 4
             let pricePath = UIBezierPath(roundedRect: priceRect, cornerRadius: priceRadius)
             context.addPath(pricePath.cgPath)
             context.drawPath(using: .fill)
 
+            // Solid border for the Y-axis price label.
             context.setLineWidth(borderWidth)
             context.setStrokeColor(drawItem.drawColor.cgColor)
             context.addPath(pricePath.cgPath)
