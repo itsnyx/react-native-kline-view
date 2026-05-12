@@ -23,6 +23,9 @@ public class HTShotView extends View {
     @Override
     public void requestLayout() {
         super.requestLayout();
+        if (getLayoutParams() == null) {
+            return;
+        }
         RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) getLayoutParams();
         int left = layoutParams.leftMargin;
         int top = layoutParams.topMargin;
