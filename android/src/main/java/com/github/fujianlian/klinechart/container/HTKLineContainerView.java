@@ -61,14 +61,19 @@ public class HTKLineContainerView extends RelativeLayout {
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        ViewGroup willShotView = (ViewGroup)getParent();
         if (shotView == null) {
-            shotView = new HTShotView(getContext(), willShotView);
+            // Use `this` (the klineView's direct parent) as the screenshot source so
+            // the magnifier captures the chart content correctly.
+            shotView = new HTShotView(getContext(), klineView);
             shotView.setEnabled(false);
+            shotView.setVisibility(View.GONE);
             shotView.dimension = 300;
             RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(shotView.dimension, shotView.dimension);
             layoutParams.setMargins(50, 50, 0, 0);
-            ((ViewGroup)willShotView.getParent().getParent()).addView(shotView, layoutParams);
+            // Add the magnifier overlay to this container (RelativeLayout) instead of
+            // traversing up the view tree, which can land on a ScrollView and crash
+            // with "ScrollView can host only one direct child" on Android.
+            this.addView(shotView, layoutParams);
         }
     }
 
@@ -523,10 +528,15 @@ public class HTKLineContainerView extends RelativeLayout {
     }
 
     private void handlerShot(MotionEvent event) {
+        if (shotView == null) {
+            return;
+        }
         if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
             shotView.setPoint(null);
+            shotView.setVisibility(View.GONE);
             lastLocation = null;
         } else {
+            shotView.setVisibility(View.VISIBLE);
             shotView.setPoint(new HTPoint(event.getX(), event.getY()));
         }
     }
