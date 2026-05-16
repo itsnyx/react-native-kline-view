@@ -94,6 +94,11 @@ public class HTKLineConfigManager {
     // Controlled from JS via optionList.configList.showVolume (default: true).
     public boolean showVolume = true;
 
+    // Whether to show a countdown timer below the chart price indicating
+    // time remaining until the current candle closes.
+    // Controlled from JS via optionList.configList.showCandleCountdown (default: false).
+    public boolean showCandleCountdown = false;
+
 
 
 
@@ -511,6 +516,15 @@ public class HTKLineConfigManager {
             this.showVolume = ((Number) showVolumeObj).intValue() != 0;
         } else {
             this.showVolume = true;
+        }
+
+        Object showCandleCountdownObj = configList.get("showCandleCountdown");
+        if (showCandleCountdownObj instanceof Boolean) {
+            this.showCandleCountdown = (Boolean) showCandleCountdownObj;
+        } else if (showCandleCountdownObj instanceof Number) {
+            this.showCandleCountdown = ((Number) showCandleCountdownObj).intValue() != 0;
+        } else {
+            this.showCandleCountdown = false;
         }
 
 

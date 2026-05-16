@@ -187,6 +187,10 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
     // Hit target for the close price center pill (shown when scrolled left, tap to scroll to present).
     private final RectF mClosePriceCenterPillRect = new RectF();
 
+    // Timer for candle countdown (fires every second to redraw the remaining time).
+    private android.os.Handler mCountdownHandler;
+    private Runnable mCountdownRunnable;
+
     public BaseKLineChartView(Context context, HTKLineConfigManager configManager) {
         super(context);
         this.configManager = configManager;
@@ -229,6 +233,12 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
         mClosePriceTrianglePaint.setStyle(Paint.Style.FILL);
 
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        stopCandleCountdownTimer();
     }
 
     @Override
@@ -332,6 +342,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             drawMaxAndMin(canvas);
             drawValue(canvas, isLongPress ? mSelectedIndex : mStopIndex);
             drawClosePriceLine(canvas);
+            drawCandleCountdown(canvas);
         }
         canvas.restore();
 
@@ -577,6 +588,83 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
         }
 
+    }
+
+    /**
+     * Draws the remaining time until the current candle closes, positioned below the last candle's close price.
+     */
+    private void drawCandleCountdown(Canvas canvas) {
+        if (!configManager.showCandleCountdown || configManager.time <= 0 || mItemCount <= 0) {
+            stopCandleCountdownTimer();
+            return;
+        }
+
+        startCandleCountdownTimer();
+
+        KLineEntity lastEntity = getItem(mItemCount - 1);
+        // lastEntity.id is the candle open timestamp in seconds (epoch).
+        long intervalSeconds = (long) configManager.time * 60L;
+        long candleOpenTime = (long) lastEntity.id;
+        long candleCloseTime = candleOpenTime + intervalSeconds;
+        long now = System.currentTimeMillis() / 1000L;
+        long remaining = Math.max(0, candleCloseTime - now);
+
+        String title;
+        if (configManager.time >= 1440) { // >= 1D
+            int totalHours = (int) (remaining / 3600);
+            int days = totalHours / 24;
+            int hours = totalHours % 24;
+            title = String.format("%02d:%02d", days, hours);
+        } else {
+            int totalSeconds = (int) remaining;
+            int hours = totalSeconds / 3600;
+            int minutes = (totalSeconds % 3600) / 60;
+            int seconds = totalSeconds % 60;
+            title = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+        }
+
+        float price = lastEntity.getClosePrice();
+        float y = yFromValue(price);
+        Paint.FontMetrics fm = mTextPaint.getFontMetrics();
+        float textHeight = fm.descent - fm.ascent;
+        float countdownY = y + textHeight / 2 + ViewUtil.Dp2Px(getContext(), 4);
+
+        float textWidth = mTextPaint.measureText(title);
+        float countdownX = mWidth - textWidth;
+
+        // Only draw within reasonable bounds.
+        if (countdownY + textHeight > mMainRect.bottom + textHeight + 10) {
+            return;
+        }
+
+        canvas.drawText(title, countdownX, countdownY + textHeight - fm.descent, mTextPaint);
+    }
+
+    /** Starts the 1-second countdown timer if not already running. */
+    private void startCandleCountdownTimer() {
+        if (mCountdownHandler == null) {
+            mCountdownHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+        }
+        if (mCountdownRunnable == null) {
+            mCountdownRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    if (configManager != null && configManager.showCandleCountdown && configManager.time > 0) {
+                        invalidate();
+                        mCountdownHandler.postDelayed(this, 1000);
+                    }
+                }
+            };
+            mCountdownHandler.postDelayed(mCountdownRunnable, 1000);
+        }
+    }
+
+    /** Stops the countdown timer. */
+    private void stopCandleCountdownTimer() {
+        if (mCountdownHandler != null && mCountdownRunnable != null) {
+            mCountdownHandler.removeCallbacks(mCountdownRunnable);
+            mCountdownRunnable = null;
+        }
     }
 
     /**

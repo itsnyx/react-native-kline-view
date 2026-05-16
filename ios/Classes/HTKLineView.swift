@@ -52,6 +52,9 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     // Hit target for the close price center pill (shown when scrolled left, tap to scroll to present).
     private var closePriceCenterPillRect: CGRect = .zero
 
+    // Timer for updating the candle countdown every second.
+    private var candleCountdownTimer: Timer?
+
     var scale: CGFloat = 1
 
     // --- Right y-axis drag scaling (vertical zoom) ---
@@ -157,6 +160,11 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         fatalError("init(coder:) has not been implemented")
     }
 
+    deinit {
+        candleCountdownTimer?.invalidate()
+        candleCountdownTimer = nil
+    }
+
     func reloadConfigManager(_ configManager: HTKLineConfigManager) {
 
         switch configManager.childType {
@@ -242,6 +250,23 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
                 centerLogoImage = UIImage(data: data)
             }
         }
+
+        // (3) Start/stop candle countdown timer based on config.
+        updateCandleCountdownTimer()
+    }
+
+    /// Starts or stops the 1-second countdown timer depending on `showCandleCountdown`.
+    private func updateCandleCountdownTimer() {
+        if configManager.showCandleCountdown && configManager.time > 0 {
+            if candleCountdownTimer == nil {
+                candleCountdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+                    self?.setNeedsDisplay()
+                }
+            }
+        } else {
+            candleCountdownTimer?.invalidate()
+            candleCountdownTimer = nil
+        }
     }
 
     func reloadContentSize() {
@@ -301,6 +326,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
             drawHighLow(context)
             drawTime(context)
             drawClosePrice(context)
+            drawCandleCountdown(context)
             // Draw user drawings (lines/labels/etc.) below the hover selector overlays.
             // This ensures the right-side hover price pill is always rendered on top.
             drawContext.draw(contentOffset.x)
@@ -918,6 +944,54 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
                 self.animationView.center = CGPoint.init(x: x + self.configManager.itemWidth / 2 + self.contentOffset.x, y: y)
             }
         }
+    }
+
+    /// Draws the remaining time until the current candle closes, positioned below the last candle's close price.
+    func drawCandleCountdown(_ context: CGContext) {
+        guard configManager.showCandleCountdown,
+              configManager.time > 0,
+              let lastModel = configManager.modelArray.last else {
+            return
+        }
+
+        // `configManager.time` is the interval in minutes (e.g. 1, 5, 15, 60, 240, 1440 for 1D, etc.)
+        let intervalSeconds = TimeInterval(configManager.time) * 60.0
+        // `lastModel.id` is the candle open timestamp in seconds (epoch).
+        let candleOpenTime = TimeInterval(lastModel.id)
+        let candleCloseTime = candleOpenTime + intervalSeconds
+        let now = Date().timeIntervalSince1970
+        let remaining = max(0, candleCloseTime - now)
+
+        let title: String
+        if configManager.time >= 1440 { // >= 1D
+            let totalHours = Int(remaining) / 3600
+            let days = totalHours / 24
+            let hours = totalHours % 24
+            title = String(format: "%02d:%02d", days, hours)
+        } else {
+            let totalSeconds = Int(remaining)
+            let hours = totalSeconds / 3600
+            let minutes = (totalSeconds % 3600) / 60
+            let seconds = totalSeconds % 60
+            title = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        }
+
+        let font = configManager.createFont(configManager.candleTextFontSize)
+        let textWidth = mainDraw.textWidth(title: title, font: font)
+        let textHeight = mainDraw.textHeight(font: font)
+
+        // Position below the close price on the right side of the chart.
+        let y = yFromValue(lastModel.close)
+        let priceFont = configManager.createFont(configManager.rightTextFontSize)
+        let priceHeight = mainDraw.textHeight(font: priceFont)
+        let countdownY = y + priceHeight / 2 + 4
+        let countdownX = allWidth - textWidth
+
+        // Only draw if within visible main area bounds (with some tolerance).
+        let maxY = mainBaseY + mainHeight + priceHeight
+        guard countdownY + textHeight <= maxY + 10 else { return }
+
+        mainDraw.drawText(title: title, point: CGPoint(x: countdownX, y: countdownY), color: configManager.textColor, font: font, context: context, configManager: configManager)
     }
 
     func drawSelectedLine(_ context: CGContext) {

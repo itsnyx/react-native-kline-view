@@ -246,6 +246,11 @@ class HTKLineConfigManager: NSObject {
     // Whether to show the Volume section (volume bars + volume header/labels).
     // Controlled from JS via optionList.configList.showVolume (default: true).
     var showVolume: Bool = true
+
+    // Whether to show a countdown timer below the chart price indicating
+    // time remaining until the current candle closes.
+    // Controlled from JS via optionList.configList.showCandleCountdown (default: false).
+    var showCandleCountdown: Bool = false
     
     // Optional base64-encoded logo image drawn in the center of the main chart,
     // behind the candles. Provided from JS via configList["centerLogoSource"].
@@ -515,6 +520,7 @@ class HTKLineConfigManager: NSObject {
         centerLogoSource = configList["centerLogoSource"] as? String ?? ""
         showPlusIcon = configList["showPlusIcon"] as? Bool ?? true
         showVolume = configList["showVolume"] as? Bool ?? true
+        showCandleCountdown = configList["showCandleCountdown"] as? Bool ?? false
     }
 
 }
