@@ -109,12 +109,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
     // Loading spinner shown at the left edge when fetching older candles.
     private lazy var loadingSpinner: UIActivityIndicatorView = {
-        let spinner: UIActivityIndicatorView
-        if #available(iOS 13.0, *) {
-            spinner = UIActivityIndicatorView(style: .medium)
-        } else {
-            spinner = UIActivityIndicatorView(style: .white)
-        }
+        let spinner = UIActivityIndicatorView(activityIndicatorStyle: .white)
         spinner.color = .white
         spinner.hidesWhenStopped = true
         spinner.alpha = 0
@@ -641,7 +636,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
         if closePriceDisplayLink == nil {
             let link = CADisplayLink(target: self, selector: #selector(closePriceAnimationTick))
-            link.add(to: RunLoop.main, forMode: .common)
+            link.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
             closePriceDisplayLink = link
         }
     }
