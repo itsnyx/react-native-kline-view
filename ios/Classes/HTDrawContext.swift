@@ -470,8 +470,6 @@ class HTDrawContext {
             }
 
             let viewPoint = klineView.viewPointFromValuePoint(point)
-            let start = CGPoint(x: 0, y: viewPoint.y)
-            let end = CGPoint(x: klineView.bounds.size.width, y: viewPoint.y)
 
             context.saveGState()
             context.clip(to: mainRect)
@@ -481,6 +479,22 @@ class HTDrawContext {
             let paddingV: CGFloat = 4
             let marginX: CGFloat = 4
             let centerY = viewPoint.y
+
+            // 1) Draw the dashed line across the full width first (with reduced opacity).
+            //    Labels drawn afterwards will paint their opaque backgrounds on top.
+            context.setStrokeColor(drawItem.drawColor.withAlphaComponent(0.3).cgColor)
+            context.setLineWidth(drawItem.drawLineHeight)
+            var dashList = [drawItem.drawDashWidth, drawItem.drawDashSpace]
+            if drawItem.drawDashSpace == 0 {
+                dashList = []
+            }
+            context.setLineDash(phase: 0, lengths: dashList)
+            context.move(to: CGPoint(x: 0, y: viewPoint.y))
+            context.addLine(to: CGPoint(x: klineView.bounds.size.width, y: viewPoint.y))
+            context.drawPath(using: .stroke)
+
+            // Reset to solid for everything below.
+            context.setLineDash(phase: 0, lengths: [])
 
             // Labels: optional custom text on the left and price on the right.
             let priceText = configManager.precision(priceValue, configManager.price)
@@ -504,65 +518,40 @@ class HTDrawContext {
                 return min(max(top, mainRect.minY), mainRect.maxY - height)
             }
 
-            // Compute where the dashed line starts (after the left label, if any).
-            var dashLineStartX: CGFloat = 0
+            // 2) Left label (drawn on top of the dashed line — its opaque background hides the line beneath).
             if drawItem.drawType == .globalHorizontalLineWithLabel, let label = leftText {
                 let leftSize = (label as NSString).size(withAttributes: leftAttributes)
-                dashLineStartX = marginX + leftSize.width + paddingH * 2 + marginX
-            }
-
-            // Compute the right price label rect early so the dashed line can stop before it.
-            let rightRectWidth = priceSize.width + paddingH * 2
-            let rightPadding: CGFloat = 8
-            let rightRectRight = klineView.bounds.size.width - rightPadding
-            let rightRectLeft = rightRectRight - rightRectWidth
-            let dashLineEndX = rightRectLeft - marginX
-
-            // Draw the dashed line at reduced opacity, from left label edge to right price label.
-            context.setStrokeColor(drawItem.drawColor.withAlphaComponent(0.35).cgColor)
-            context.setLineWidth(drawItem.drawLineHeight)
-            var dashList = [drawItem.drawDashWidth, drawItem.drawDashSpace]
-            if drawItem.drawDashSpace == 0 {
-                dashList = []
-            }
-            context.setLineDash(phase: 0, lengths: dashList)
-            context.move(to: CGPoint(x: dashLineStartX, y: viewPoint.y))
-            context.addLine(to: CGPoint(x: dashLineEndX, y: viewPoint.y))
-            context.drawPath(using: .stroke)
-
-            // Reset dash for solid borders drawn below.
-            context.setLineDash(phase: 0, lengths: [])
-
-            // Left label (custom text), only for globalHorizontalLineWithLabel.
-            if drawItem.drawType == .globalHorizontalLineWithLabel, let label = leftText {
-                let leftSize = (label as NSString).size(withAttributes: leftAttributes)
-                let left = marginX
                 let rectHeight = leftSize.height + paddingV * 2
                 let top = clampTop(centerY - rectHeight / 2, rectHeight)
-                let rect = CGRect(
-                    x: left,
+                let leftRect = CGRect(
+                    x: marginX,
                     y: top,
                     width: leftSize.width + paddingH * 2,
                     height: rectHeight
                 )
 
+                // Opaque background (covers the dashed line underneath).
                 context.setFillColor(drawItem.textBackgroundColor.cgColor)
-                let radius = rect.height / 4
-                let path = UIBezierPath(roundedRect: rect, cornerRadius: radius)
+                let radius = leftRect.height / 4
+                let path = UIBezierPath(roundedRect: leftRect, cornerRadius: radius)
                 context.addPath(path.cgPath)
                 context.drawPath(using: .fill)
 
-                // Solid border – use line color
+                // Solid border.
                 context.setLineWidth(borderWidth)
                 context.setStrokeColor(drawItem.drawColor.cgColor)
                 context.addPath(path.cgPath)
                 context.drawPath(using: .stroke)
 
-                let textPoint = CGPoint(x: rect.minX + paddingH, y: rect.minY + paddingV)
+                // Text.
+                let textPoint = CGPoint(x: leftRect.minX + paddingH, y: leftRect.minY + paddingV)
                 (label as NSString).draw(at: textPoint, withAttributes: leftAttributes)
             }
 
-            // Right price label (rightRectWidth, rightRectRight, rightRectLeft computed above).
+            // 3) Right price label (drawn on top of the dashed line — its opaque background hides the line beneath).
+            let rightRectWidth = priceSize.width + paddingH * 2
+            let rightRectRight = klineView.bounds.size.width - marginX
+            let rightRectLeft = rightRectRight - rightRectWidth
             let rightRectHeight = priceSize.height + paddingV * 2
             let rightTop = clampTop(centerY - rightRectHeight / 2, rightRectHeight)
             let priceRect = CGRect(
@@ -572,19 +561,20 @@ class HTDrawContext {
                 height: rightRectHeight
             )
 
+            // Opaque background (covers the dashed line underneath).
             context.setFillColor(configManager.panelBackgroundColor.cgColor)
             let priceRadius = priceRect.height / 4
             let pricePath = UIBezierPath(roundedRect: priceRect, cornerRadius: priceRadius)
             context.addPath(pricePath.cgPath)
             context.drawPath(using: .fill)
 
-            // Solid border for the Y-axis price label.
-            context.setLineDash(phase: 0, lengths: [])
+            // Solid border.
             context.setLineWidth(borderWidth)
             context.setStrokeColor(drawItem.drawColor.cgColor)
             context.addPath(pricePath.cgPath)
             context.drawPath(using: .stroke)
 
+            // Price text.
             let priceTextPoint = CGPoint(
                 x: priceRect.minX + paddingH,
                 y: priceRect.minY + paddingV
