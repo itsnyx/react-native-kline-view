@@ -487,10 +487,11 @@ class HTKLineContainerView: UIView {
         guard !configManager.modelArray.isEmpty else {
             return value
         }
+        let dValue = Double(value)
         var closest = configManager.modelArray[0]
-        var minDiff = abs(closest.id - value)
+        var minDiff = abs(closest.id - dValue)
         for model in configManager.modelArray {
-            let diff = abs(model.id - value)
+            let diff = abs(model.id - dValue)
             if diff < minDiff {
                 minDiff = diff
                 closest = model

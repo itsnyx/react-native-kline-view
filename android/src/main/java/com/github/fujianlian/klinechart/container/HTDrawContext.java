@@ -210,9 +210,9 @@ public class HTDrawContext {
             return valueX;
         }
         KLineEntity closest = configManager.modelArray.get(0);
-        float minDiff = Math.abs(closest.id - valueX);
+        double minDiff = Math.abs(closest.id - valueX);
         for (KLineEntity entity : configManager.modelArray) {
-            float diff = Math.abs(entity.id - valueX);
+            double diff = Math.abs(entity.id - valueX);
             if (diff < minDiff) {
                 minDiff = diff;
                 closest = entity;
@@ -232,9 +232,9 @@ public class HTDrawContext {
             return valueX;
         }
         KLineEntity closest = configManager.modelArray.get(0);
-        float minDiff = Math.abs(closest.id - valueX);
+        double minDiff = Math.abs(closest.id - valueX);
         for (KLineEntity entity : configManager.modelArray) {
-            float diff = Math.abs(entity.id - valueX);
+            double diff = Math.abs(entity.id - valueX);
             if (diff < minDiff) {
                 minDiff = diff;
                 closest = entity;
@@ -252,16 +252,16 @@ public class HTDrawContext {
         if (configManager == null || configManager.modelArray == null || configManager.modelArray.size() == 0) {
             return valueX;
         }
-        float closestId = configManager.modelArray.get(0).id;
-        float minDiff = Math.abs(closestId - valueX);
+        double closestId = configManager.modelArray.get(0).id;
+        double minDiff = Math.abs(closestId - valueX);
         for (int i = 1; i < configManager.modelArray.size(); i++) {
-            float diff = Math.abs(configManager.modelArray.get(i).id - valueX);
+            double diff = Math.abs(configManager.modelArray.get(i).id - valueX);
             if (diff < minDiff) {
                 minDiff = diff;
                 closestId = configManager.modelArray.get(i).id;
             }
         }
-        return closestId;
+        return (float)closestId;
     }
 
     /**
@@ -273,9 +273,9 @@ public class HTDrawContext {
             return -1;
         }
         int closestIndex = 0;
-        float minDiff = Math.abs(configManager.modelArray.get(0).id - valueX);
+        double minDiff = Math.abs(configManager.modelArray.get(0).id - valueX);
         for (int i = 1; i < configManager.modelArray.size(); i++) {
-            float diff = Math.abs(configManager.modelArray.get(i).id - valueX);
+            double diff = Math.abs(configManager.modelArray.get(i).id - valueX);
             if (diff < minDiff) {
                 minDiff = diff;
                 closestIndex = i;
@@ -814,14 +814,14 @@ public class HTDrawContext {
             float timeDiff = 0;
             if (configManager != null && configManager.modelArray != null && configManager.modelArray.size() > 0) {
                 int startIndex = 0;
-                float startMinDiff = Math.abs(configManager.modelArray.get(0).id - startPoint.x);
+                double startMinDiff = Math.abs(configManager.modelArray.get(0).id - startPoint.x);
                 int endIndex = 0;
-                float endMinDiff = Math.abs(configManager.modelArray.get(0).id - endPoint.x);
-                
+                double endMinDiff = Math.abs(configManager.modelArray.get(0).id - endPoint.x);
+
                 for (int i = 0; i < configManager.modelArray.size(); i++) {
                     KLineEntity model = configManager.modelArray.get(i);
-                    float startDiff = Math.abs(model.id - startPoint.x);
-                    float endDiff = Math.abs(model.id - endPoint.x);
+                    double startDiff = Math.abs(model.id - startPoint.x);
+                    double endDiff = Math.abs(model.id - endPoint.x);
                     if (startDiff < startMinDiff) {
                         startMinDiff = startDiff;
                         startIndex = i;
@@ -831,12 +831,12 @@ public class HTDrawContext {
                         endIndex = i;
                     }
                 }
-                
+
                 barCount = Math.abs(endIndex - startIndex);
                 if (startIndex < configManager.modelArray.size() && endIndex < configManager.modelArray.size()) {
-                    float startTime = configManager.modelArray.get(startIndex).id;
-                    float endTime = configManager.modelArray.get(endIndex).id;
-                    timeDiff = Math.abs(endTime - startTime);
+                    double startTime = configManager.modelArray.get(startIndex).id;
+                    double endTime = configManager.modelArray.get(endIndex).id;
+                    timeDiff = (float)Math.abs(endTime - startTime);
                 }
             }
             

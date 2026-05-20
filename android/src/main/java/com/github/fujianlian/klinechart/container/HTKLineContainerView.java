@@ -554,9 +554,9 @@ public class HTKLineContainerView extends RelativeLayout {
             return valueX;
         }
         KLineEntity closest = configManager.modelArray.get(0);
-        float minDiff = Math.abs(closest.id - valueX);
+        double minDiff = Math.abs(closest.id - valueX);
         for (KLineEntity entity : configManager.modelArray) {
-            float diff = Math.abs(entity.id - valueX);
+            double diff = Math.abs(entity.id - valueX);
             if (diff < minDiff) {
                 minDiff = diff;
                 closest = entity;

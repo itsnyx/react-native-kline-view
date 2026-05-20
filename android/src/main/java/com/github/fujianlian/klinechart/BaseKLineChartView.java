@@ -427,9 +427,9 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         }
         KLineEntity firstItem = getItem(0);
         KLineEntity lastItem = getItem(mItemCount - 1);
-        float scale = (lastItem.id - firstItem.id) / (configManager.itemWidth * (mItemCount - 1));
+        float scale = (float)(lastItem.id - firstItem.id) / (configManager.itemWidth * (mItemCount - 1));
         // Base scroll-space coordinate (same space as getItemMiddleScrollX)
-        float scrollX = (value - firstItem.id) / scale + configManager.itemWidth / 2.0f;
+        float scrollX = (float)(value - firstItem.id) / scale + configManager.itemWidth / 2.0f;
         // Convert scroll-space to view-space, honoring scroll and horizontal zoom
         return scrollXtoViewX(scrollX);
     }
@@ -440,10 +440,10 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         }
         KLineEntity firstItem = getItem(0);
         KLineEntity lastItem = getItem(mItemCount - 1);
-        float scale = (lastItem.id - firstItem.id) / (configManager.itemWidth * (mItemCount - 1));
+        float scale = (float)(lastItem.id - firstItem.id) / (configManager.itemWidth * (mItemCount - 1));
         // Invert scrollXtoViewX to recover scroll-space from view-space
         float scrollX = x / mScaleX + mScrollX;
-        float value = scale * (scrollX - configManager.itemWidth / 2.0f) + firstItem.id;
+        float value = scale * (scrollX - configManager.itemWidth / 2.0f) + (float)firstItem.id;
         return value;
     }
 
@@ -604,7 +604,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         KLineEntity lastEntity = getItem(mItemCount - 1);
         // lastEntity.id is the candle open timestamp in seconds (epoch).
         long intervalSeconds = (long) configManager.time * 60L;
-        long candleOpenTime = (long) lastEntity.id;
+        long candleOpenTime = Math.round(lastEntity.id);
         long candleCloseTime = candleOpenTime + intervalSeconds;
         long now = System.currentTimeMillis() / 1000L;
         long remaining = Math.max(0, candleCloseTime - now);

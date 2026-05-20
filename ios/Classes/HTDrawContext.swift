@@ -220,16 +220,17 @@ class HTDrawContext {
     /// Used to snap a candleMarker's horizontal position to the candle center.
     private func closestCandleId(forX value: CGFloat) -> CGFloat {
         guard !configManager.modelArray.isEmpty else { return value }
+        let dValue = Double(value)
         var closest = configManager.modelArray[0]
-        var minDiff = abs(closest.id - value)
+        var minDiff = abs(closest.id - dValue)
         for model in configManager.modelArray {
-            let diff = abs(model.id - value)
+            let diff = abs(model.id - dValue)
             if diff < minDiff {
                 minDiff = diff
                 closest = model
             }
         }
-        return closest.id
+        return CGFloat(closest.id)
     }
 
     /// For a given X-value (timestamp), find the candle whose id is closest and
@@ -240,10 +241,11 @@ class HTDrawContext {
         guard !configManager.modelArray.isEmpty else {
             return value
         }
+        let dValue = Double(value)
         var closest = configManager.modelArray[0]
-        var minDiff = abs(closest.id - value)
+        var minDiff = abs(closest.id - dValue)
         for model in configManager.modelArray {
-            let diff = abs(model.id - value)
+            let diff = abs(model.id - dValue)
             if diff < minDiff {
                 minDiff = diff
                 closest = model
@@ -259,10 +261,11 @@ class HTDrawContext {
         guard !configManager.modelArray.isEmpty else {
             return value
         }
+        let dValue = Double(value)
         var closest = configManager.modelArray[0]
-        var minDiff = abs(closest.id - value)
+        var minDiff = abs(closest.id - dValue)
         for model in configManager.modelArray {
-            let diff = abs(model.id - value)
+            let diff = abs(model.id - dValue)
             if diff < minDiff {
                 minDiff = diff
                 closest = model
@@ -290,9 +293,9 @@ class HTDrawContext {
                 // test rather than raw timestamp bounds to avoid edge cases where the marker's `x`
                 // is slightly outside the visible-id range but still belongs to the edge candle.
                 var closestIndex = 0
-                var minDiff = abs(configManager.modelArray[0].id - point.x)
+                var minDiff = abs(configManager.modelArray[0].id - Double(point.x))
                 for (i, model) in configManager.modelArray.enumerated() {
-                    let diff = abs(model.id - point.x)
+                    let diff = abs(model.id - Double(point.x))
                     if diff < minDiff {
                         minDiff = diff
                         closestIndex = i
@@ -508,8 +511,15 @@ class HTDrawContext {
                 dashLineStartX = marginX + leftSize.width + paddingH * 2 + marginX
             }
 
-            // Draw the dashed line at 0.5 opacity, stopping before the left label.
-            context.setStrokeColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
+            // Compute the right price label rect early so the dashed line can stop before it.
+            let rightRectWidth = priceSize.width + paddingH * 2
+            let rightPadding: CGFloat = 8
+            let rightRectRight = klineView.bounds.size.width - rightPadding
+            let rightRectLeft = rightRectRight - rightRectWidth
+            let dashLineEndX = rightRectLeft - marginX
+
+            // Draw the dashed line at reduced opacity, from left label edge to right price label.
+            context.setStrokeColor(drawItem.drawColor.withAlphaComponent(0.35).cgColor)
             context.setLineWidth(drawItem.drawLineHeight)
             var dashList = [drawItem.drawDashWidth, drawItem.drawDashSpace]
             if drawItem.drawDashSpace == 0 {
@@ -517,7 +527,7 @@ class HTDrawContext {
             }
             context.setLineDash(phase: 0, lengths: dashList)
             context.move(to: CGPoint(x: dashLineStartX, y: viewPoint.y))
-            context.addLine(to: end)
+            context.addLine(to: CGPoint(x: dashLineEndX, y: viewPoint.y))
             context.drawPath(using: .stroke)
 
             // Reset dash for solid borders drawn below.
@@ -552,10 +562,7 @@ class HTDrawContext {
                 (label as NSString).draw(at: textPoint, withAttributes: leftAttributes)
             }
 
-            // Right price label.
-            let rightRectWidth = priceSize.width + paddingH * 2
-            let rightRectRight = klineView.bounds.size.width - marginX
-            let rightRectLeft = rightRectRight - rightRectWidth
+            // Right price label (rightRectWidth, rightRectRight, rightRectLeft computed above).
             let rightRectHeight = priceSize.height + paddingV * 2
             let rightTop = clampTop(centerY - rightRectHeight / 2, rightRectHeight)
             let priceRect = CGRect(
@@ -572,6 +579,7 @@ class HTDrawContext {
             context.drawPath(using: .fill)
 
             // Solid border for the Y-axis price label.
+            context.setLineDash(phase: 0, lengths: [])
             context.setLineWidth(borderWidth)
             context.setStrokeColor(drawItem.drawColor.cgColor)
             context.addPath(pricePath.cgPath)
@@ -759,7 +767,7 @@ class HTDrawContext {
             let end = CGPoint(x: viewPoint.x, y: klineView.bounds.size.height)
 
             context.saveGState()
-            context.setStrokeColor(drawItem.drawColor.cgColor)
+            context.setStrokeColor(drawItem.drawColor.withAlphaComponent(0.35).cgColor)
             context.setLineWidth(drawItem.drawLineHeight)
             var dashList = [drawItem.drawDashWidth, drawItem.drawDashSpace]
             if drawItem.drawDashSpace == 0 {
@@ -799,13 +807,13 @@ class HTDrawContext {
             var timeDiff: TimeInterval = 0
             if !configManager.modelArray.isEmpty {
                 var startIndex = 0
-                var startMinDiff = abs(configManager.modelArray[0].id - startPoint.x)
+                var startMinDiff = abs(configManager.modelArray[0].id - Double(startPoint.x))
                 var endIndex = 0
-                var endMinDiff = abs(configManager.modelArray[0].id - endPoint.x)
-                
+                var endMinDiff = abs(configManager.modelArray[0].id - Double(endPoint.x))
+
                 for (i, model) in configManager.modelArray.enumerated() {
-                    let startDiff = abs(model.id - startPoint.x)
-                    let endDiff = abs(model.id - endPoint.x)
+                    let startDiff = abs(model.id - Double(startPoint.x))
+                    let endDiff = abs(model.id - Double(endPoint.x))
                     if startDiff < startMinDiff {
                         startMinDiff = startDiff
                         startIndex = i

@@ -40,7 +40,7 @@ class HTKLineModel: NSObject {
 
     var dateString: String = ""
 
-    var id: CGFloat = 0
+    var id: Double = 0
 
     var open: CGFloat = 0
 
@@ -87,7 +87,7 @@ class HTKLineModel: NSObject {
 
     static func packModel(_ dictionary: [String: Any]) -> HTKLineModel {
         let model = HTKLineModel()
-        model.id = dictionary["id"] as? CGFloat ?? 0
+        model.id = (dictionary["id"] as? NSNumber)?.doubleValue ?? 0
         model.dateString = dictionary["dateString"] as? String ?? ""
         model.open = dictionary["open"] as? CGFloat ?? 0
         model.high = dictionary["high"] as? CGFloat ?? 0

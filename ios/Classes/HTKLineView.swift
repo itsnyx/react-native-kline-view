@@ -715,14 +715,14 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         guard configManager.modelArray.count > 1, configManager.itemWidth > 0 else {
             return 0
         }
-        let scale = (lastItem.id - firstItem.id) / (configManager.itemWidth * CGFloat(configManager.modelArray.count - 1))
+        let scale = CGFloat(lastItem.id - firstItem.id) / (configManager.itemWidth * CGFloat(configManager.modelArray.count - 1))
         guard scale.isFinite && scale != 0 else {
             return 0
         }
-        let x = (value - firstItem.id) / scale + configManager.itemWidth / 2.0 - contentOffset.x
+        let x = (value - CGFloat(firstItem.id)) / scale + configManager.itemWidth / 2.0 - contentOffset.x
         return x.isFinite ? x : 0
     }
-    
+
     func valueFromX(_ x: CGFloat) -> CGFloat {
         guard let firstItem = configManager.modelArray.first, let lastItem = configManager.modelArray.last else {
             return 0
@@ -730,11 +730,11 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         guard configManager.modelArray.count > 1, configManager.itemWidth > 0 else {
             return 0
         }
-        let scale = (lastItem.id - firstItem.id) / (configManager.itemWidth * CGFloat(configManager.modelArray.count - 1))
+        let scale = CGFloat(lastItem.id - firstItem.id) / (configManager.itemWidth * CGFloat(configManager.modelArray.count - 1))
         guard scale.isFinite && scale != 0 else {
             return 0
         }
-        let value = scale * (x + contentOffset.x - configManager.itemWidth / 2.0) + firstItem.id
+        let value = scale * (x + contentOffset.x - configManager.itemWidth / 2.0) + CGFloat(firstItem.id)
         return value.isFinite ? value : 0
     }
 
@@ -955,9 +955,10 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         }
 
         // `configManager.time` is the interval in minutes (e.g. 1, 5, 15, 60, 240, 1440 for 1D, etc.)
-        let intervalSeconds = TimeInterval(configManager.time) * 60.0
+        let intervalSeconds = Double(configManager.time) * 60.0
         // `lastModel.id` is the candle open timestamp in seconds (epoch).
-        let candleOpenTime = TimeInterval(lastModel.id)
+        // Use Double explicitly to avoid precision loss on 32-bit where CGFloat is Float.
+        let candleOpenTime = Double(lastModel.id)
         let candleCloseTime = candleOpenTime + intervalSeconds
         let now = Date().timeIntervalSince1970
         let remaining = max(0, candleCloseTime - now)

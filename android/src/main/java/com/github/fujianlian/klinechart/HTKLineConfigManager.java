@@ -262,10 +262,9 @@ public class HTKLineConfigManager {
         // mapping between candle ids, drawing pointList.x, and JS data, and caused
         // drawings to shift or appear at the wrong time when reloaded.
         //
-        // We keep it as a float internally (KLineEntity.id is float), but convert
-        // directly from the JS number to float to preserve as much precision as
-        // possible without 32‑bit integer overflow.
-    	entity.id = ((Number)keyValue.get("id")).floatValue();
+        // Use double to preserve full precision for epoch timestamps (which exceed
+        // 32-bit float's ~7 significant digits).
+    	entity.id = ((Number)keyValue.get("id")).doubleValue();
         entity.Date = keyValue.get("dateString").toString();
         entity.Open = ((Number)keyValue.get("open")).floatValue();
         entity.High = ((Number)keyValue.get("high")).floatValue();
