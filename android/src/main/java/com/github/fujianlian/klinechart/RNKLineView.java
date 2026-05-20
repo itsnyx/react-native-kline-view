@@ -1,8 +1,10 @@
 package com.github.fujianlian.klinechart;
 
+import android.animation.ValueAnimator;
 import android.graphics.Color;
 import android.os.Build;
 import android.view.View;
+import android.view.animation.DecelerateInterpolator;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.common.MapBuilder;
@@ -156,7 +158,18 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
                             // very left edge. Shift scrollX so that the previously visible first
                             // candle stays anchored in view instead of jumping to the new oldest.
                             int shiftPx = Math.round(addedCount * containerView.configManager.itemWidth);
-                            containerView.klineView.setScrollX(shiftPx);
+                            // Animate the scroll offset shift for a fluid transition.
+                            ValueAnimator scrollAnim = ValueAnimator.ofInt(0, shiftPx);
+                            scrollAnim.setDuration(300);
+                            scrollAnim.setInterpolator(new DecelerateInterpolator());
+                            scrollAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                                @Override
+                                public void onAnimationUpdate(ValueAnimator animation) {
+                                    int val = (int) animation.getAnimatedValue();
+                                    containerView.klineView.setScrollX(val);
+                                }
+                            });
+                            scrollAnim.start();
                         } else if (wasAtEnd) {
                             // If the user was at the right edge (latest candle) before the update,
                             // keep them pinned to the newest candle after the data change.

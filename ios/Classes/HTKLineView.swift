@@ -107,6 +107,24 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
     var lastLoadAnimationSource = ""
 
+    // Loading spinner shown at the left edge when fetching older candles.
+    private lazy var loadingSpinner: UIActivityIndicatorView = {
+        let spinner = UIActivityIndicatorView(style: .medium)
+        spinner.color = .white
+        spinner.hidesWhenStopped = true
+        spinner.alpha = 0
+        return spinner
+    }()
+    private var isShowingLoadingSpinner = false
+
+    // Animated close price: smoothly interpolate the displayed value.
+    private var displayedClosePrice: CGFloat = .nan
+    private var closePriceDisplayLink: CADisplayLink?
+    private var closePriceAnimationStart: CGFloat = .nan
+    private var closePriceAnimationEnd: CGFloat = .nan
+    private var closePriceAnimationStartTime: CFTimeInterval = 0
+    private let closePriceAnimationDuration: CFTimeInterval = 0.35
+
 
 
 
@@ -154,6 +172,8 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         // Prefer long-press hover over horizontal scrolling. This prevents the scroll view pan
         // from beginning immediately (due to tiny finger movement) and causing long-press to fail.
         panGestureRecognizer.require(toFail: longPressGesture)
+
+        addSubview(loadingSpinner)
     }
 
     required init?(coder: NSCoder) {
@@ -163,6 +183,8 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     deinit {
         candleCountdownTimer?.invalidate()
         candleCountdownTimer = nil
+        closePriceDisplayLink?.invalidate()
+        closePriceDisplayLink = nil
     }
 
     func reloadConfigManager(_ configManager: HTKLineConfigManager) {
@@ -551,6 +573,89 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         scrollViewDidScroll(self)
     }
 
+    // MARK: - Loading spinner
+
+    func showLoadingIndicator() {
+        guard !isShowingLoadingSpinner else { return }
+        isShowingLoadingSpinner = true
+        loadingSpinner.startAnimating()
+        // Add left inset so spinner has room
+        contentInset = UIEdgeInsets(top: 0, left: 48, bottom: 0, right: 0)
+        updateLoadingSpinnerPosition()
+        UIView.animate(withDuration: 0.25) {
+            self.loadingSpinner.alpha = 1
+        }
+    }
+
+    func hideLoadingIndicator(animated: Bool = true) {
+        guard isShowingLoadingSpinner else { return }
+        isShowingLoadingSpinner = false
+        let hide = {
+            self.loadingSpinner.alpha = 0
+            self.contentInset = .zero
+        }
+        let done = { (_: Bool) in
+            self.loadingSpinner.stopAnimating()
+        }
+        if animated {
+            UIView.animate(withDuration: 0.25, animations: hide, completion: done)
+        } else {
+            hide()
+            done(true)
+        }
+    }
+
+    private func updateLoadingSpinnerPosition() {
+        let spinnerSize: CGFloat = 20
+        let y = bounds.height / 2
+        // Position in content coordinates at the very left, inside the inset area
+        loadingSpinner.frame = CGRect(
+            x: contentOffset.x - contentInset.left + (contentInset.left - spinnerSize) / 2,
+            y: y - spinnerSize / 2,
+            width: spinnerSize,
+            height: spinnerSize
+        )
+    }
+
+    // MARK: - Animated close price
+
+    private func animateClosePriceTo(_ newValue: CGFloat) {
+        guard newValue.isFinite else { return }
+
+        if displayedClosePrice.isNaN {
+            displayedClosePrice = newValue
+            return
+        }
+        if abs(displayedClosePrice - newValue) < 0.000001 {
+            return
+        }
+
+        closePriceAnimationStart = displayedClosePrice
+        closePriceAnimationEnd = newValue
+        closePriceAnimationStartTime = CACurrentMediaTime()
+
+        if closePriceDisplayLink == nil {
+            let link = CADisplayLink(target: self, selector: #selector(closePriceAnimationTick))
+            link.add(to: .main, forMode: .common)
+            closePriceDisplayLink = link
+        }
+    }
+
+    @objc private func closePriceAnimationTick() {
+        let elapsed = CACurrentMediaTime() - closePriceAnimationStartTime
+        let progress = min(elapsed / closePriceAnimationDuration, 1.0)
+        // Ease-out cubic
+        let t = 1.0 - pow(1.0 - progress, 3)
+        displayedClosePrice = closePriceAnimationStart + (closePriceAnimationEnd - closePriceAnimationStart) * CGFloat(t)
+
+        if progress >= 1.0 {
+            displayedClosePrice = closePriceAnimationEnd
+            closePriceDisplayLink?.invalidate()
+            closePriceDisplayLink = nil
+        }
+        setNeedsDisplay()
+    }
+
     private func enterHoverModeIfNeeded() {
         guard !isHoverModeLocked else { return }
         isHoverModeLocked = true
@@ -870,21 +975,26 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
             closePriceCenterPillRect = .zero
             return
         }
+
+        // Kick off animated interpolation toward the latest close price.
+        animateClosePriceTo(lastModel.close)
+        let animatedClose = displayedClosePrice.isNaN ? lastModel.close : displayedClosePrice
+
         let offset = CGFloat(visibleRange.upperBound) * configManager.itemWidth - contentOffset.x
-        let valueWidth = mainDraw.textWidth(title: configManager.precision(lastModel.close, configManager.price), font: configManager.createFont(configManager.rightTextFontSize))
+        let valueWidth = mainDraw.textWidth(title: configManager.precision(animatedClose, configManager.price), font: configManager.createFont(configManager.rightTextFontSize))
         let showCenter = offset > allWidth - valueWidth - configManager.itemWidth
         animationView.isHidden = true
         if (showCenter) {
-            drawClosePriceCenter(context, lastModel)
+            drawClosePriceCenter(context, lastModel, animatedClose)
         } else {
             // Clear the tap target when viewing the present (center pill not shown).
             closePriceCenterPillRect = .zero
-            drawClosePriceRight(context, lastModel, offset)
+            drawClosePriceRight(context, lastModel, offset, animatedClose)
         }
     }
 
-    func drawClosePriceCenter(_ context: CGContext, _ lastModel: HTKLineModel) {
-        let title = configManager.precision(lastModel.close, configManager.price)
+    func drawClosePriceCenter(_ context: CGContext, _ lastModel: HTKLineModel, _ animatedClose: CGFloat) {
+        let title = configManager.precision(animatedClose, configManager.price)
         let font = configManager.createFont(configManager.candleTextFontSize)
         let width = mainDraw.textWidth(title: title, font: font)
         let height = mainDraw.textHeight(font: font)
@@ -895,7 +1005,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         let triangleMarginLeft: CGFloat = 3
         let x = allWidth - configManager.paddingRight
         let rectHeight = height + paddingVertical * 2
-        let y = max(mainBaseY - textHeight + rectHeight / 2, min(mainBaseY + mainHeight + textHeight - rectHeight / 2, yFromValue(lastModel.close)))
+        let y = max(mainBaseY - textHeight + rectHeight / 2, min(mainBaseY + mainHeight + textHeight - rectHeight / 2, yFromValue(animatedClose)))
         let rectWidth = paddingHorizontal + width + triangleMarginLeft + triangleWidth + paddingHorizontal
         let rect = CGRect.init(x: x - rectWidth / 2, y: y - height / 2 - paddingVertical, width: rectWidth, height: rectHeight)
 
@@ -929,8 +1039,8 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         context.fillPath()
     }
 
-    func drawClosePriceRight(_ context: CGContext, _ lastModel: HTKLineModel, _ offset: CGFloat) {
-        let y = yFromValue(lastModel.close)
+    func drawClosePriceRight(_ context: CGContext, _ lastModel: HTKLineModel, _ offset: CGFloat, _ animatedClose: CGFloat) {
+        let y = yFromValue(animatedClose)
         context.saveGState()
         context.setLineDash(phase: 0, lengths: [4, 4])
         context.setStrokeColor(configManager.closePriceRightSeparatorColor.cgColor)
@@ -940,7 +1050,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         context.strokePath()
         context.restoreGState()
 
-        let title = configManager.precision(lastModel.close, configManager.price)
+        let title = configManager.precision(animatedClose, configManager.price)
         let font = configManager.createFont(configManager.rightTextFontSize)
         let color = configManager.closePriceRightSeparatorColor
         let width = mainDraw.textWidth(title: title, font: font)
@@ -1013,7 +1123,8 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         let textHeight = mainDraw.textHeight(font: font)
 
         // Position below the close price on the right side of the chart.
-        let y = yFromValue(lastModel.close)
+        let animatedClose = displayedClosePrice.isNaN ? lastModel.close : displayedClosePrice
+        let y = yFromValue(animatedClose)
         let priceHeight = textHeight
         let countdownY = y + priceHeight / 2
         let countdownX = allWidth - textWidth
@@ -1316,6 +1427,11 @@ extension HTKLineView: UIScrollViewDelegate {
         visibleRange = visibleStartIndex...visibleEndIndex
         self.setNeedsDisplay()
 
+        // Keep the loading spinner pinned to the left edge as user scrolls.
+        if isShowingLoadingSpinner {
+            updateLoadingSpinnerPosition()
+        }
+
         // When the very first candle becomes visible, consider that "reached the left edge".
         // Using the computed index is more reliable than a strict contentOffset == 0 check
         // which can miss due to float rounding and padding.
@@ -1326,6 +1442,7 @@ extension HTKLineView: UIScrollViewDelegate {
                 // candles" flow so we can keep the user's visible range anchored when
                 // new data is prepended on the left.
                 configManager.loadingMoreFromLeft = true
+                showLoadingIndicator()
                 containerView?.onEndReached?([:])
             }
         } else {

@@ -93,9 +93,13 @@ class HTKLineContainerView: UIView {
                             // We just prepended older candles while the user was sitting at the
                             // very left edge. Shift scrollX so that the previously visible first
                             // candle stays anchored in view instead of jumping to the new oldest.
+                            self.klineView.hideLoadingIndicator()
                             let shiftPx = CGFloat(addedCount) * self.configManager.itemWidth
                             let newOffsetX = min(shiftPx, self.klineView.contentSize.width - self.klineView.bounds.size.width)
-                            self.klineView.setContentOffset(CGPoint(x: newOffsetX, y: 0), animated: false)
+                            // Animate the scroll offset shift for a fluid transition.
+                            UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseOut) {
+                                self.klineView.contentOffset = CGPoint(x: newOffsetX, y: 0)
+                            }
                         } else if wasAtEnd {
                             // If the user was at the right edge (latest candle) before the update,
                             // keep them pinned to the newest candle after the data change.

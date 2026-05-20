@@ -4,6 +4,7 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.*;
 import android.graphics.drawable.Drawable;
+import android.view.animation.DecelerateInterpolator;
 import androidx.core.view.GestureDetectorCompat;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -190,6 +191,10 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
     // Timer for candle countdown (fires every second to redraw the remaining time).
     private android.os.Handler mCountdownHandler;
     private Runnable mCountdownRunnable;
+
+    // Animated close price: smoothly interpolate the displayed value.
+    private float mDisplayedClosePrice = Float.NaN;
+    private ValueAnimator mClosePriceAnimator;
 
     public BaseKLineChartView(Context context, HTKLineConfigManager configManager) {
         super(context);
@@ -513,6 +518,30 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 //        }
     }
 
+    private void animateClosePriceTo(float newPrice) {
+        if (Float.isNaN(mDisplayedClosePrice)) {
+            mDisplayedClosePrice = newPrice;
+            return;
+        }
+        if (Math.abs(mDisplayedClosePrice - newPrice) < 0.000001f) {
+            return;
+        }
+        if (mClosePriceAnimator != null) {
+            mClosePriceAnimator.cancel();
+        }
+        mClosePriceAnimator = ValueAnimator.ofFloat(mDisplayedClosePrice, newPrice);
+        mClosePriceAnimator.setDuration(350);
+        mClosePriceAnimator.setInterpolator(new android.view.animation.DecelerateInterpolator(2f));
+        mClosePriceAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                mDisplayedClosePrice = (float) animation.getAnimatedValue();
+                invalidate();
+            }
+        });
+        mClosePriceAnimator.start();
+    }
+
     private void drawClosePriceLine(Canvas canvas) {
         if (mItemCount <= 0) {
             mClosePriceCenterPillRect.setEmpty();
@@ -521,11 +550,13 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         float paddingRight = this.configManager.paddingRight;
         IKLine point = (IKLine) getItem(mItemCount - 1);
         float price = point.getClosePrice();
-        String text = safeText(mainDraw.getValueFormatter().format(price));
+        animateClosePriceTo(price);
+        float animatedPrice = Float.isNaN(mDisplayedClosePrice) ? price : mDisplayedClosePrice;
+        String text = safeText(mainDraw.getValueFormatter().format(animatedPrice));
         float width = calculateWidth(text);
         Paint.FontMetrics fm = mTextPaint.getFontMetrics();
         float height = fm.descent - fm.ascent;
-        float y = yFromValue(price);
+        float y = yFromValue(animatedPrice);
         float x = scrollXtoViewX(getItemMiddleScrollX(mItemCount - 1) + mPointWidth * 0.5f);
 
 
@@ -643,7 +674,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         float savedTextSize = mTextPaint.getTextSize();
         mTextPaint.setTextSize(configManager.rightTextFontSize);
 
-        float price = lastEntity.getClosePrice();
+        float price = Float.isNaN(mDisplayedClosePrice) ? lastEntity.getClosePrice() : mDisplayedClosePrice;
         float y = yFromValue(price);
         Paint.FontMetrics fm = mTextPaint.getFontMetrics();
         float textHeight = fm.descent - fm.ascent;

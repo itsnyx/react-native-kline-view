@@ -1,10 +1,13 @@
 package com.github.fujianlian.klinechart;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.view.GestureDetector;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.DecelerateInterpolator;
 import androidx.annotation.ColorRes;
 import androidx.annotation.DimenRes;
 import androidx.core.content.ContextCompat;
@@ -177,7 +180,13 @@ public class KLineChartView extends BaseKLineChartView {
             isRefreshing = true;
             if (mProgressBar != null) {
                 mProgressBar.setVisibility(View.VISIBLE);
+                AlphaAnimation fadeIn = new AlphaAnimation(0f, 1f);
+                fadeIn.setDuration(250);
+                fadeIn.setInterpolator(new DecelerateInterpolator());
+                fadeIn.setFillAfter(true);
+                mProgressBar.startAnimation(fadeIn);
             }
+            setPadding(dp2px(48), getPaddingTop(), getPaddingRight(), getPaddingBottom());
             if (mRefreshListener != null) {
                 mRefreshListener.onLoadMoreBegin(this);
             }
@@ -194,7 +203,14 @@ public class KLineChartView extends BaseKLineChartView {
             isRefreshing = true;
             if (mProgressBar != null) {
                 mProgressBar.setVisibility(View.VISIBLE);
+                AlphaAnimation fadeIn = new AlphaAnimation(0f, 1f);
+                fadeIn.setDuration(250);
+                fadeIn.setInterpolator(new DecelerateInterpolator());
+                fadeIn.setFillAfter(true);
+                mProgressBar.startAnimation(fadeIn);
             }
+            // Add left padding so there's breathing room while loading
+            setPadding(dp2px(48), getPaddingTop(), getPaddingRight(), getPaddingBottom());
             if (mRefreshListener != null) {
                 mRefreshListener.onLoadMoreBegin(this);
             }
@@ -207,8 +223,22 @@ public class KLineChartView extends BaseKLineChartView {
 
     private void hideLoading() {
         if (mProgressBar != null) {
-            mProgressBar.setVisibility(View.GONE);
+            AlphaAnimation fadeOut = new AlphaAnimation(1f, 0f);
+            fadeOut.setDuration(250);
+            fadeOut.setInterpolator(new DecelerateInterpolator());
+            fadeOut.setFillAfter(true);
+            fadeOut.setAnimationListener(new android.view.animation.Animation.AnimationListener() {
+                @Override public void onAnimationStart(android.view.animation.Animation a) {}
+                @Override public void onAnimationRepeat(android.view.animation.Animation a) {}
+                @Override public void onAnimationEnd(android.view.animation.Animation a) {
+                    mProgressBar.setVisibility(View.GONE);
+                    mProgressBar.clearAnimation();
+                }
+            });
+            mProgressBar.startAnimation(fadeOut);
         }
+        // Remove the extra left padding
+        setPadding(0, getPaddingTop(), getPaddingRight(), getPaddingBottom());
         super.setScrollEnable(mLastScrollEnable);
         super.setScaleEnable(mLastScaleEnable);
     }
