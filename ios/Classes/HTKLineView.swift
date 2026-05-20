@@ -956,20 +956,24 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
         // `configManager.time` is the interval in minutes (e.g. 1, 5, 15, 60, 240, 1440 for 1D, etc.)
         let intervalSeconds = Double(configManager.time) * 60.0
-        // `lastModel.id` is the candle open timestamp in seconds (epoch).
-        // Use Double explicitly to avoid precision loss on 32-bit where CGFloat is Float.
-        let candleOpenTime = Double(lastModel.id)
+        // `lastModel.id` may be in milliseconds — normalise to seconds.
+        let rawId = Double(lastModel.id)
+        let candleOpenTime = rawId > 9_999_999_999 ? rawId / 1000.0 : rawId
         let candleCloseTime = candleOpenTime + intervalSeconds
         let now = Date().timeIntervalSince1970
         let remaining = max(0, candleCloseTime - now)
 
         let title: String
-        if configManager.time >= 1440 { // >= 1D
+        if configManager.time >= 1440 { // >= 1 day
             let totalHours = Int(remaining) / 3600
             let days = totalHours / 24
             let hours = totalHours % 24
             title = String(format: "%02d:%02d", days, hours)
-        } else {
+        } else if remaining < 3600 { // < 1 hour
+            let minutes = Int(remaining) / 60
+            let seconds = Int(remaining) % 60
+            title = String(format: "%02d:%02d", minutes, seconds)
+        } else { // >= 1 hour and < 1 day
             let totalSeconds = Int(remaining)
             let hours = totalSeconds / 3600
             let minutes = (totalSeconds % 3600) / 60
@@ -977,14 +981,14 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
             title = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
         }
 
-        let font = configManager.createFont(configManager.candleTextFontSize)
+        // Use the same font size as the right-side price labels so it fits the axis.
+        let font = configManager.createFont(configManager.rightTextFontSize)
         let textWidth = mainDraw.textWidth(title: title, font: font)
         let textHeight = mainDraw.textHeight(font: font)
 
         // Position below the close price on the right side of the chart.
         let y = yFromValue(lastModel.close)
-        let priceFont = configManager.createFont(configManager.rightTextFontSize)
-        let priceHeight = mainDraw.textHeight(font: priceFont)
+        let priceHeight = textHeight
         let countdownY = y + priceHeight / 2 + 4
         let countdownX = allWidth - textWidth
 
@@ -992,7 +996,12 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         let maxY = mainBaseY + mainHeight + priceHeight
         guard countdownY + textHeight <= maxY + 10 else { return }
 
-        mainDraw.drawText(title: title, point: CGPoint(x: countdownX, y: countdownY), color: configManager.textColor, font: font, context: context, configManager: configManager)
+        // Draw background matching the close-price right label style.
+        let bgRect = CGRect(x: countdownX, y: countdownY, width: textWidth, height: textHeight)
+        context.setFillColor(configManager.closePriceRightBackgroundColor.cgColor)
+        context.fill(bgRect)
+
+        mainDraw.drawText(title: title, point: CGPoint(x: countdownX, y: countdownY), color: configManager.closePriceRightSeparatorColor, font: font, context: context, configManager: configManager)
     }
 
     func drawSelectedLine(_ context: CGContext) {

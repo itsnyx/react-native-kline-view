@@ -602,26 +602,33 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         startCandleCountdownTimer();
 
         KLineEntity lastEntity = getItem(mItemCount - 1);
-        // lastEntity.id is the candle open timestamp in seconds (epoch).
         long intervalSeconds = (long) configManager.time * 60L;
-        long candleOpenTime = Math.round(lastEntity.id);
+        // lastEntity.id may be in milliseconds — normalise to seconds.
+        long candleOpenTime = Math.round(lastEntity.id > 9_999_999_999L ? lastEntity.id / 1000.0 : lastEntity.id);
         long candleCloseTime = candleOpenTime + intervalSeconds;
         long now = System.currentTimeMillis() / 1000L;
         long remaining = Math.max(0, candleCloseTime - now);
 
         String title;
-        if (configManager.time >= 1440) { // >= 1D
+        if (configManager.time >= 1440) { // >= 1 day
             int totalHours = (int) (remaining / 3600);
             int days = totalHours / 24;
             int hours = totalHours % 24;
             title = String.format("%02d:%02d", days, hours);
-        } else {
-            int totalSeconds = (int) remaining;
-            int hours = totalSeconds / 3600;
-            int minutes = (totalSeconds % 3600) / 60;
-            int seconds = totalSeconds % 60;
+        } else if (remaining < 3600) { // < 1 hour
+            int minutes = (int) (remaining / 60);
+            int seconds = (int) (remaining % 60);
+            title = String.format("%02d:%02d", minutes, seconds);
+        } else { // >= 1 hour and < 1 day
+            int hours = (int) (remaining / 3600);
+            int minutes = (int) ((remaining % 3600) / 60);
+            int seconds = (int) (remaining % 60);
             title = String.format("%02d:%02d:%02d", hours, minutes, seconds);
         }
+
+        // Use the same font size as the right-side price labels so it fits the axis.
+        float savedTextSize = mTextPaint.getTextSize();
+        mTextPaint.setTextSize(configManager.rightTextFontSize);
 
         float price = lastEntity.getClosePrice();
         float y = yFromValue(price);
@@ -634,10 +641,22 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
         // Only draw within reasonable bounds.
         if (countdownY + textHeight > mMainRect.bottom + textHeight + 10) {
+            mTextPaint.setTextSize(savedTextSize);
             return;
         }
 
-        canvas.drawText(title, countdownX, countdownY + textHeight - fm.descent, mTextPaint);
+        // Draw background matching the close-price right label style.
+        float bgTop = countdownY;
+        float bgBottom = countdownY + textHeight;
+        mClosePricePointPaint.setColor(configManager.closePriceRightBackgroundColor);
+        mClosePricePointPaint.setStyle(Paint.Style.FILL);
+        canvas.drawRect(countdownX, bgTop, mWidth, bgBottom, mClosePricePointPaint);
+
+        mClosePriceRightTextPaint.setTextSize(configManager.rightTextFontSize);
+        canvas.drawText(title, countdownX, countdownY + textHeight - fm.descent, mClosePriceRightTextPaint);
+
+        // Restore original text size.
+        mTextPaint.setTextSize(savedTextSize);
     }
 
     /** Starts the 1-second countdown timer if not already running. */
