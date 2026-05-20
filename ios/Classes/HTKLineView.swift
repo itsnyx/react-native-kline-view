@@ -641,7 +641,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
         if closePriceDisplayLink == nil {
             let link = CADisplayLink(target: self, selector: #selector(closePriceAnimationTick))
-            link.add(to: .main, forMode: .common)
+            link.add(to: RunLoop.main, forMode: .common)
             closePriceDisplayLink = link
         }
     }
