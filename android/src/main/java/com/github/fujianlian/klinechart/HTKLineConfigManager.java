@@ -99,8 +99,10 @@ public class HTKLineConfigManager {
     // Controlled from JS via optionList.configList.showCandleCountdown (default: false).
     public boolean showCandleCountdown = false;
 
-
-
+    // The actual candle interval duration in milliseconds, passed from JS via
+    // optionList.configList.candleIntervalMs (e.g. 60000 for 1m, 3600000 for 1h).
+    // Used by the countdown timer instead of the enum-based `time` field.
+    public long candleIntervalMs = 0;
 
 
 	public PrimaryStatus primaryStatus = PrimaryStatus.MA;
@@ -526,6 +528,12 @@ public class HTKLineConfigManager {
             this.showCandleCountdown = false;
         }
 
+        Object candleIntervalMsObj = configList.get("candleIntervalMs");
+        if (candleIntervalMsObj instanceof Number) {
+            this.candleIntervalMs = ((Number) candleIntervalMsObj).longValue();
+        } else {
+            this.candleIntervalMs = 0;
+        }
 
 
         this.minuteVolumeCandleColor = ((Number) configList.get("minuteVolumeCandleColor")).intValue();

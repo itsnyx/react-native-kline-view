@@ -594,7 +594,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
      * Draws the remaining time until the current candle closes, positioned below the last candle's close price.
      */
     private void drawCandleCountdown(Canvas canvas) {
-        if (!configManager.showCandleCountdown || configManager.time <= 0 || mItemCount <= 0) {
+        if (!configManager.showCandleCountdown || configManager.candleIntervalMs <= 0 || mItemCount <= 0) {
             stopCandleCountdownTimer();
             return;
         }
@@ -602,24 +602,26 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         startCandleCountdownTimer();
 
         KLineEntity lastEntity = getItem(mItemCount - 1);
-        long intervalSeconds = (long) configManager.time * 60L;
-        // lastEntity.id may be in milliseconds — normalise to seconds.
-        long candleOpenTime = Math.round(lastEntity.id > 9_999_999_999L ? lastEntity.id / 1000.0 : lastEntity.id);
-        long candleCloseTime = candleOpenTime + intervalSeconds;
-        long now = System.currentTimeMillis() / 1000L;
-        long remaining = Math.max(0, candleCloseTime - now);
+        // candleIntervalMs is the candle duration in milliseconds (from JS TimeTypes.time).
+        long intervalMs = configManager.candleIntervalMs;
+        // lastEntity.id may be in seconds or milliseconds — normalise to ms.
+        long candleOpenMs = Math.round(lastEntity.id < 9_999_999_999L ? lastEntity.id * 1000.0 : lastEntity.id);
+        long candleCloseMs = candleOpenMs + intervalMs;
+        long nowMs = System.currentTimeMillis();
+        long remainingMs = Math.max(0, candleCloseMs - nowMs);
+        long remaining = remainingMs / 1000L; // seconds
 
         String title;
-        if (configManager.time >= 1440) { // >= 1 day
+        if (intervalMs >= 86_400_000L) { // >= 1 day
             int totalHours = (int) (remaining / 3600);
             int days = totalHours / 24;
             int hours = totalHours % 24;
             title = String.format("%02d:%02d", days, hours);
-        } else if (remaining < 3600) { // < 1 hour
+        } else if (remaining < 3600) { // < 1 hour remaining
             int minutes = (int) (remaining / 60);
             int seconds = (int) (remaining % 60);
             title = String.format("%02d:%02d", minutes, seconds);
-        } else { // >= 1 hour and < 1 day
+        } else { // >= 1 hour remaining and < 1 day interval
             int hours = (int) (remaining / 3600);
             int minutes = (int) ((remaining % 3600) / 60);
             int seconds = (int) (remaining % 60);
@@ -668,7 +670,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             mCountdownRunnable = new Runnable() {
                 @Override
                 public void run() {
-                    if (configManager != null && configManager.showCandleCountdown && configManager.time > 0) {
+                    if (configManager != null && configManager.showCandleCountdown && configManager.candleIntervalMs > 0) {
                         invalidate();
                         mCountdownHandler.postDelayed(this, 1000);
                     }

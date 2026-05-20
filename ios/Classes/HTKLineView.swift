@@ -257,7 +257,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
     /// Starts or stops the 1-second countdown timer depending on `showCandleCountdown`.
     private func updateCandleCountdownTimer() {
-        if configManager.showCandleCountdown && configManager.time > 0 {
+        if configManager.showCandleCountdown && configManager.candleIntervalMs > 0 {
             if candleCountdownTimer == nil {
                 candleCountdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
                     self?.setNeedsDisplay()
@@ -949,35 +949,35 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     /// Draws the remaining time until the current candle closes, positioned below the last candle's close price.
     func drawCandleCountdown(_ context: CGContext) {
         guard configManager.showCandleCountdown,
-              configManager.time > 0,
+              configManager.candleIntervalMs > 0,
               let lastModel = configManager.modelArray.last else {
             return
         }
 
-        // `configManager.time` is the interval in minutes (e.g. 1, 5, 15, 60, 240, 1440 for 1D, etc.)
-        let intervalSeconds = Double(configManager.time) * 60.0
-        // `lastModel.id` may be in milliseconds — normalise to seconds.
+        // candleIntervalMs is the candle duration in milliseconds (from JS TimeTypes.time).
+        let intervalMs = configManager.candleIntervalMs
+        // lastModel.id may be in seconds or milliseconds — normalise to ms.
         let rawId = Double(lastModel.id)
-        let candleOpenTime = rawId > 9_999_999_999 ? rawId / 1000.0 : rawId
-        let candleCloseTime = candleOpenTime + intervalSeconds
-        let now = Date().timeIntervalSince1970
-        let remaining = max(0, candleCloseTime - now)
+        let candleOpenMs = rawId < 9_999_999_999 ? rawId * 1000.0 : rawId
+        let candleCloseMs = candleOpenMs + intervalMs
+        let nowMs = Date().timeIntervalSince1970 * 1000.0
+        let remainingMs = max(0, candleCloseMs - nowMs)
+        let remaining = Int(remainingMs / 1000.0) // seconds
 
         let title: String
-        if configManager.time >= 1440 { // >= 1 day
-            let totalHours = Int(remaining) / 3600
+        if intervalMs >= 86_400_000 { // >= 1 day interval
+            let totalHours = remaining / 3600
             let days = totalHours / 24
             let hours = totalHours % 24
             title = String(format: "%02d:%02d", days, hours)
-        } else if remaining < 3600 { // < 1 hour
-            let minutes = Int(remaining) / 60
-            let seconds = Int(remaining) % 60
+        } else if remaining < 3600 { // < 1 hour remaining
+            let minutes = remaining / 60
+            let seconds = remaining % 60
             title = String(format: "%02d:%02d", minutes, seconds)
-        } else { // >= 1 hour and < 1 day
-            let totalSeconds = Int(remaining)
-            let hours = totalSeconds / 3600
-            let minutes = (totalSeconds % 3600) / 60
-            let seconds = totalSeconds % 60
+        } else { // >= 1 hour remaining and < 1 day interval
+            let hours = remaining / 3600
+            let minutes = (remaining % 3600) / 60
+            let seconds = remaining % 60
             title = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
         }
 

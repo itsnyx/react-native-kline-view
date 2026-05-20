@@ -291,19 +291,20 @@ const TimeConstants = {
 };
 
 // Time Period Types - Use constant values
+// `time` is the candle interval in milliseconds, used by the native countdown timer.
 const TimeTypes = {
-  1: { label: 'Line', value: TimeConstants.minuteHour },
-  2: { label: '1m', value: TimeConstants.oneMinute },
-  3: { label: '3m', value: TimeConstants.threeMinute },
-  4: { label: '5m', value: TimeConstants.fiveMinute },
-  5: { label: '15m', value: TimeConstants.fifteenMinute },
-  6: { label: '30m', value: TimeConstants.thirtyMinute },
-  7: { label: '1h', value: TimeConstants.oneHour },
-  8: { label: '4h', value: TimeConstants.fourHour },
-  9: { label: '6h', value: TimeConstants.sixHour },
-  10: { label: '1d', value: TimeConstants.oneDay },
-  11: { label: '1w', value: TimeConstants.oneWeek },
-  12: { label: '1M', value: TimeConstants.oneMonth },
+  1: { label: 'Line', value: TimeConstants.minuteHour, time: 0 },
+  2: { label: '1m', value: TimeConstants.oneMinute, time: 60000 },
+  3: { label: '3m', value: TimeConstants.threeMinute, time: 180000 },
+  4: { label: '5m', value: TimeConstants.fiveMinute, time: 300000 },
+  5: { label: '15m', value: TimeConstants.fifteenMinute, time: 900000 },
+  6: { label: '30m', value: TimeConstants.thirtyMinute, time: 1800000 },
+  7: { label: '1h', value: TimeConstants.oneHour, time: 3600000 },
+  8: { label: '4h', value: TimeConstants.fourHour, time: 4 * 3600000 },
+  9: { label: '6h', value: TimeConstants.sixHour, time: 6 * 3600000 },
+  10: { label: '1d', value: TimeConstants.oneDay, time: 86400000 },
+  11: { label: '1w', value: TimeConstants.oneWeek, time: 7 * 86400000 },
+  12: { label: '1M', value: TimeConstants.oneMonth, time: 30 * 86400000 },
 };
 
 // Indicator Types - Sub chart indicator index changed to 3-6
@@ -839,6 +840,8 @@ class App extends Component {
         android: '',
       }),
       closePriceRightLightLottieSource: '',
+      showCandleCountdown: true,
+      candleIntervalMs: TimeTypes[this.state.selectedTimeType].time,
     };
 
     // Use unified target configuration

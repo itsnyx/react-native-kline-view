@@ -251,7 +251,12 @@ class HTKLineConfigManager: NSObject {
     // time remaining until the current candle closes.
     // Controlled from JS via optionList.configList.showCandleCountdown (default: false).
     var showCandleCountdown: Bool = false
-    
+
+    // The actual candle interval duration in milliseconds, passed from JS via
+    // optionList.configList.candleIntervalMs (e.g. 60000 for 1m, 3600000 for 1h).
+    // Used by the countdown timer instead of the enum-based `time` field.
+    var candleIntervalMs: Double = 0
+
     // Optional base64-encoded logo image drawn in the center of the main chart,
     // behind the candles. Provided from JS via configList["centerLogoSource"].
     // Expected to be a plain base64 string, or a data-URL string like:
@@ -521,6 +526,7 @@ class HTKLineConfigManager: NSObject {
         showPlusIcon = configList["showPlusIcon"] as? Bool ?? true
         showVolume = configList["showVolume"] as? Bool ?? true
         showCandleCountdown = configList["showCandleCountdown"] as? Bool ?? false
+        candleIntervalMs = (configList["candleIntervalMs"] as? NSNumber)?.doubleValue ?? 0
     }
 
 }
