@@ -608,7 +608,8 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         long candleOpenMs = Math.round(lastEntity.id < 9_999_999_999L ? lastEntity.id * 1000.0 : lastEntity.id);
         long candleCloseMs = candleOpenMs + intervalMs;
         long nowMs = System.currentTimeMillis();
-        long remainingMs = Math.max(0, candleCloseMs - nowMs);
+        long remainingMs = candleCloseMs - nowMs;
+        if (remainingMs <= 0) return;
         long remaining = remainingMs / 1000L; // seconds
 
         String title;
@@ -636,7 +637,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         float y = yFromValue(price);
         Paint.FontMetrics fm = mTextPaint.getFontMetrics();
         float textHeight = fm.descent - fm.ascent;
-        float countdownY = y + textHeight / 2 + ViewUtil.Dp2Px(getContext(), 4);
+        float countdownY = y + textHeight / 2;
 
         float textWidth = mTextPaint.measureText(title);
         float countdownX = mWidth - textWidth;

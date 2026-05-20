@@ -961,7 +961,8 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         let candleOpenMs = rawId < 9_999_999_999 ? rawId * 1000.0 : rawId
         let candleCloseMs = candleOpenMs + intervalMs
         let nowMs = Date().timeIntervalSince1970 * 1000.0
-        let remainingMs = max(0, candleCloseMs - nowMs)
+        let remainingMs = candleCloseMs - nowMs
+        guard remainingMs > 0 else { return }
         let remaining = Int(remainingMs / 1000.0) // seconds
 
         let title: String
@@ -989,7 +990,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         // Position below the close price on the right side of the chart.
         let y = yFromValue(lastModel.close)
         let priceHeight = textHeight
-        let countdownY = y + priceHeight / 2 + 4
+        let countdownY = y + priceHeight / 2
         let countdownX = allWidth - textWidth
 
         // Only draw if within visible main area bounds (with some tolerance).
