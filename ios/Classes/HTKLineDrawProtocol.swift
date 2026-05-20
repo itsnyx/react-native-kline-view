@@ -30,7 +30,7 @@ extension HTKLineDrawProtocol {
         let paddingHorizontal = (itemWidth - width) / 2.0
         let x = CGFloat(index) * itemWidth + paddingHorizontal
         let y = baseY + (maxValue - high) / scale
-        let height = (high - (!verticalAlignBottom ? low : minValue)) / scale
+        let height = max(1, (high - (!verticalAlignBottom ? low : minValue)) / scale)
         context.setFillColor(color.cgColor)
         context.fill(CGRect.init(x: x, y: y, width: width, height: height))
     }

@@ -382,6 +382,20 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
             candleLow = autoMainRange.lowerBound
         }
 
+        // Symmetrize padding around candle high/low so the highest and lowest
+        // prices are equally distant from chart edges when indicators (MA/BOLL)
+        // extend the range asymmetrically.
+        var symMainRange = autoMainRange
+        if autoMainRange.upperBound != autoMainRange.lowerBound {
+            let paddingAbove = autoMainRange.upperBound - candleHigh
+            let paddingBelow = candleLow - autoMainRange.lowerBound
+            if paddingAbove > paddingBelow {
+                symMainRange = Range<CGFloat>(uncheckedBounds: (lower: candleLow - paddingAbove, upper: autoMainRange.upperBound))
+            } else if paddingBelow > paddingAbove {
+                symMainRange = Range<CGFloat>(uncheckedBounds: (lower: autoMainRange.lowerBound, upper: candleHigh + paddingBelow))
+            }
+        }
+
         if isMainScaleFixed, fixedMainMaxValue.isFinite, fixedMainMinValue.isFinite {
             var maxV = fixedMainMaxValue
             var minV = fixedMainMinValue
@@ -394,9 +408,9 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
             self.mainMinMaxRange = Range<CGFloat>(uncheckedBounds: (lower: minV, upper: maxV))
         } else {
             // Keep auto range as baseline for future y-axis drags.
-            fixedMainMaxValue = autoMainRange.upperBound
-            fixedMainMinValue = autoMainRange.lowerBound
-            self.mainMinMaxRange = autoMainRange
+            fixedMainMaxValue = symMainRange.upperBound
+            fixedMainMinValue = symMainRange.lowerBound
+            self.mainMinMaxRange = symMainRange
         }
         self.textHeight = mainDraw.textHeight(font: UIFont.systemFont(ofSize: 11)) / 2
         self.mainBaseY = configManager.paddingTop - textHeight
@@ -951,6 +965,12 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         guard configManager.showCandleCountdown,
               configManager.candleIntervalMs > 0,
               let lastModel = configManager.modelArray.last else {
+            return
+        }
+
+        // Hide countdown when scrolled away from the latest candle.
+        let count = configManager.modelArray.count
+        guard count > 0, visibleRange.upperBound >= count - 1 else {
             return
         }
 

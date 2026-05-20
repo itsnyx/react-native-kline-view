@@ -599,6 +599,11 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             return;
         }
 
+        // Hide countdown when scrolled away from the latest candle.
+        if (mStopIndex < mItemCount - 1) {
+            return;
+        }
+
         startCandleCountdownTimer();
 
         KLineEntity lastEntity = getItem(mItemCount - 1);
@@ -1442,17 +1447,16 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 //        }
 
         if (mMainMaxValue != mMainMinValue) {
-//            float padding = (mMainMaxValue - mMainMinValue) * 0.05f;
-//            padding = 0;
-//            mMainMaxValue += padding;
-//            mMainMinValue -= padding;
-        } else {
-            //当最大值和最小值都相等的时候 分别增大最大值和 减小最小值
-//            mMainMaxValue += Math.abs(mMainMaxValue * 0.05f);
-//            mMainMinValue -= Math.abs(mMainMinValue * 0.05f);
-//            if (mMainMaxValue == 0) {
-//                mMainMaxValue = 1;
-//            }
+            // Symmetrize padding around candle high/low so the highest and lowest
+            // prices are equally distant from chart edges when indicators (MA/BOLL)
+            // extend the range asymmetrically.
+            float paddingAbove = mMainMaxValue - mMainHighMaxValue;
+            float paddingBelow = mMainLowMinValue - mMainMinValue;
+            if (paddingAbove > paddingBelow) {
+                mMainMinValue = mMainLowMinValue - paddingAbove;
+            } else if (paddingBelow > paddingAbove) {
+                mMainMaxValue = mMainHighMaxValue + paddingBelow;
+            }
         }
 
         // Apply/maintain fixed vertical range when user is vertically zooming
