@@ -548,10 +548,9 @@ class HTDrawContext {
                 (label as NSString).draw(at: textPoint, withAttributes: leftAttributes)
             }
 
-            // 3) Right price label (drawn on top of the dashed line — its opaque background hides the line beneath).
+            // 3) Right price label (flush to the right edge, no margin — drawn on top of the dashed line).
             let rightRectWidth = priceSize.width + paddingH * 2
-            let rightRectRight = klineView.bounds.size.width - marginX
-            let rightRectLeft = rightRectRight - rightRectWidth
+            let rightRectLeft = klineView.bounds.size.width - rightRectWidth
             let rightRectHeight = priceSize.height + paddingV * 2
             let rightTop = clampTop(centerY - rightRectHeight / 2, rightRectHeight)
             let priceRect = CGRect(
@@ -627,7 +626,9 @@ class HTDrawContext {
 
             context.saveGState()
             context.clip(to: mainRect)
-            context.setStrokeColor(drawItem.drawColor.cgColor)
+
+            // 1) Draw the dashed line with reduced opacity (labels painted on top will cover it).
+            context.setStrokeColor(drawItem.drawColor.withAlphaComponent(0.3).cgColor)
             context.setLineWidth(drawItem.drawLineHeight)
             var dashList = [drawItem.drawDashWidth, drawItem.drawDashSpace]
             if drawItem.drawDashSpace == 0 {
@@ -637,6 +638,9 @@ class HTDrawContext {
             context.move(to: start)
             context.addLine(to: end)
             context.drawPath(using: .stroke)
+
+            // Reset to solid for all label borders below.
+            context.setLineDash(phase: 0, lengths: [])
 
             // Labels: optional custom text at the anchor and price on the right.
             let priceText = configManager.precision(priceValue, configManager.price)
@@ -667,7 +671,7 @@ class HTDrawContext {
                 return min(max(top, mainRect.minY), mainRect.maxY - height)
             }
 
-            // Left label (custom text) at the anchor X position.
+            // 2) Left label (custom text) at the anchor X position.
             if let label = leftText {
                 let leftSize = (label as NSString).size(withAttributes: leftAttributes)
                 let rectHeight = leftSize.height + paddingV * 2
@@ -679,8 +683,7 @@ class HTDrawContext {
 
                 // Avoid overlapping the right-side price bubble.
                 let rightRectWidth = priceSize.width + paddingH * 2
-                let rightRectRight = klineView.bounds.size.width - marginX
-                let rightRectLeft = rightRectRight - rightRectWidth
+                let rightRectLeft = klineView.bounds.size.width - rightRectWidth
                 let maxLeft = rightRectLeft - marginX - rectWidth
                 if left > maxLeft {
                     left = maxLeft
@@ -692,13 +695,14 @@ class HTDrawContext {
                     height: rectHeight
                 )
 
+                // Opaque background (covers the dashed line underneath).
                 context.setFillColor(drawItem.textBackgroundColor.cgColor)
                 let radius = rect.height / 4
                 let path = UIBezierPath(roundedRect: rect, cornerRadius: radius)
                 context.addPath(path.cgPath)
                 context.drawPath(using: .fill)
 
-                // Border – use line color
+                // Solid border.
                 context.setLineWidth(borderWidth)
                 context.setStrokeColor(drawItem.drawColor.cgColor)
                 context.addPath(path.cgPath)
@@ -708,10 +712,9 @@ class HTDrawContext {
                 (label as NSString).draw(at: textPoint, withAttributes: leftAttributes)
             }
 
-            // Right price label.
+            // 3) Right price label (flush to the right edge, no margin).
             let rightRectWidth = priceSize.width + paddingH * 2
-            let rightRectRight = klineView.bounds.size.width - marginX
-            let rightRectLeft = rightRectRight - rightRectWidth
+            let rightRectLeft = klineView.bounds.size.width - rightRectWidth
             let rightRectHeight = priceSize.height + paddingV * 2
             let rightTop = clampTop(centerY - rightRectHeight / 2, rightRectHeight)
             let priceRect = CGRect(
@@ -721,12 +724,14 @@ class HTDrawContext {
                 height: rightRectHeight
             )
 
+            // Opaque background (covers the dashed line underneath).
             context.setFillColor(configManager.panelBackgroundColor.cgColor)
             let priceRadius = priceRect.height / 4
             let pricePath = UIBezierPath(roundedRect: priceRect, cornerRadius: priceRadius)
             context.addPath(pricePath.cgPath)
             context.drawPath(using: .fill)
 
+            // Solid border.
             context.setLineWidth(borderWidth)
             context.setStrokeColor(drawItem.drawColor.cgColor)
             context.addPath(pricePath.cgPath)
