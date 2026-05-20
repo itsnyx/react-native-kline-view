@@ -119,6 +119,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
     // Animated close price: smoothly interpolate the displayed value.
     private var displayedClosePrice: CGFloat = .nan
+    private var closePriceAnimationTarget: CGFloat = .nan
     private var closePriceDisplayLink: CADisplayLink?
     private var closePriceAnimationStart: CGFloat = .nan
     private var closePriceAnimationEnd: CGFloat = .nan
@@ -624,11 +625,15 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
         if displayedClosePrice.isNaN {
             displayedClosePrice = newValue
+            closePriceAnimationTarget = newValue
             return
         }
-        if abs(displayedClosePrice - newValue) < 0.000001 {
+        // Only start a new animation when the actual target price changes,
+        // not on every draw() triggered by the animation's own setNeedsDisplay().
+        if !closePriceAnimationTarget.isNaN && abs(closePriceAnimationTarget - newValue) < 0.000001 {
             return
         }
+        closePriceAnimationTarget = newValue
 
         closePriceAnimationStart = displayedClosePrice
         closePriceAnimationEnd = newValue
@@ -1041,6 +1046,8 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
     func drawClosePriceRight(_ context: CGContext, _ lastModel: HTKLineModel, _ offset: CGFloat, _ animatedClose: CGFloat) {
         let y = yFromValue(animatedClose)
+
+        // --- Dashed line from last candle to the right edge ---
         context.saveGState()
         context.setLineDash(phase: 0, lengths: [4, 4])
         context.setStrokeColor(configManager.closePriceRightSeparatorColor.cgColor)
@@ -1050,18 +1057,59 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         context.strokePath()
         context.restoreGState()
 
-        let title = configManager.precision(animatedClose, configManager.price)
+        // --- Compute price text ---
+        let priceTitle = configManager.precision(animatedClose, configManager.price)
         let font = configManager.createFont(configManager.rightTextFontSize)
         let color = configManager.closePriceRightSeparatorColor
-        let width = mainDraw.textWidth(title: title, font: font)
-        let height = mainDraw.textHeight(font: font)
+        let priceWidth = mainDraw.textWidth(title: priceTitle, font: font)
+        let lineHeight = mainDraw.textHeight(font: font)
 
-        let rect = CGRect.init(x: allWidth - width, y: y - height / 2, width: width, height: height)
+        // --- Compute optional countdown text ---
+        let countdownTitle = candleCountdownString()
+        let hasCountdown = countdownTitle != nil
+        let countdownWidth = hasCountdown ? mainDraw.textWidth(title: countdownTitle!, font: font) : 0
+
+        // --- Pill dimensions ---
+        let paddingH: CGFloat = 5
+        let paddingV: CGFloat = 3
+        let spacing: CGFloat = hasCountdown ? 2 : 0
+        let contentWidth = max(priceWidth, countdownWidth)
+        let pillWidth = contentWidth + paddingH * 2
+        let pillHeight = lineHeight + (hasCountdown ? lineHeight + spacing : 0) + paddingV * 2
+        let pillX = allWidth - pillWidth
+        let pillY = y - pillHeight / 2
+
+        // Clamp within main chart area.
+        let clampedPillY = max(mainBaseY - textHeight, min(mainBaseY + mainHeight + textHeight - pillHeight, pillY))
+
+        let pillRect = CGRect(x: pillX, y: clampedPillY, width: pillWidth, height: pillHeight)
+        let cornerRadius: CGFloat = 4
+
+        // --- Draw pill background ---
+        let pillPath = UIBezierPath(roundedRect: pillRect, cornerRadius: cornerRadius)
         context.setFillColor(configManager.closePriceRightBackgroundColor.cgColor)
-        context.fill(rect)
-        mainDraw.drawText(title: title, point: rect.origin, color: color, font: font, context: context, configManager: configManager)
+        context.addPath(pillPath.cgPath)
+        context.fillPath()
 
+        // --- Draw pill border ---
+        context.setStrokeColor(UIColor.white.withAlphaComponent(0.35).cgColor)
+        context.setLineWidth(0.8)
+        context.addPath(pillPath.cgPath)
+        context.strokePath()
 
+        // --- Draw price text (centered in pill) ---
+        let priceX = pillRect.minX + (pillWidth - priceWidth) / 2
+        let priceY = pillRect.minY + paddingV
+        mainDraw.drawText(title: priceTitle, point: CGPoint(x: priceX, y: priceY), color: color, font: font, context: context, configManager: configManager)
+
+        // --- Draw countdown text below price (centered in pill) ---
+        if hasCountdown, let countdown = countdownTitle {
+            let countdownX = pillRect.minX + (pillWidth - countdownWidth) / 2
+            let countdownY = priceY + lineHeight + spacing
+            mainDraw.drawText(title: countdown, point: CGPoint(x: countdownX, y: countdownY), color: color, font: font, context: context, configManager: configManager)
+        }
+
+        // --- Lottie animation for minute charts ---
         if (configManager.isMinute) {
             animationView.isHidden = false
             UIView.animate(withDuration: 0.15) {
@@ -1070,75 +1118,70 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         }
     }
 
-    /// Draws the remaining time until the current candle closes, positioned below the last candle's close price.
-    func drawCandleCountdown(_ context: CGContext) {
+    /// Returns the countdown string for the current candle, or nil if not applicable.
+    private func candleCountdownString() -> String? {
         guard configManager.showCandleCountdown,
               configManager.candleIntervalMs > 0,
               let lastModel = configManager.modelArray.last else {
-            return
+            return nil
         }
 
-        // Hide countdown when scrolled away from the latest candle.
         let count = configManager.modelArray.count
         guard count > 0, visibleRange.upperBound >= count - 1 else {
-            return
+            return nil
         }
 
-        // candleIntervalMs is the candle duration in milliseconds (from JS TimeTypes.time).
         let intervalMs = configManager.candleIntervalMs
-        // lastModel.id may be in seconds or milliseconds — normalise to ms.
         let rawId = Double(lastModel.id)
         let candleOpenMs = rawId < 9_999_999_999 ? rawId * 1000.0 : rawId
         let candleCloseMs = candleOpenMs + intervalMs
         let nowMs = Date().timeIntervalSince1970 * 1000.0
         let remainingMs = candleCloseMs - nowMs
-        guard remainingMs > 0 else { return }
-        let remaining = Int(remainingMs / 1000.0) // seconds
+        guard remainingMs > 0 else { return nil }
+        let remaining = Int(remainingMs / 1000.0)
 
-        let title: String
-        if intervalMs > 86_400_000 { // > 1 day interval (e.g. 1W, 1M)
+        if intervalMs > 86_400_000 {
             let totalHours = remaining / 3600
-            let days = totalHours / 24
-            let hours = totalHours % 24
-            title = String(format: "%02dD:%02dH", days, hours)
-        } else if intervalMs == 86_400_000 { // exactly 1 day
-            let hours = remaining / 3600
-            let minutes = (remaining % 3600) / 60
-            let seconds = remaining % 60
-            title = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
-        } else if remaining < 3600 { // < 1 hour remaining
-            let minutes = remaining / 60
-            let seconds = remaining % 60
-            title = String(format: "%02d:%02d", minutes, seconds)
-        } else { // >= 1 hour remaining and < 1 day interval
-            let hours = remaining / 3600
-            let minutes = (remaining % 3600) / 60
-            let seconds = remaining % 60
-            title = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+            return String(format: "%02dD:%02dH", totalHours / 24, totalHours % 24)
+        } else if intervalMs == 86_400_000 {
+            return String(format: "%02d:%02d:%02d", remaining / 3600, (remaining % 3600) / 60, remaining % 60)
+        } else if remaining < 3600 {
+            return String(format: "%02d:%02d", remaining / 60, remaining % 60)
+        } else {
+            return String(format: "%02d:%02d:%02d", remaining / 3600, (remaining % 3600) / 60, remaining % 60)
         }
+    }
 
-        // Use the same font size as the right-side price labels so it fits the axis.
-        let font = configManager.createFont(configManager.rightTextFontSize)
-        let textWidth = mainDraw.textWidth(title: title, font: font)
-        let textHeight = mainDraw.textHeight(font: font)
-
-        // Position below the close price on the right side of the chart.
+    /// Draws the remaining time until the current candle closes.
+    /// Now handled inside drawClosePriceRight as a combined pill.
+    /// This method is kept for the case when drawClosePriceCenter is shown instead.
+    func drawCandleCountdown(_ context: CGContext) {
+        // When the right-side pill is visible, countdown is drawn inside it.
+        // Only draw standalone countdown when the center pill is shown.
+        guard let lastModel = configManager.modelArray.last else { return }
+        let offset = CGFloat(visibleRange.upperBound) * configManager.itemWidth - contentOffset.x
         let animatedClose = displayedClosePrice.isNaN ? lastModel.close : displayedClosePrice
+        let valueWidth = mainDraw.textWidth(title: configManager.precision(animatedClose, configManager.price), font: configManager.createFont(configManager.rightTextFontSize))
+        let showCenter = offset > allWidth - valueWidth - configManager.itemWidth
+        guard showCenter else { return } // Right pill already has countdown
+
+        guard let countdownTitle = candleCountdownString() else { return }
+
+        let font = configManager.createFont(configManager.rightTextFontSize)
+        let countdownWidth = mainDraw.textWidth(title: countdownTitle, font: font)
+        let countdownHeight = mainDraw.textHeight(font: font)
+
         let y = yFromValue(animatedClose)
-        let priceHeight = textHeight
-        let countdownY = y + priceHeight / 2
-        let countdownX = allWidth - textWidth
+        let countdownY = y + countdownHeight / 2 + 2
+        let countdownX = allWidth - countdownWidth
 
-        // Only draw if within visible main area bounds (with some tolerance).
-        let maxY = mainBaseY + mainHeight + priceHeight
-        guard countdownY + textHeight <= maxY + 10 else { return }
+        let maxY = mainBaseY + mainHeight + countdownHeight
+        guard countdownY + countdownHeight <= maxY + 10 else { return }
 
-        // Draw background matching the close-price right label style.
-        let bgRect = CGRect(x: countdownX, y: countdownY, width: textWidth, height: textHeight)
+        let bgRect = CGRect(x: countdownX, y: countdownY, width: countdownWidth, height: countdownHeight)
         context.setFillColor(configManager.closePriceRightBackgroundColor.cgColor)
         context.fill(bgRect)
-
-        mainDraw.drawText(title: title, point: CGPoint(x: countdownX, y: countdownY), color: configManager.closePriceRightSeparatorColor, font: font, context: context, configManager: configManager)
+        mainDraw.drawText(title: countdownTitle, point: CGPoint(x: countdownX, y: countdownY), color: configManager.closePriceRightSeparatorColor, font: font, context: context, configManager: configManager)
     }
 
     func drawSelectedLine(_ context: CGContext) {

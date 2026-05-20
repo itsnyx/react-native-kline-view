@@ -194,6 +194,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
     // Animated close price: smoothly interpolate the displayed value.
     private float mDisplayedClosePrice = Float.NaN;
+    private float mClosePriceAnimationTarget = Float.NaN;
     private ValueAnimator mClosePriceAnimator;
 
     public BaseKLineChartView(Context context, HTKLineConfigManager configManager) {
@@ -521,17 +522,21 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
     private void animateClosePriceTo(float newPrice) {
         if (Float.isNaN(mDisplayedClosePrice)) {
             mDisplayedClosePrice = newPrice;
+            mClosePriceAnimationTarget = newPrice;
             return;
         }
-        if (Math.abs(mDisplayedClosePrice - newPrice) < 0.000001f) {
+        // Only start a new animation when the actual target price changes,
+        // not on every onDraw triggered by the animation's own invalidate().
+        if (!Float.isNaN(mClosePriceAnimationTarget) && Math.abs(mClosePriceAnimationTarget - newPrice) < 0.000001f) {
             return;
         }
+        mClosePriceAnimationTarget = newPrice;
         if (mClosePriceAnimator != null) {
             mClosePriceAnimator.cancel();
         }
         mClosePriceAnimator = ValueAnimator.ofFloat(mDisplayedClosePrice, newPrice);
         mClosePriceAnimator.setDuration(350);
-        mClosePriceAnimator.setInterpolator(new android.view.animation.DecelerateInterpolator(2f));
+        mClosePriceAnimator.setInterpolator(new DecelerateInterpolator(2f));
         mClosePriceAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
@@ -600,13 +605,55 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             // Clear the tap target when viewing the present (center pill not shown).
             mClosePriceCenterPillRect.setEmpty();
             mClosePriceLinePaint.setColor(configManager.closePriceRightSeparatorColor);
-            mClosePricePointPaint.setColor(configManager.closePriceRightBackgroundColor);
-            mClosePricePointPaint.setStyle(Paint.Style.FILL);
             mClosePriceRightTextPaint.setColor(configManager.closePriceRightSeparatorColor);
 
+            // --- Dashed line from last candle to right edge ---
             canvas.drawLine(x, y, mWidth, y, mClosePriceLinePaint);
-            canvas.drawRect(mWidth - width, y - height / 2, mWidth, y + height / 2, mClosePricePointPaint);
-            canvas.drawText(text, mWidth - width, fixTextY1(y), mClosePriceRightTextPaint);
+
+            // --- Countdown string (may be null) ---
+            String countdownText = getCandleCountdownString();
+            boolean hasCountdown = countdownText != null;
+            float countdownWidth = hasCountdown ? mClosePriceRightTextPaint.measureText(countdownText) : 0;
+
+            // --- Pill dimensions ---
+            float paddingH = 14;
+            float paddingV = 8;
+            float spacing = hasCountdown ? 4 : 0;
+            float contentWidth = Math.max(width, countdownWidth);
+            float pillWidth = contentWidth + paddingH * 2;
+            float pillHeight = height + (hasCountdown ? height + spacing : 0) + paddingV * 2;
+            float pillX = mWidth - pillWidth;
+            float pillY = y - pillHeight / 2;
+
+            // Clamp within main chart area.
+            pillY = Math.max(mMainRect.top, Math.min(getMainBottom() - pillHeight, pillY));
+
+            RectF pillRect = new RectF(pillX, pillY, mWidth, pillY + pillHeight);
+            float cornerRadius = 10;
+
+            // --- Draw pill background ---
+            mClosePricePointPaint.setColor(configManager.closePriceRightBackgroundColor);
+            mClosePricePointPaint.setStyle(Paint.Style.FILL);
+            canvas.drawRoundRect(pillRect, cornerRadius, cornerRadius, mClosePricePointPaint);
+
+            // --- Draw pill border ---
+            mClosePricePointPaint.setColor(Color.argb(90, 255, 255, 255));
+            mClosePricePointPaint.setStyle(Paint.Style.STROKE);
+            mClosePricePointPaint.setStrokeWidth(2);
+            canvas.drawRoundRect(pillRect, cornerRadius, cornerRadius, mClosePricePointPaint);
+            mClosePricePointPaint.setStrokeWidth(1);
+
+            // --- Draw price text (centered in pill) ---
+            float priceX = pillRect.left + (pillWidth - width) / 2;
+            float priceTextY = pillRect.top + paddingV + height - fm.descent;
+            canvas.drawText(text, priceX, priceTextY, mClosePriceRightTextPaint);
+
+            // --- Draw countdown text below price (centered in pill) ---
+            if (hasCountdown) {
+                float cdX = pillRect.left + (pillWidth - countdownWidth) / 2;
+                float cdY = priceTextY + spacing + height - fm.descent;
+                canvas.drawText(countdownText, cdX, cdY, mClosePriceRightTextPaint);
+            }
 
             if (isMinute) {
                 int lottieWidth = lottieDrawable.getIntrinsicWidth();
@@ -622,84 +669,89 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
     }
 
     /**
-     * Draws the remaining time until the current candle closes, positioned below the last candle's close price.
+     * Returns the countdown string for the current candle, or null if not applicable.
      */
-    private void drawCandleCountdown(Canvas canvas) {
+    private String getCandleCountdownString() {
         if (!configManager.showCandleCountdown || configManager.candleIntervalMs <= 0 || mItemCount <= 0) {
-            stopCandleCountdownTimer();
-            return;
+            return null;
         }
-
-        // Hide countdown when scrolled away from the latest candle.
         if (mStopIndex < mItemCount - 1) {
-            return;
+            return null;
         }
 
         startCandleCountdownTimer();
 
         KLineEntity lastEntity = getItem(mItemCount - 1);
-        // candleIntervalMs is the candle duration in milliseconds (from JS TimeTypes.time).
         long intervalMs = configManager.candleIntervalMs;
-        // lastEntity.id may be in seconds or milliseconds — normalise to ms.
         long candleOpenMs = Math.round(lastEntity.id < 9_999_999_999L ? lastEntity.id * 1000.0 : lastEntity.id);
         long candleCloseMs = candleOpenMs + intervalMs;
         long nowMs = System.currentTimeMillis();
         long remainingMs = candleCloseMs - nowMs;
-        if (remainingMs <= 0) return;
-        long remaining = remainingMs / 1000L; // seconds
+        if (remainingMs <= 0) return null;
+        long remaining = remainingMs / 1000L;
 
-        String title;
-        if (intervalMs > 86_400_000L) { // > 1 day (e.g. 1W, 1M)
+        if (intervalMs > 86_400_000L) {
             int totalHours = (int) (remaining / 3600);
-            int days = totalHours / 24;
-            int hours = totalHours % 24;
-            title = String.format("%02dD:%02dH", days, hours);
-        } else if (intervalMs == 86_400_000L) { // exactly 1 day
-            int hours = (int) (remaining / 3600);
-            int minutes = (int) ((remaining % 3600) / 60);
-            int seconds = (int) (remaining % 60);
-            title = String.format("%02d:%02d:%02d", hours, minutes, seconds);
-        } else if (remaining < 3600) { // < 1 hour remaining
-            int minutes = (int) (remaining / 60);
-            int seconds = (int) (remaining % 60);
-            title = String.format("%02d:%02d", minutes, seconds);
-        } else { // >= 1 hour remaining and < 1 day interval
-            int hours = (int) (remaining / 3600);
-            int minutes = (int) ((remaining % 3600) / 60);
-            int seconds = (int) (remaining % 60);
-            title = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+            return String.format("%02dD:%02dH", totalHours / 24, totalHours % 24);
+        } else if (intervalMs == 86_400_000L) {
+            return String.format("%02d:%02d:%02d", (int)(remaining / 3600), (int)((remaining % 3600) / 60), (int)(remaining % 60));
+        } else if (remaining < 3600) {
+            return String.format("%02d:%02d", (int)(remaining / 60), (int)(remaining % 60));
+        } else {
+            return String.format("%02d:%02d:%02d", (int)(remaining / 3600), (int)((remaining % 3600) / 60), (int)(remaining % 60));
+        }
+    }
+
+    /**
+     * Draws the remaining time until the current candle closes.
+     * Now handled inside drawClosePriceLine as a combined pill when the right-side label is visible.
+     * This method only draws the standalone countdown when the center pill is shown.
+     */
+    private void drawCandleCountdown(Canvas canvas) {
+        if (mItemCount <= 0) {
+            stopCandleCountdownTimer();
+            return;
         }
 
-        // Use the same font size as the right-side price labels so it fits the axis.
+        // Check if center pill is showing (countdown already in the right pill otherwise).
+        float animatedPrice = Float.isNaN(mDisplayedClosePrice) ? ((IKLine) getItem(mItemCount - 1)).getClosePrice() : mDisplayedClosePrice;
+        String priceText = safeText(mainDraw.getValueFormatter().format(animatedPrice));
+        float priceWidth = calculateWidth(priceText);
+        float xPos = scrollXtoViewX(getItemMiddleScrollX(mItemCount - 1) + mPointWidth * 0.5f);
+        boolean isCenterPill = xPos > mWidth - priceWidth;
+        if (!isCenterPill) {
+            // Right pill handles the countdown already.
+            return;
+        }
+
+        String countdownTitle = getCandleCountdownString();
+        if (countdownTitle == null) {
+            stopCandleCountdownTimer();
+            return;
+        }
+
         float savedTextSize = mTextPaint.getTextSize();
         mTextPaint.setTextSize(configManager.rightTextFontSize);
 
-        float price = Float.isNaN(mDisplayedClosePrice) ? lastEntity.getClosePrice() : mDisplayedClosePrice;
-        float y = yFromValue(price);
+        float y = yFromValue(animatedPrice);
         Paint.FontMetrics fm = mTextPaint.getFontMetrics();
         float textHeight = fm.descent - fm.ascent;
         float countdownY = y + textHeight / 2;
-
-        float textWidth = mTextPaint.measureText(title);
+        float textWidth = mTextPaint.measureText(countdownTitle);
         float countdownX = mWidth - textWidth;
 
-        // Only draw within reasonable bounds.
         if (countdownY + textHeight > mMainRect.bottom + textHeight + 10) {
             mTextPaint.setTextSize(savedTextSize);
             return;
         }
 
-        // Draw background matching the close-price right label style.
-        float bgTop = countdownY;
-        float bgBottom = countdownY + textHeight;
         mClosePricePointPaint.setColor(configManager.closePriceRightBackgroundColor);
         mClosePricePointPaint.setStyle(Paint.Style.FILL);
-        canvas.drawRect(countdownX, bgTop, mWidth, bgBottom, mClosePricePointPaint);
+        canvas.drawRect(countdownX, countdownY, mWidth, countdownY + textHeight, mClosePricePointPaint);
 
         mClosePriceRightTextPaint.setTextSize(configManager.rightTextFontSize);
-        canvas.drawText(title, countdownX, countdownY + textHeight - fm.descent, mClosePriceRightTextPaint);
+        canvas.drawText(countdownTitle, countdownX, countdownY + textHeight - fm.descent, mClosePriceRightTextPaint);
 
-        // Restore original text size.
         mTextPaint.setTextSize(savedTextSize);
     }
 
