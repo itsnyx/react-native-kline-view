@@ -613,11 +613,16 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         long remaining = remainingMs / 1000L; // seconds
 
         String title;
-        if (intervalMs >= 86_400_000L) { // >= 1 day
+        if (intervalMs > 86_400_000L) { // > 1 day (e.g. 1W, 1M)
             int totalHours = (int) (remaining / 3600);
             int days = totalHours / 24;
             int hours = totalHours % 24;
-            title = String.format("%02d:%02d", days, hours);
+            title = String.format("%02dD:%02dH", days, hours);
+        } else if (intervalMs == 86_400_000L) { // exactly 1 day
+            int hours = (int) (remaining / 3600);
+            int minutes = (int) ((remaining % 3600) / 60);
+            int seconds = (int) (remaining % 60);
+            title = String.format("%02d:%02d:%02d", hours, minutes, seconds);
         } else if (remaining < 3600) { // < 1 hour remaining
             int minutes = (int) (remaining / 60);
             int seconds = (int) (remaining % 60);

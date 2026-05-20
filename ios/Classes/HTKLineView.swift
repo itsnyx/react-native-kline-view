@@ -966,11 +966,16 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         let remaining = Int(remainingMs / 1000.0) // seconds
 
         let title: String
-        if intervalMs >= 86_400_000 { // >= 1 day interval
+        if intervalMs > 86_400_000 { // > 1 day interval (e.g. 1W, 1M)
             let totalHours = remaining / 3600
             let days = totalHours / 24
             let hours = totalHours % 24
-            title = String(format: "%02d:%02d", days, hours)
+            title = String(format: "%02dD:%02dH", days, hours)
+        } else if intervalMs == 86_400_000 { // exactly 1 day
+            let hours = remaining / 3600
+            let minutes = (remaining % 3600) / 60
+            let seconds = remaining % 60
+            title = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
         } else if remaining < 3600 { // < 1 hour remaining
             let minutes = remaining / 60
             let seconds = remaining % 60
