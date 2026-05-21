@@ -42,10 +42,13 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
 
     private boolean mScaleEnable = true;
 
-    // Debounce flags so edge callbacks (onLeftSide / onRightSide) are not
-    // fired continuously while the user is "stuck" at an edge.
+    // Debounce flag so onLeftSide is not fired continuously while the
+    // first candle stays visible.
     private boolean mHasCalledLeftSide = false;
-    private boolean mHasCalledRightSide = false;
+
+    // True once the user has actively scrolled (drag or fling).
+    // Prevents programmatic setScrollX / notifyChanged from triggering onLeftSide.
+    protected boolean mUserHasScrolled = false;
 
     public ScrollAndScaleView(Context context) {
         super(context);
@@ -95,6 +98,7 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
     @Override
     public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
         if (!isLongPress && !isMultipleTouch()) {
+            mUserHasScrolled = true;
             scrollBy(-Math.round(distanceX), 0);
             return true;
         }
@@ -118,6 +122,7 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
 
     @Override
     public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+        mUserHasScrolled = true;
         if (!isTouch() && isScrollEnable()) {
             mScroller.fling(-mScrollX, 0
                     , Math.round(velocityX / mScaleX), 0,
@@ -313,22 +318,24 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
             mScrollX = maxScrollX;
             mScroller.forceFinished(true);
         }
+    }
 
-        if (mScrollX <= 0) {
+    /**
+     * Called after visible range (startIndex) is computed to fire
+     * onLeftSide when the first candle becomes visible. Only fires once
+     * per user-initiated scroll toward the left edge; resets when the
+     * user scrolls away.
+     */
+    protected void checkLeftEdge(int startIndex, int itemCount) {
+        if (!mUserHasScrolled) return;
+
+        if (startIndex <= 0 && itemCount > 0) {
             if (!mHasCalledLeftSide) {
                 mHasCalledLeftSide = true;
-                mHasCalledRightSide = false;
                 onLeftSide();
-            }
-        } else if (mScrollX >= maxScrollX) {
-            if (!mHasCalledRightSide) {
-                mHasCalledRightSide = true;
-                mHasCalledLeftSide = false;
-                onRightSide();
             }
         } else {
             mHasCalledLeftSide = false;
-            mHasCalledRightSide = false;
         }
     }
 

@@ -164,11 +164,15 @@ public class KLineChartView extends BaseKLineChartView {
 
     @Override
     public void onLeftSide() {
-        // When the user scrolls all the way to the left (older data side),
-        // trigger the refresh listener so JS can load more candles.
-        // We use justShowLoading() so the KChartRefreshListener is called
-        // and scrolling is momentarily locked until refreshComplete().
-        justShowLoading();
+        // When the first candle becomes visible, notify JS to load more
+        // historical candles. Keep scrolling enabled so the user can
+        // continue scrolling into the left padding while data loads.
+        if (!isLoadMoreEnd && !isRefreshing) {
+            isRefreshing = true;
+            if (mRefreshListener != null) {
+                mRefreshListener.onLoadMoreBegin(this);
+            }
+        }
     }
 
     @Override
@@ -256,7 +260,6 @@ public class KLineChartView extends BaseKLineChartView {
      */
     public void refreshComplete() {
         isRefreshing = false;
-        hideLoading();
     }
 
     /**
@@ -265,7 +268,6 @@ public class KLineChartView extends BaseKLineChartView {
     public void refreshEnd() {
         isLoadMoreEnd = true;
         isRefreshing = false;
-        hideLoading();
     }
 
     /**

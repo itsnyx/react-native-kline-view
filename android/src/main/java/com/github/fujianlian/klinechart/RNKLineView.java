@@ -151,31 +151,22 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
                                 : 0;
                         int addedCount = Math.max(newCount - previousCount, 0);
 
-                        containerView.klineView.notifyChanged();
-
-                        int minScrollX = containerView.klineView.getMinScrollX();
-                        if (loadingMoreFromLeft && oldScrollOffset <= minScrollX + 1 && addedCount > 0) {
-                            // We just prepended older candles while the user was sitting at the
-                            // very left edge. Shift scrollX so that the previously visible first
-                            // candle stays anchored in view instead of jumping to the new oldest.
+                        if (loadingMoreFromLeft && addedCount > 0) {
+                            // We are about to prepend older candles. Shift scrollX by the
+                            // pixel width of the added candles so the currently visible
+                            // candles stay in place. Set BEFORE notifyChanged so the very
+                            // first frame after data update already has the correct offset.
                             int shiftPx = Math.round(addedCount * containerView.configManager.itemWidth);
                             int targetScrollX = oldScrollOffset + shiftPx;
-                            // Animate the scroll offset shift for a fluid transition.
-                            ValueAnimator scrollAnim = ValueAnimator.ofInt(oldScrollOffset, targetScrollX);
-                            scrollAnim.setDuration(300);
-                            scrollAnim.setInterpolator(new DecelerateInterpolator());
-                            scrollAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                                @Override
-                                public void onAnimationUpdate(ValueAnimator animation) {
-                                    int val = (int) animation.getAnimatedValue();
-                                    containerView.klineView.setScrollX(val);
-                                }
-                            });
-                            scrollAnim.start();
-                        } else if (wasAtEnd) {
-                            // If the user was at the right edge (latest candle) before the update,
-                            // keep them pinned to the newest candle after the data change.
-                            containerView.klineView.setScrollX(containerView.klineView.getMaxScrollX());
+                            containerView.klineView.notifyChanged();
+                            containerView.klineView.setScrollX(targetScrollX);
+                        } else {
+                            containerView.klineView.notifyChanged();
+                            if (wasAtEnd) {
+                                // If the user was at the right edge (latest candle) before the update,
+                                // keep them pinned to the newest candle after the data change.
+                                containerView.klineView.setScrollX(containerView.klineView.getMaxScrollX());
+                            }
                         }
 
                         // Reset left-load flag so normal updates (e.g. live ticks on the right)

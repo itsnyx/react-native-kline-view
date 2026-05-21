@@ -1420,6 +1420,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         mChildMinValue = Float.MAX_VALUE;
         mStartIndex = Math.min(Math.max(0, indexFromScrollX(viewXToScrollX(0))), mItemCount - 1);
         mStopIndex = Math.max(0, Math.min(indexFromScrollX(viewXToScrollX(mWidth)), mItemCount - 1));
+        checkLeftEdge(mStartIndex, mItemCount);
         mMainMaxIndex = mStartIndex;
         mMainMinIndex = mStartIndex;
         mMainHighMaxValue = Float.MIN_VALUE;
