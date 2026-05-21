@@ -689,8 +689,23 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         KLineEntity lastEntity = getItem(mItemCount - 1);
         long intervalMs = configManager.candleIntervalMs;
         long candleOpenMs = Math.round(lastEntity.id < 9_999_999_999L ? lastEntity.id * 1000.0 : lastEntity.id);
-        long candleCloseMs = candleOpenMs + intervalMs;
         long nowMs = System.currentTimeMillis();
+        long candleCloseMs;
+        if (intervalMs >= 86_400_000L) {
+            // For daily+ candles, snap close to next UTC midnight boundary
+            long utcDayMs = 86_400_000L;
+            long currentUtcDayStart = (nowMs / utcDayMs) * utcDayMs;
+            candleCloseMs = currentUtcDayStart + utcDayMs;
+            if (intervalMs > 86_400_000L) {
+                long days = intervalMs / utcDayMs;
+                long epoch = 0L;
+                long periodMs = days * utcDayMs;
+                long periodStart = epoch + ((nowMs - epoch) / periodMs) * periodMs;
+                candleCloseMs = periodStart + periodMs;
+            }
+        } else {
+            candleCloseMs = candleOpenMs + intervalMs;
+        }
         long remainingMs = candleCloseMs - nowMs;
         if (remainingMs <= 0) return null;
         long remaining = remainingMs / 1000L;

@@ -1118,8 +1118,22 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         let intervalMs = configManager.candleIntervalMs
         let rawId = Double(lastModel.id)
         let candleOpenMs = rawId < 9_999_999_999 ? rawId * 1000.0 : rawId
-        let candleCloseMs = candleOpenMs + intervalMs
         let nowMs = Date().timeIntervalSince1970 * 1000.0
+        let candleCloseMs: Double
+        if intervalMs >= 86_400_000 {
+            let utcDayMs: Double = 86_400_000
+            let currentUtcDayStart = floor(nowMs / utcDayMs) * utcDayMs
+            if intervalMs > 86_400_000 {
+                let days = intervalMs / utcDayMs
+                let periodMs = days * utcDayMs
+                let periodStart = floor(nowMs / periodMs) * periodMs
+                candleCloseMs = periodStart + periodMs
+            } else {
+                candleCloseMs = currentUtcDayStart + utcDayMs
+            }
+        } else {
+            candleCloseMs = candleOpenMs + intervalMs
+        }
         let remainingMs = candleCloseMs - nowMs
         guard remainingMs > 0 else { return nil }
         let remaining = Int(remainingMs / 1000.0)
