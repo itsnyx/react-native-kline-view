@@ -198,6 +198,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
     private float mAnimatedVolMinValue = Float.NaN;
     private float mAnimatedChildMaxValue = Float.NaN;
     private float mAnimatedChildMinValue = Float.NaN;
+    private int mPrevItemCountForAnim = -1;
     private static final float SCALE_ANIM_LERP = 0.12f;
 
     public BaseKLineChartView(Context context, HTKLineConfigManager configManager) {
@@ -1522,7 +1523,11 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
                 mChildMinValue = -10.00f;
         }
         // Animate min/max toward target values for smooth vertical rescaling.
-        if (Float.isNaN(mAnimatedMainMaxValue)) {
+        // Snap immediately on first frame or when data count changes (initial load / onEndReached).
+        boolean snap = Float.isNaN(mAnimatedMainMaxValue) || mItemCount != mPrevItemCountForAnim;
+        mPrevItemCountForAnim = mItemCount;
+
+        if (snap) {
             mAnimatedMainMaxValue = mMainMaxValue;
             mAnimatedMainMinValue = mMainMinValue;
             mAnimatedVolMaxValue = mVolMaxValue;
