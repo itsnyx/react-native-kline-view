@@ -1365,6 +1365,16 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         if (mSelectedIndex >= mItemCount) {
             isLongPress = false;
         }
+        // Reset scale animation so the next frame snaps to the new data range
+        // instead of lerping from stale/sentinel values (e.g. timeframe change).
+        mAnimatedMainMaxValue = Float.NaN;
+        mAnimatedMainMinValue = Float.NaN;
+        mAnimatedVolMaxValue = Float.NaN;
+        mAnimatedVolMinValue = Float.NaN;
+        mAnimatedChildMaxValue = Float.NaN;
+        mAnimatedChildMinValue = Float.NaN;
+        mPrevItemCountForAnim = -1;
+
         initRect();
         initLottieView();
         invalidate();
