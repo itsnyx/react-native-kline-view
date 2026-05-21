@@ -307,27 +307,26 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
         if (mScrollX < minScrollX) {
             mScrollX = minScrollX;
             mScroller.forceFinished(true);
+        }
 
-            // We reached (or tried to scroll past) the left edge.
-            // Fire onLeftSide once per edge reach while the user is interacting.
+        if (mScrollX > maxScrollX) {
+            mScrollX = maxScrollX;
+            mScroller.forceFinished(true);
+        }
+
+        if (mScrollX <= 0) {
             if (touch && !mHasCalledLeftSide) {
                 mHasCalledLeftSide = true;
                 mHasCalledRightSide = false;
                 onLeftSide();
             }
-        } else if (mScrollX > maxScrollX) {
-            mScrollX = maxScrollX;
-            mScroller.forceFinished(true);
-
-            // Symmetric behavior for right edge so consumers that care
-            // about right-side reach can hook in via onRightSide().
+        } else if (mScrollX >= maxScrollX) {
             if (touch && !mHasCalledRightSide) {
                 mHasCalledRightSide = true;
                 mHasCalledLeftSide = false;
                 onRightSide();
             }
         } else {
-            // We're within bounds again; allow the next edge reach to fire.
             if (touch) {
                 mHasCalledLeftSide = false;
                 mHasCalledRightSide = false;

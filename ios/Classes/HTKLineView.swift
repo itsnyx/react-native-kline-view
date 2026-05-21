@@ -52,6 +52,8 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     // Hit target for the close price center pill (shown when scrolled left, tap to scroll to present).
     private var closePriceCenterPillRect: CGRect = .zero
 
+    private var baseLeftInset: CGFloat { bounds.width * 0.5 }
+
     // Timer for updating the candle countdown every second.
     private var candleCountdownTimer: Timer?
 
@@ -548,6 +550,10 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         lastKnownBoundsSize = bounds.size
         lastKnownContentSize = contentSize
 
+        if !isShowingLoadingSpinner {
+            contentInset = UIEdgeInsets(top: 0, left: baseLeftInset, bottom: 0, right: 0)
+        }
+
         // Clamp any invalid contentOffset that could have been set while bounds were 0.
         let maxOffsetX = max(0, contentSize.width - bounds.size.width)
         if contentOffset.x.isFinite, contentOffset.x > maxOffsetX + 0.5 {
@@ -581,7 +587,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         isShowingLoadingSpinner = true
         loadingSpinner.startAnimating()
         // Add left inset so spinner has room
-        contentInset = UIEdgeInsets(top: 0, left: 48, bottom: 0, right: 0)
+        contentInset = UIEdgeInsets(top: 0, left: baseLeftInset + 48, bottom: 0, right: 0)
         updateLoadingSpinnerPosition()
         UIView.animate(withDuration: 0.25) {
             self.loadingSpinner.alpha = 1
@@ -593,7 +599,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         isShowingLoadingSpinner = false
         let hide = {
             self.loadingSpinner.alpha = 0
-            self.contentInset = .zero
+            self.contentInset = UIEdgeInsets(top: 0, left: self.baseLeftInset, bottom: 0, right: 0)
         }
         let done = { (_: Bool) in
             self.loadingSpinner.stopAnimating()
@@ -1032,7 +1038,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         context.setStrokeColor(configManager.closePriceCenterBorderColor.cgColor)
         context.addPath(rectPath.cgPath)
         context.strokePath()
-        mainDraw.drawText(title: title, point: CGPoint.init(x: rect.minX + paddingHorizontal, y: rect.minY + paddingVertical), color: configManager.textColor, font: font, context: context, configManager: configManager)
+        mainDraw.drawText(title: title, point: CGPoint.init(x: rect.minX + paddingHorizontal, y: rect.minY + paddingVertical), color: configManager.closePriceRightSeparatorColor, font: font, context: context, configManager: configManager)
 
         let trianglePath = UIBezierPath.init()
         trianglePath.move(to: CGPoint.init(x: rect.maxX - paddingHorizontal, y: y))

@@ -153,13 +153,15 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
 
                         containerView.klineView.notifyChanged();
 
-                        if (loadingMoreFromLeft && oldScrollOffset == 0 && addedCount > 0) {
+                        int minScrollX = containerView.klineView.getMinScrollX();
+                        if (loadingMoreFromLeft && oldScrollOffset <= minScrollX + 1 && addedCount > 0) {
                             // We just prepended older candles while the user was sitting at the
                             // very left edge. Shift scrollX so that the previously visible first
                             // candle stays anchored in view instead of jumping to the new oldest.
                             int shiftPx = Math.round(addedCount * containerView.configManager.itemWidth);
+                            int targetScrollX = oldScrollOffset + shiftPx;
                             // Animate the scroll offset shift for a fluid transition.
-                            ValueAnimator scrollAnim = ValueAnimator.ofInt(0, shiftPx);
+                            ValueAnimator scrollAnim = ValueAnimator.ofInt(oldScrollOffset, targetScrollX);
                             scrollAnim.setDuration(300);
                             scrollAnim.setInterpolator(new DecelerateInterpolator());
                             scrollAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {

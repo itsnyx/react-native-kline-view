@@ -88,14 +88,15 @@ class HTKLineContainerView: UIView {
                         
                         // Handle scroll position adjustment
                         // Check if user was at the left edge (with small tolerance for floating point precision)
-                        let wasAtLeftEdge = oldContentOffsetX <= 0.5
+                        let wasAtLeftEdge = oldContentOffsetX < self.configManager.itemWidth
                         if loadingMoreFromLeft && wasAtLeftEdge && addedCount > 0 {
                             // We just prepended older candles while the user was sitting at the
                             // very left edge. Shift scrollX so that the previously visible first
                             // candle stays anchored in view instead of jumping to the new oldest.
                             self.klineView.hideLoadingIndicator()
                             let shiftPx = CGFloat(addedCount) * self.configManager.itemWidth
-                            let newOffsetX = min(shiftPx, self.klineView.contentSize.width - self.klineView.bounds.size.width)
+                            let maxAllowed = self.klineView.contentSize.width - self.klineView.bounds.size.width
+                            let newOffsetX = min(oldContentOffsetX + shiftPx, maxAllowed)
                             // Animate the scroll offset shift for a fluid transition.
                             UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseOut) {
                                 self.klineView.contentOffset = CGPoint(x: newOffsetX, y: 0)

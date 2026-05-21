@@ -593,7 +593,8 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             mClosePricePointPaint.setColor(configManager.closePriceCenterBorderColor);
             mClosePricePointPaint.setStyle(Paint.Style.STROKE);
             canvas.drawRoundRect(rect,radius,radius, mClosePricePointPaint);
-            canvas.drawText(text, textX, fixTextY1(y), mTextPaint);
+            mClosePriceRightTextPaint.setColor(configManager.closePriceRightSeparatorColor);
+            canvas.drawText(text, textX, fixTextY1(y), mClosePriceRightTextPaint);
             Path path = new Path();
             float triangleMarginTop = (rect.bottom - rect.top - triangleHeight) / 2;
             path.moveTo(rect.right - paddingX - triangleWidth, triangleMarginTop + rect.top);
@@ -1600,8 +1601,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
     @Override
     public int getMinScrollX() {
-//        return (int) -(mOverScrollRange / mScaleX);
-        return 0;
+        return (int) -(mWidth * 0.5f / mScaleX);
     }
 
     public int getMaxScrollX() {
