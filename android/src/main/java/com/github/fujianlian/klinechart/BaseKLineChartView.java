@@ -76,12 +76,9 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
     private Float mChildMinValue = Float.MIN_VALUE;
 
-    // Vertical zoom state for main chart
-    private boolean mIsMainScaleFixed = false;
-
-    private float mFixedMainMaxValue = Float.MAX_VALUE;
-
-    private float mFixedMainMinValue = Float.MIN_VALUE;
+    // Y-axis zoom factor: 1.0 = 100% (auto-fit), up to 5.0 = 20% (zoomed out).
+    // Persists across gestures so the zoom level is retained after finger lift.
+    private float mYAxisZoomFactor = 1.0f;
 
     // --- Right y-axis drag scaling (vertical zoom) ---
     private boolean mIsYAxisScaling = false;
@@ -89,10 +86,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
     private float mYAxisDownX = Float.NaN;
     private float mYAxisDownY = Float.NaN;
     private float mYAxisScaleStartY = Float.NaN;
-    private float mYAxisScaleStartMax = Float.NaN;
-    private float mYAxisScaleStartMin = Float.NaN;
-    private float mYAxisScaleVisibleHigh = Float.NaN;
-    private float mYAxisScaleVisibleLow = Float.NaN;
+    private float mYAxisScaleStartFactor = 1.0f;
     // Defaults: ~64dp hit target and "one screen height drag ~= ~2x zoom"
     private final float mYAxisGestureWidthDp = 64f;
     private final float mYAxisGestureSensitivityFactor = 0.7f;
@@ -1183,26 +1177,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
     private void startRightYAxisScaling(float startY) {
         mIsYAxisScaling = true;
         mYAxisScaleStartY = startY;
-
-        // Use current fixed range if already fixed, otherwise start from current auto range.
-        float startMax = mIsMainScaleFixed ? mFixedMainMaxValue : mMainMaxValue;
-        float startMin = mIsMainScaleFixed ? mFixedMainMinValue : mMainMinValue;
-        if (startMax <= startMin) {
-            // Fallback to visible candle extremes.
-            startMax = mMainHighMaxValue;
-            startMin = mMainLowMinValue;
-        }
-        mYAxisScaleStartMax = startMax;
-        mYAxisScaleStartMin = startMin;
-
-        // Clamp zoom-in so the highest/lowest candle remains visible.
-        mYAxisScaleVisibleHigh = mMainHighMaxValue;
-        mYAxisScaleVisibleLow = mMainLowMinValue;
-
-        // Switch to fixed mode so yFromValue responds immediately.
-        mIsMainScaleFixed = true;
-        mFixedMainMaxValue = startMax;
-        mFixedMainMinValue = startMin;
+        mYAxisScaleStartFactor = mYAxisZoomFactor;
     }
 
     private boolean handleRightYAxisScaleTouch(MotionEvent event) {
@@ -1255,47 +1230,10 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
                     }
                 }
                 float dy = event.getY() - mYAxisScaleStartY;
-                float baseRange = mYAxisScaleStartMax - mYAxisScaleStartMin;
-                if (baseRange <= 0) {
-                    baseRange = Math.max(1e-6f, mMainHighMaxValue - mMainLowMinValue);
-                }
-                float minRange = Math.max(1e-6f, mYAxisScaleVisibleHigh - mYAxisScaleVisibleLow);
-                // Cap zoom-out: max zoom-out range is 10x the max zoom-in range
-                // (i.e. max zoom-in range is 10% of max zoom-out range).
-                float maxZoomOutRange = minRange / 0.10f;
-
-                // Exponential feel: small drags = fine control; large drags = faster zoom.
                 float denom = Math.max(1f, mMainRect.height() * mYAxisGestureSensitivityFactor);
-                float factor = (float) Math.exp(dy / denom); // dy>0 => zoom out (range bigger)
-                // Clamp factor to avoid absurd ranges.
-                float minFactor = minRange / baseRange;
-                if (factor < minFactor) factor = minFactor;
-                float newRange = baseRange * factor;
-                // Absolute clamp so zoom-out stops at a sensible limit.
-                if (newRange > maxZoomOutRange) {
-                    newRange = maxZoomOutRange;
-                }
-                float center = (mYAxisScaleStartMax + mYAxisScaleStartMin) / 2f;
-                float newMax = center + newRange / 2f;
-                float newMin = center - newRange / 2f;
-
-                // Ensure candle extremes remain visible (never clip high/low).
-                if (newMax < mYAxisScaleVisibleHigh) {
-                    newMax = mYAxisScaleVisibleHigh;
-                    newMin = newMax - newRange;
-                }
-                if (newMin > mYAxisScaleVisibleLow) {
-                    newMin = mYAxisScaleVisibleLow;
-                    newMax = newMin + newRange;
-                }
-
-                // Final sanity: keep a non-zero range.
-                if (newMax <= newMin) {
-                    newMax = newMin + 1e-6f;
-                }
-
-                mFixedMainMaxValue = newMax;
-                mFixedMainMinValue = newMin;
+                float factor = mYAxisScaleStartFactor * (float) Math.exp(dy / denom);
+                // Clamp: 1.0 (100% auto-fit) to 5.0 (20% zoom-out)
+                mYAxisZoomFactor = Math.max(1.0f, Math.min(5.0f, factor));
                 invalidate();
                 return true;
             }
@@ -1308,7 +1246,6 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
                 }
                 mIsYAxisScaling = false;
                 mIsYAxisScaleCandidate = false;
-                mIsMainScaleFixed = false;
                 mYAxisScaleStartY = Float.NaN;
                 setLongPressEnable(true);
                 getParent().requestDisallowInterceptTouchEvent(false);
@@ -1544,28 +1481,12 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             }
         }
 
-        // Apply/maintain fixed vertical range when user is vertically zooming
-        if (mIsMainScaleFixed) {
-            // Use fixed range, but never allow clipping of the highest/lowest visible candle.
-            float fixedMax = mFixedMainMaxValue;
-            float fixedMin = mFixedMainMinValue;
-            if (fixedMax < mMainHighMaxValue) {
-                fixedMax = mMainHighMaxValue;
-            }
-            if (fixedMin > mMainLowMinValue) {
-                fixedMin = mMainLowMinValue;
-            }
-            if (fixedMax <= fixedMin) {
-                fixedMax = fixedMin + 1e-6f;
-            }
-            mFixedMainMaxValue = fixedMax;
-            mFixedMainMinValue = fixedMin;
-            mMainMaxValue = fixedMax;
-            mMainMinValue = fixedMin;
-        } else {
-            // Keep latest auto range as baseline for future zooming
-            mFixedMainMaxValue = mMainMaxValue;
-            mFixedMainMinValue = mMainMinValue;
+        // Apply persistent y-axis zoom factor (1.0 = auto-fit, >1 = zoomed out).
+        if (mYAxisZoomFactor > 1.0f) {
+            float center = (mMainMaxValue + mMainMinValue) / 2f;
+            float range = (mMainMaxValue - mMainMinValue) * mYAxisZoomFactor;
+            mMainMaxValue = center + range / 2f;
+            mMainMinValue = center - range / 2f;
         }
 
         if (Math.abs(mVolMaxValue) < 0.01) {

@@ -59,15 +59,13 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
     var scale: CGFloat = 1
 
+    // Y-axis zoom factor: 1.0 = 100% (auto-fit), up to 5.0 = 20% (zoomed out).
+    // Persists across gestures so the zoom level is retained after finger lift.
+    private var yAxisZoomFactor: CGFloat = 1.0
+
     // --- Right y-axis drag scaling (vertical zoom) ---
-    private var isMainScaleFixed: Bool = false
-    private var fixedMainMaxValue: CGFloat = .nan
-    private var fixedMainMinValue: CGFloat = .nan
     private var yAxisScaleStartY: CGFloat = .nan
-    private var yAxisScaleStartMax: CGFloat = .nan
-    private var yAxisScaleStartMin: CGFloat = .nan
-    private var yAxisScaleVisibleHigh: CGFloat = .nan
-    private var yAxisScaleVisibleLow: CGFloat = .nan
+    private var yAxisScaleStartFactor: CGFloat = 1.0
     private let yAxisGestureWidth: CGFloat = 64
     private let yAxisGestureSensitivityFactor: CGFloat = 0.7
 
@@ -421,20 +419,12 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
             }
         }
 
-        if isMainScaleFixed, fixedMainMaxValue.isFinite, fixedMainMinValue.isFinite {
-            var maxV = fixedMainMaxValue
-            var minV = fixedMainMinValue
-            // Never clip the highest/lowest visible candle.
-            if maxV < candleHigh { maxV = candleHigh }
-            if minV > candleLow { minV = candleLow }
-            if maxV <= minV { maxV = minV + 1e-6 }
-            fixedMainMaxValue = maxV
-            fixedMainMinValue = minV
-            self.mainMinMaxRange = Range<CGFloat>(uncheckedBounds: (lower: minV, upper: maxV))
+        // Apply persistent y-axis zoom factor (1.0 = auto-fit, >1 = zoomed out).
+        if yAxisZoomFactor > 1.0 {
+            let center = (symMainRange.upperBound + symMainRange.lowerBound) / 2
+            let range = (symMainRange.upperBound - symMainRange.lowerBound) * yAxisZoomFactor
+            self.mainMinMaxRange = Range<CGFloat>(uncheckedBounds: (lower: center - range / 2, upper: center + range / 2))
         } else {
-            // Keep auto range as baseline for future y-axis drags.
-            fixedMainMaxValue = symMainRange.upperBound
-            fixedMainMinValue = symMainRange.lowerBound
             self.mainMinMaxRange = symMainRange
         }
         self.textHeight = mainDraw.textHeight(font: UIFont.systemFont(ofSize: 11)) / 2
@@ -698,72 +688,20 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         switch pan.state {
         case .began:
             guard isInRightYAxisArea(point) else { return }
-
-            // Initialize from current visible range (auto or fixed).
             yAxisScaleStartY = point.y
-            yAxisScaleStartMax = mainMinMaxRange.upperBound
-            yAxisScaleStartMin = mainMinMaxRange.lowerBound
-
-            // Visible candle extremes for clamp (never clip).
-            var candleHigh: CGFloat = CGFloat.leastNormalMagnitude
-            var candleLow: CGFloat = CGFloat.greatestFiniteMagnitude
-            for model in visibleModelArray {
-                candleHigh = max(candleHigh, model.high)
-                candleLow = min(candleLow, model.low)
-            }
-            if candleHigh <= candleLow {
-                candleHigh = yAxisScaleStartMax
-                candleLow = yAxisScaleStartMin
-            }
-            yAxisScaleVisibleHigh = candleHigh
-            yAxisScaleVisibleLow = candleLow
-
-            isMainScaleFixed = true
-            fixedMainMaxValue = yAxisScaleStartMax
-            fixedMainMinValue = yAxisScaleStartMin
+            yAxisScaleStartFactor = yAxisZoomFactor
             setNeedsDisplay()
 
         case .changed:
-            guard isMainScaleFixed, yAxisScaleStartY.isFinite else { return }
-
+            guard yAxisScaleStartY.isFinite else { return }
             let dy = point.y - yAxisScaleStartY
-            var baseRange = yAxisScaleStartMax - yAxisScaleStartMin
-            if baseRange <= 0 {
-                baseRange = max(1e-6, yAxisScaleVisibleHigh - yAxisScaleVisibleLow)
-            }
-            let minRange = max(1e-6, yAxisScaleVisibleHigh - yAxisScaleVisibleLow)
-            // Cap zoom-out: max zoom-out range is 10x the max zoom-in range
-            // (i.e. max zoom-in range is 10% of max zoom-out range).
-            let maxZoomOutRange = minRange / 0.10
-
             let denom = max(1, mainHeight * yAxisGestureSensitivityFactor)
-            let factor = exp(dy / denom) // dy>0 => zoom out (range bigger)
-            let minFactor = minRange / baseRange
-            let clampedFactor = max(factor, minFactor)
-            var newRange = baseRange * clampedFactor
-            // Absolute clamp so zoom-out stops at a sensible limit.
-            if newRange > maxZoomOutRange { newRange = maxZoomOutRange }
-            let center = (yAxisScaleStartMax + yAxisScaleStartMin) / 2
-            var newMax = center + newRange / 2
-            var newMin = center - newRange / 2
-
-            // Never clip candle extremes.
-            if newMax < yAxisScaleVisibleHigh {
-                newMax = yAxisScaleVisibleHigh
-                newMin = newMax - newRange
-            }
-            if newMin > yAxisScaleVisibleLow {
-                newMin = yAxisScaleVisibleLow
-                newMax = newMin + newRange
-            }
-            if newMax <= newMin { newMax = newMin + 1e-6 }
-
-            fixedMainMaxValue = newMax
-            fixedMainMinValue = newMin
+            let factor = yAxisScaleStartFactor * exp(dy / denom)
+            // Clamp: 1.0 (100% auto-fit) to 5.0 (20% zoom-out)
+            yAxisZoomFactor = max(1.0, min(5.0, factor))
             setNeedsDisplay()
 
         case .ended, .cancelled, .failed:
-            isMainScaleFixed = false
             yAxisScaleStartY = .nan
             setNeedsDisplay()
         default:
