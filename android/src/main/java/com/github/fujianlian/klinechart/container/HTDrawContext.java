@@ -458,7 +458,15 @@ public class HTDrawContext {
             canvas.save();
             canvas.clipRect(mainRect.left, mainRect.top, mainRect.right, mainRect.bottom);
 
-            paint.setColor(drawItem.drawColor);
+            int lineColor = drawItem.drawColor;
+            if (!configManager.modelArray.isEmpty()) {
+                KLineEntity lastCandle = configManager.modelArray.get(configManager.modelArray.size() - 1);
+                lineColor = lastCandle.getClosePrice() >= lastCandle.getOpenPrice()
+                        ? configManager.increaseColor
+                        : configManager.decreaseColor;
+            }
+
+            paint.setColor(lineColor);
             paint.setStrokeWidth(drawItem.drawLineHeight);
             paint.setStyle(Paint.Style.STROKE);
             if (drawItem.drawDashSpace != 0) {

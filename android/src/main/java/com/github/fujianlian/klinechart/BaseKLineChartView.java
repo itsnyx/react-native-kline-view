@@ -191,6 +191,15 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
     private float mClosePriceAnimationTarget = Float.NaN;
     private ValueAnimator mClosePriceAnimator;
 
+    // Animated vertical scale: smoothly interpolate min/max when visible range changes.
+    private float mAnimatedMainMaxValue = Float.NaN;
+    private float mAnimatedMainMinValue = Float.NaN;
+    private float mAnimatedVolMaxValue = Float.NaN;
+    private float mAnimatedVolMinValue = Float.NaN;
+    private float mAnimatedChildMaxValue = Float.NaN;
+    private float mAnimatedChildMinValue = Float.NaN;
+    private static final float SCALE_ANIM_LERP = 0.12f;
+
     public BaseKLineChartView(Context context, HTKLineConfigManager configManager) {
         super(context);
         this.configManager = configManager;
@@ -1512,6 +1521,34 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             if (Math.abs(mChildMinValue) < 0.01)
                 mChildMinValue = -10.00f;
         }
+        // Animate min/max toward target values for smooth vertical rescaling.
+        if (Float.isNaN(mAnimatedMainMaxValue)) {
+            mAnimatedMainMaxValue = mMainMaxValue;
+            mAnimatedMainMinValue = mMainMinValue;
+            mAnimatedVolMaxValue = mVolMaxValue;
+            mAnimatedVolMinValue = mVolMinValue;
+            mAnimatedChildMaxValue = mChildMaxValue;
+            mAnimatedChildMinValue = mChildMinValue;
+        } else {
+            mAnimatedMainMaxValue += (mMainMaxValue - mAnimatedMainMaxValue) * SCALE_ANIM_LERP;
+            mAnimatedMainMinValue += (mMainMinValue - mAnimatedMainMinValue) * SCALE_ANIM_LERP;
+            mAnimatedVolMaxValue += (mVolMaxValue - mAnimatedVolMaxValue) * SCALE_ANIM_LERP;
+            mAnimatedVolMinValue += (mVolMinValue - mAnimatedVolMinValue) * SCALE_ANIM_LERP;
+            mAnimatedChildMaxValue += (mChildMaxValue - mAnimatedChildMaxValue) * SCALE_ANIM_LERP;
+            mAnimatedChildMinValue += (mChildMinValue - mAnimatedChildMinValue) * SCALE_ANIM_LERP;
+            // Keep redrawing while animating toward target.
+            if (Math.abs(mAnimatedMainMaxValue - mMainMaxValue) > 0.0001f
+                    || Math.abs(mAnimatedMainMinValue - mMainMinValue) > 0.0001f) {
+                invalidate();
+            }
+        }
+        mMainMaxValue = mAnimatedMainMaxValue;
+        mMainMinValue = mAnimatedMainMinValue;
+        mVolMaxValue = mAnimatedVolMaxValue;
+        mVolMinValue = mAnimatedVolMinValue;
+        mChildMaxValue = mAnimatedChildMaxValue;
+        mChildMinValue = mAnimatedChildMinValue;
+
         mMainScaleY = mMainRect.height() * 1f / (mMainMaxValue - mMainMinValue);
         mVolScaleY = mVolRect.height() * 1f / (mVolMaxValue - mVolMinValue);
         if (mChildRect != null)

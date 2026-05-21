@@ -130,6 +130,15 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
 
 
 
+    // Animated vertical scale: smoothly interpolate min/max when visible range changes.
+    private var animatedMainMin: CGFloat = .nan
+    private var animatedMainMax: CGFloat = .nan
+    private var animatedVolMin: CGFloat = .nan
+    private var animatedVolMax: CGFloat = .nan
+    private var animatedChildMin: CGFloat = .nan
+    private var animatedChildMax: CGFloat = .nan
+    private let scaleAnimLerp: CGFloat = 0.12
+
     // 计算属性
     var visibleModelArray = [HTKLineModel]()
     var volumeRange: ClosedRange<CGFloat> = 0...0
@@ -444,7 +453,37 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         self.childMinMaxRange = childDraw?.minMaxRange(visibleModelArray, configManager) ?? Range<CGFloat>.init(uncheckedBounds: (lower: 0, upper: 0))
         self.childBaseY = allHeight * volumeRange.upperBound + configManager.headerHeight + textHeight
         self.childHeight = allHeight * (1 - volumeRange.upperBound) - configManager.headerHeight - textHeight
-        
+
+        // Animate min/max toward target values for smooth vertical rescaling.
+        let targetMainMin = mainMinMaxRange.lowerBound
+        let targetMainMax = mainMinMaxRange.upperBound
+        let targetVolMin = volumeMinMaxRange.lowerBound
+        let targetVolMax = volumeMinMaxRange.upperBound
+        let targetChildMin = childMinMaxRange.lowerBound
+        let targetChildMax = childMinMaxRange.upperBound
+
+        if animatedMainMin.isNaN {
+            animatedMainMin = targetMainMin
+            animatedMainMax = targetMainMax
+            animatedVolMin = targetVolMin
+            animatedVolMax = targetVolMax
+            animatedChildMin = targetChildMin
+            animatedChildMax = targetChildMax
+        } else {
+            animatedMainMin += (targetMainMin - animatedMainMin) * scaleAnimLerp
+            animatedMainMax += (targetMainMax - animatedMainMax) * scaleAnimLerp
+            animatedVolMin += (targetVolMin - animatedVolMin) * scaleAnimLerp
+            animatedVolMax += (targetVolMax - animatedVolMax) * scaleAnimLerp
+            animatedChildMin += (targetChildMin - animatedChildMin) * scaleAnimLerp
+            animatedChildMax += (targetChildMax - animatedChildMax) * scaleAnimLerp
+            if abs(animatedMainMax - targetMainMax) > 0.0001
+                || abs(animatedMainMin - targetMainMin) > 0.0001 {
+                DispatchQueue.main.async { [weak self] in self?.setNeedsDisplay() }
+            }
+        }
+        self.mainMinMaxRange = Range<CGFloat>(uncheckedBounds: (lower: animatedMainMin, upper: animatedMainMax))
+        self.volumeMinMaxRange = Range<CGFloat>(uncheckedBounds: (lower: animatedVolMin, upper: animatedVolMax))
+        self.childMinMaxRange = Range<CGFloat>(uncheckedBounds: (lower: animatedChildMin, upper: animatedChildMax))
     }
 
     private func isInRightYAxisArea(_ point: CGPoint) -> Bool {
