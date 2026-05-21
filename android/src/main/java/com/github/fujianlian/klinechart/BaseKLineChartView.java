@@ -1365,14 +1365,10 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         if (mSelectedIndex >= mItemCount) {
             isLongPress = false;
         }
-        // Reset scale animation so the next frame snaps to the new data range
-        // instead of lerping from stale/sentinel values (e.g. timeframe change).
-        mAnimatedMainMaxValue = Float.NaN;
-        mAnimatedMainMinValue = Float.NaN;
-        mAnimatedVolMaxValue = Float.NaN;
-        mAnimatedVolMinValue = Float.NaN;
-        mAnimatedChildMaxValue = Float.NaN;
-        mAnimatedChildMinValue = Float.NaN;
+        // Force the next calculateValue() to snap instead of lerp.
+        // We set the counter to -1 so the snap condition fires, but we do NOT
+        // reset animated values to NaN — that would cause BigDecimal crashes if
+        // onDraw fires before calculateValue() sets real values.
         mPrevItemCountForAnim = -1;
 
         initRect();

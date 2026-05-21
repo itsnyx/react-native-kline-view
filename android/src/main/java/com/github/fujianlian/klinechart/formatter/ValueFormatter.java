@@ -39,6 +39,9 @@ public class ValueFormatter implements IValueFormatter {
      //    return format.format(value);
 
 
+        if (Float.isNaN(value) || Float.isInfinite(value)) {
+            return "0";
+        }
         String numberString = String.valueOf(value);
         numberString = new BigDecimal(numberString).toPlainString();
         int dotIndex = numberString.indexOf(".");
