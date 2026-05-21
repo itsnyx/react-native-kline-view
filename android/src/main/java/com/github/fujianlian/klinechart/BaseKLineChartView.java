@@ -1308,6 +1308,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
                 }
                 mIsYAxisScaling = false;
                 mIsYAxisScaleCandidate = false;
+                mIsMainScaleFixed = false;
                 mYAxisScaleStartY = Float.NaN;
                 setLongPressEnable(true);
                 getParent().requestDisallowInterceptTouchEvent(false);

@@ -763,6 +763,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
             setNeedsDisplay()
 
         case .ended, .cancelled, .failed:
+            isMainScaleFixed = false
             yAxisScaleStartY = .nan
             setNeedsDisplay()
         default:

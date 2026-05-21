@@ -315,22 +315,20 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
         }
 
         if (mScrollX <= 0) {
-            if (touch && !mHasCalledLeftSide) {
+            if (!mHasCalledLeftSide) {
                 mHasCalledLeftSide = true;
                 mHasCalledRightSide = false;
                 onLeftSide();
             }
         } else if (mScrollX >= maxScrollX) {
-            if (touch && !mHasCalledRightSide) {
+            if (!mHasCalledRightSide) {
                 mHasCalledRightSide = true;
                 mHasCalledLeftSide = false;
                 onRightSide();
             }
         } else {
-            if (touch) {
-                mHasCalledLeftSide = false;
-                mHasCalledRightSide = false;
-            }
+            mHasCalledLeftSide = false;
+            mHasCalledRightSide = false;
         }
     }
 
