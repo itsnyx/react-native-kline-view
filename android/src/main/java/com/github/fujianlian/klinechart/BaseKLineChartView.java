@@ -191,6 +191,14 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
     private float mClosePriceAnimationTarget = Float.NaN;
     private ValueAnimator mClosePriceAnimator;
 
+    public float getDisplayedClosePrice() {
+        return mDisplayedClosePrice;
+    }
+
+    public int getItemCount() {
+        return mItemCount;
+    }
+
     // Animated vertical scale: smoothly interpolate min/max when visible range changes.
     private float mAnimatedMainMaxValue = Float.NaN;
     private float mAnimatedMainMinValue = Float.NaN;
@@ -236,7 +244,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
         mClosePriceLinePaint.setStyle(Paint.Style.STROKE);
         mClosePriceLinePaint.setAntiAlias(true);
-        mClosePriceLinePaint.setStrokeWidth(ViewUtil.Dp2Px(getContext(), 0.7f));
+        mClosePriceLinePaint.setStrokeWidth(ViewUtil.Dp2Px(getContext(), 0.5f));
         mClosePriceLinePaint.setPathEffect(new DashPathEffect(new float[]{8, 8}, 0));
 
         mClosePricePointPaint.setStrokeWidth(1);

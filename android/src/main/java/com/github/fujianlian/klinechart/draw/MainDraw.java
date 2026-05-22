@@ -125,7 +125,14 @@ public class MainDraw implements IChartDraw<ICandle> {
         if (view.isMinute) {
             return;
         }
-        drawCandle(view, canvas, curX, curPoint.getHighPrice(), curPoint.getLowPrice(), curPoint.getOpenPrice(), curPoint.getClosePrice());
+        float closePrice = curPoint.getClosePrice();
+        if (position == view.getItemCount() - 1) {
+            float animated = view.getDisplayedClosePrice();
+            if (!Float.isNaN(animated)) {
+                closePrice = animated;
+            }
+        }
+        drawCandle(view, canvas, curX, curPoint.getHighPrice(), curPoint.getLowPrice(), curPoint.getOpenPrice(), closePrice);
         if (primaryStatus == PrimaryStatus.MA) {
             KLineEntity lastItem = (KLineEntity) lastPoint;
             KLineEntity currentItem = (KLineEntity) curPoint;

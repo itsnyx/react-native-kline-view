@@ -851,8 +851,19 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
             mainDraw.drawGradient(visibleModelArray, mainMinMaxRange.upperBound, mainMinMaxRange.lowerBound, allWidth, mainBaseY, mainHeight, context, configManager)
         }
 
+        let lastModelInArray = configManager.modelArray.last
+        let animatedClose = displayedClosePrice.isNaN ? nil : displayedClosePrice
+
         for (i, model) in visibleModelArray.enumerated() {
+            var savedClose: CGFloat?
+            if let animatedClose = animatedClose, model === lastModelInArray {
+                savedClose = model.close
+                model.close = animatedClose
+            }
             mainDraw.drawCandle(model, i, mainMinMaxRange.upperBound, mainMinMaxRange.lowerBound, mainBaseY, mainHeight, context, configManager)
+            if let saved = savedClose {
+                model.close = saved
+            }
             if configManager.showVolume {
                 volumeDraw.drawCandle(model, i, volumeMinMaxRange.upperBound, volumeMinMaxRange.lowerBound, volumeBaseY, volumeHeight, context, configManager)
             }
@@ -1004,7 +1015,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         context.saveGState()
         context.setLineDash(phase: 0, lengths: [4, 4])
         context.setStrokeColor(configManager.closePriceCenterSeparatorColor.cgColor)
-        context.setLineWidth(configManager.lineWidth / 2)
+        context.setLineWidth(configManager.lineWidth / 3)
         context.addLines(between: [CGPoint.init(x: 0, y: y), CGPoint.init(x: allWidth, y: y)])
         context.strokePath()
         context.restoreGState()
@@ -1035,7 +1046,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         context.saveGState()
         context.setLineDash(phase: 0, lengths: [4, 4])
         context.setStrokeColor(configManager.closePriceRightSeparatorColor.cgColor)
-        context.setLineWidth(configManager.lineWidth / 2)
+        context.setLineWidth(configManager.lineWidth / 3)
         let x = offset + configManager.itemWidth / 2
         context.addLines(between: [CGPoint.init(x: x, y: y), CGPoint.init(x: allWidth, y: y)])
         context.strokePath()
