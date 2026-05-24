@@ -42,6 +42,11 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
 
     private boolean mScaleEnable = true;
 
+    // Vertical pinch state – tracks the vertical span between two fingers so the
+    // pinch gesture can simultaneously adjust the Y-axis zoom factor.
+    private float mPinchStartVerticalSpan = Float.NaN;
+    private float mPinchStartYAxisZoomFactor = 1.0f;
+
     // Debounce flag so onLeftSide is not fired continuously while the
     // first candle stays visible.
     private boolean mHasCalledLeftSide = false;
@@ -178,6 +183,17 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
         } else {
             onScaleChanged(mScaleX, oldScale);
         }
+
+        // Vertical pinch: use the change in vertical finger span to adjust Y-axis zoom.
+        // Skip when initial vertical span is too small to avoid jitter from a purely horizontal pinch.
+        if (!Float.isNaN(mPinchStartVerticalSpan) && mPinchStartVerticalSpan > 10) {
+            float currentSpanY = detector.getCurrentSpanY();
+            float verticalRatio = mPinchStartVerticalSpan / currentSpanY;
+            float factor = mPinchStartYAxisZoomFactor * verticalRatio;
+            factor = Math.max(1.0f, Math.min(5.0f, factor));
+            setYAxisZoomFactor(factor);
+        }
+
         return true;
     }
 
@@ -187,13 +203,18 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
 
     @Override
     public boolean onScaleBegin(ScaleGestureDetector detector) {
+        mPinchStartVerticalSpan = detector.getCurrentSpanY();
+        mPinchStartYAxisZoomFactor = getYAxisZoomFactor();
         return true;
     }
 
     @Override
     public void onScaleEnd(ScaleGestureDetector detector) {
-
+        mPinchStartVerticalSpan = Float.NaN;
     }
+
+    protected abstract float getYAxisZoomFactor();
+    protected abstract void setYAxisZoomFactor(float factor);
 
     float x;
 

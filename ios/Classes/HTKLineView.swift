@@ -69,6 +69,11 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     private let yAxisGestureWidth: CGFloat = 64
     private let yAxisGestureSensitivityFactor: CGFloat = 0.7
 
+    // Vertical pinch state – tracks the vertical span between two fingers so the
+    // pinch gesture can simultaneously adjust the Y-axis zoom factor.
+    private var pinchStartVerticalSpan: CGFloat = .nan
+    private var pinchStartYAxisZoomFactor: CGFloat = 1.0
+
     private lazy var yAxisPanGesture: UIPanGestureRecognizer = {
         let pan = UIPanGestureRecognizer(target: self, action: #selector(yAxisPanSelector(_:)))
         pan.maximumNumberOfTouches = 1
@@ -1609,8 +1614,28 @@ extension HTKLineView: UIScrollViewDelegate {
     @objc
     func pinchSelector(_ gesture: UIPinchGestureRecognizer) {
         switch gesture.state {
+        case .began:
+            if gesture.numberOfTouches >= 2 {
+                let p0 = gesture.location(ofTouch: 0, in: self)
+                let p1 = gesture.location(ofTouch: 1, in: self)
+                pinchStartVerticalSpan = abs(p0.y - p1.y)
+                pinchStartYAxisZoomFactor = yAxisZoomFactor
+            }
         case .changed:
             scale += (gesture.scale - 1) / 10
+
+            // Vertical pinch: use the change in vertical finger span to adjust Y-axis zoom.
+            if gesture.numberOfTouches >= 2 && pinchStartVerticalSpan > 10 {
+                let p0 = gesture.location(ofTouch: 0, in: self)
+                let p1 = gesture.location(ofTouch: 1, in: self)
+                let currentSpanY = abs(p0.y - p1.y)
+                if currentSpanY > 0 {
+                    let ratio = pinchStartVerticalSpan / currentSpanY
+                    yAxisZoomFactor = max(1.0, min(5.0, pinchStartYAxisZoomFactor * ratio))
+                }
+            }
+        case .ended, .cancelled, .failed:
+            pinchStartVerticalSpan = .nan
         default:
             break
         }

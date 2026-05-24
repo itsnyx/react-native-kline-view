@@ -1185,10 +1185,30 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
     public boolean onSingleTapUp(MotionEvent e) {
         // If the close price center pill (shown when scrolled left) is tapped, scroll to present.
         if (!mClosePriceCenterPillRect.isEmpty() && mClosePriceCenterPillRect.contains(e.getX(), e.getY())) {
-            setScrollX(getMaxScrollX());
+            animateScrollToEnd();
             return true;
         }
         return super.onSingleTapUp(e);
+    }
+
+    private ValueAnimator mScrollToEndAnimator;
+
+    private void animateScrollToEnd() {
+        if (mScrollToEndAnimator != null) {
+            mScrollToEndAnimator.cancel();
+        }
+        int startX = getScrollOffset();
+        int endX = getMaxScrollX();
+        if (startX == endX) return;
+
+        mScrollToEndAnimator = ValueAnimator.ofInt(startX, endX);
+        mScrollToEndAnimator.setDuration(300);
+        mScrollToEndAnimator.setInterpolator(new android.view.animation.DecelerateInterpolator());
+        mScrollToEndAnimator.addUpdateListener(animation -> {
+            int value = (int) animation.getAnimatedValue();
+            setScrollX(value);
+        });
+        mScrollToEndAnimator.start();
     }
 
     private boolean isInRightYAxisArea(float x, float y) {
@@ -1205,6 +1225,17 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
             widthPx = Math.max(widthPx, configManager.paddingRight);
         }
         return x >= (mWidth - widthPx);
+    }
+
+    @Override
+    protected float getYAxisZoomFactor() {
+        return mYAxisZoomFactor;
+    }
+
+    @Override
+    protected void setYAxisZoomFactor(float factor) {
+        mYAxisZoomFactor = factor;
+        invalidate();
     }
 
     private void startRightYAxisScaling(float startY) {

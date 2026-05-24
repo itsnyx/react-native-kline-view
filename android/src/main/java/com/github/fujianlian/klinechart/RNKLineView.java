@@ -134,28 +134,27 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
                         ? containerView.configManager.modelArray.size()
                         : 0;
 
-                // Reuse existing packModelList logic
-                containerView.configManager.modelArray =
+                // Pack on background thread but do NOT assign to configManager yet —
+                // assigning here would let onDraw see new data before mItemCount/mScrollX
+                // are updated, causing a visible scroll jump.
+                final List<KLineEntity> packedList =
                         containerView.configManager.packModelList(modelArray);
                 containerView.post(new Runnable() {
                     @Override
                     public void run() {
-                        // Only notify data change, keep config/drawings as-is.
+                        // Atomically assign data + adjust scroll on the UI thread.
                         int oldScrollOffset = containerView.klineView.getScrollOffset();
                         int oldMaxScrollX = containerView.klineView.getMaxScrollX();
                         boolean wasAtEnd = oldScrollOffset >= oldMaxScrollX;
 
                         boolean loadingMoreFromLeft = containerView.configManager.loadingMoreFromLeft;
-                        int newCount = containerView.configManager.modelArray != null
-                                ? containerView.configManager.modelArray.size()
-                                : 0;
-                        int addedCount = Math.max(newCount - previousCount, 0);
+                        int addedCount = Math.max(packedList.size() - previousCount, 0);
+
+                        // Assign the new data right before notifyChanged so both happen
+                        // in the same UI frame — no stale-data draw in between.
+                        containerView.configManager.modelArray = packedList;
 
                         if (loadingMoreFromLeft && addedCount > 0) {
-                            // We are about to prepend older candles. Shift scrollX by the
-                            // pixel width of the added candles so the currently visible
-                            // candles stay in place. Set BEFORE notifyChanged so the very
-                            // first frame after data update already has the correct offset.
                             int shiftPx = Math.round(addedCount * containerView.configManager.itemWidth);
                             int targetScrollX = oldScrollOffset + shiftPx;
                             containerView.klineView.notifyChanged();
@@ -163,8 +162,6 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
                         } else {
                             containerView.klineView.notifyChanged();
                             if (wasAtEnd) {
-                                // If the user was at the right edge (latest candle) before the update,
-                                // keep them pinned to the newest candle after the data change.
                                 containerView.klineView.setScrollX(containerView.klineView.getMaxScrollX());
                             }
                         }
