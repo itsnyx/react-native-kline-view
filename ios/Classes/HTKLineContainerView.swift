@@ -83,7 +83,14 @@ class HTKLineContainerView: UIView {
                         
                         let newCount = self.configManager.modelArray.count
                         let addedCount = max(newCount - previousCount, 0)
-                        
+
+                        // When data is replaced wholesale (initial load, timeframe switch,
+                        // or prepend), snap the animated scale values so the chart doesn't
+                        // slowly lerp from the old price range to the new one.
+                        if previousCount == 0 || addedCount > 1 || newCount < previousCount {
+                            self.klineView.resetAnimatedScaleValues()
+                        }
+
                         self.klineView.reloadContentSize()
                         
                         // Handle scroll position adjustment

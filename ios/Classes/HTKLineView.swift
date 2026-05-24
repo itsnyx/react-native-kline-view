@@ -486,6 +486,15 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         self.childMinMaxRange = Range<CGFloat>(uncheckedBounds: (lower: animatedChildMin, upper: animatedChildMax))
     }
 
+    func resetAnimatedScaleValues() {
+        animatedMainMin = .nan
+        animatedMainMax = .nan
+        animatedVolMin = .nan
+        animatedVolMax = .nan
+        animatedChildMin = .nan
+        animatedChildMax = .nan
+    }
+
     private func isInRightYAxisArea(_ point: CGPoint) -> Bool {
         // Only allow scaling in the main chart vertical span.
         let mainTop = mainBaseY
