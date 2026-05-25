@@ -66,64 +66,83 @@ class HTKLineContainerView: UIView {
                           let list = try JSONSerialization.jsonObject(with: data, options: .allowFragments) as? [[String: Any]] else {
                         return
                     }
-                    
-                    // Capture previous state so we can preserve/adjust scroll position on the UI thread.
+
                     let previousCount = self?.configManager.modelArray.count ?? 0
                     let loadingMoreFromLeft = self?.configManager.loadingMoreFromLeft ?? false
-                    
-                    self?.configManager.modelArray = HTKLineModel.packModelArray(list)
+
+                    // Capture old first candle ID before swapping data so we can
+                    // detect prepends by finding it in the new array.
+                    let oldFirstCandleId = self?.configManager.modelArray.first?.id
+
+                    let newModelArray = HTKLineModel.packModelArray(list)
+
+                    // Detect prepend on background thread while we have both arrays.
+                    // Finding the old first candle's new index is robust against
+                    // intermediate live-tick updates that corrupt count comparisons.
+                    var prependedCount = 0
+                    var dataReplaced = false
+                    if loadingMoreFromLeft, let oldId = oldFirstCandleId, !newModelArray.isEmpty {
+                        var found = false
+                        for (i, model) in newModelArray.enumerated() {
+                            if model.id == oldId {
+                                prependedCount = i
+                                found = true
+                                break
+                            }
+                        }
+                        if !found {
+                            dataReplaced = true
+                        }
+                    }
+
+                    self?.configManager.modelArray = newModelArray
                     DispatchQueue.main.async {
                         guard let self = self else { return }
-                        
+
                         // Capture scroll state before updating content size
                         let oldContentOffsetX = self.klineView.contentOffset.x
                         let oldContentSizeWidth = self.klineView.contentSize.width
                         let oldMaxOffsetX = max(0, oldContentSizeWidth - self.klineView.bounds.size.width)
-                        let wasAtEnd = oldContentOffsetX >= oldMaxOffsetX - 1 // Use small tolerance for floating point
-                        
+                        let wasAtEnd = oldContentOffsetX >= oldMaxOffsetX - 1
+
                         let newCount = self.configManager.modelArray.count
                         let addedCount = max(newCount - previousCount, 0)
 
                         // When data is replaced wholesale (initial load, timeframe switch,
                         // or prepend), snap the animated scale values so the chart doesn't
                         // slowly lerp from the old price range to the new one.
-                        if previousCount == 0 || addedCount > 1 || newCount < previousCount {
+                        if previousCount == 0 || prependedCount > 0 || addedCount > 1 || newCount < previousCount {
                             self.klineView.resetAnimatedScaleValues()
                         }
 
                         self.klineView.reloadContentSize()
-                        
-                        // Handle scroll position adjustment
-                        // Check if user was at the left edge (with small tolerance for floating point precision)
-                        let wasAtLeftEdge = oldContentOffsetX < self.configManager.itemWidth
-                        if loadingMoreFromLeft && wasAtLeftEdge && addedCount > 0 {
-                            // We just prepended older candles while the user was sitting at the
-                            // very left edge. Shift scrollX so that the previously visible first
-                            // candle stays anchored in view instead of jumping to the new oldest.
+
+                        if prependedCount > 0 {
+                            // Shift scroll so the previously visible candles stay anchored,
+                            // regardless of where the user scrolled while waiting.
                             self.klineView.hideLoadingIndicator()
-                            let shiftPx = CGFloat(addedCount) * self.configManager.itemWidth
+                            let shiftPx = CGFloat(prependedCount) * self.configManager.itemWidth
                             let maxAllowed = self.klineView.contentSize.width - self.klineView.bounds.size.width
                             let newOffsetX = min(oldContentOffsetX + shiftPx, maxAllowed)
-                            // Animate the scroll offset shift for a fluid transition.
                             UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseOut) {
                                 self.klineView.contentOffset = CGPoint(x: newOffsetX, y: 0)
                             }
+                            self.configManager.loadingMoreFromLeft = false
+                        } else if dataReplaced {
+                            // Data replaced entirely (e.g. timeframe switch) — reset flag
+                            self.configManager.loadingMoreFromLeft = false
+                            let maxOffsetX = max(0, self.klineView.contentSize.width - self.klineView.bounds.size.width)
+                            self.klineView.setContentOffset(CGPoint(x: maxOffsetX, y: 0), animated: false)
                         } else if wasAtEnd {
-                            // If the user was at the right edge (latest candle) before the update,
-                            // keep them pinned to the newest candle after the data change.
                             let maxOffsetX = max(0, self.klineView.contentSize.width - self.klineView.bounds.size.width)
                             self.klineView.setContentOffset(CGPoint(x: maxOffsetX, y: 0), animated: false)
                         } else if previousCount == 0 && newCount > 0 && self.configManager.shouldScrollToEnd && self.klineView.bounds.size.width > 0 {
-                            // Initial load: if this is the first time we have data and shouldScrollToEnd is true,
-                            // scroll to the end (most recent candle). Only do this if the view has been laid out.
                             let maxOffsetX = max(0, self.klineView.contentSize.width - self.klineView.bounds.size.width)
                             self.klineView.setContentOffset(CGPoint(x: maxOffsetX, y: 0), animated: false)
                         }
-                        
-                        // Reset left-load flag so normal updates (e.g. live ticks on the right)
-                        // are not misinterpreted as "prepend" operations.
-                        self.configManager.loadingMoreFromLeft = false
-                        
+                        // Don't reset loadingMoreFromLeft for live ticks —
+                        // the flag stays active until the actual prepend arrives.
+
                         self.klineView.scrollViewDidScroll(self.klineView)
                     }
                 } catch {

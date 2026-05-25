@@ -82,6 +82,7 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
                 if (root.klineView != null) {
                     root.klineView.refreshComplete();
                 }
+                root.configManager.loadingMoreFromLeft = false;
                 break;
             default:
                 break;
@@ -129,11 +130,6 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
                 }
                 List modelArray = (List) parsed;
 
-                // Capture previous state so we can preserve/adjust scroll position on the UI thread.
-                final int previousCount = containerView.configManager.modelArray != null
-                        ? containerView.configManager.modelArray.size()
-                        : 0;
-
                 // Pack on background thread but do NOT assign to configManager yet —
                 // assigning here would let onDraw see new data before mItemCount/mScrollX
                 // are updated, causing a visible scroll jump.
@@ -147,28 +143,48 @@ public class RNKLineView extends SimpleViewManager<HTKLineContainerView> {
                         int oldMaxScrollX = containerView.klineView.getMaxScrollX();
                         boolean wasAtEnd = oldScrollOffset >= oldMaxScrollX;
 
+                        // Detect prepend by finding where the current first candle
+                        // appears in the new data. This is robust against intermediate
+                        // live-tick updates that would corrupt a count-based comparison.
+                        int prependedCount = 0;
                         boolean loadingMoreFromLeft = containerView.configManager.loadingMoreFromLeft;
-                        int addedCount = Math.max(packedList.size() - previousCount, 0);
+                        if (loadingMoreFromLeft) {
+                            List<KLineEntity> currentArray = containerView.configManager.modelArray;
+                            if (currentArray != null && !currentArray.isEmpty() && !packedList.isEmpty()) {
+                                double oldFirstId = currentArray.get(0).id;
+                                boolean found = false;
+                                for (int i = 0; i < packedList.size(); i++) {
+                                    if (packedList.get(i).id == oldFirstId) {
+                                        prependedCount = i;
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                if (!found) {
+                                    // Data replaced entirely (e.g. timeframe switch) — reset flag
+                                    containerView.configManager.loadingMoreFromLeft = false;
+                                }
+                            }
+                        }
 
                         // Assign the new data right before notifyChanged so both happen
                         // in the same UI frame — no stale-data draw in between.
                         containerView.configManager.modelArray = packedList;
 
-                        if (loadingMoreFromLeft && addedCount > 0) {
-                            int shiftPx = Math.round(addedCount * containerView.configManager.itemWidth);
+                        if (prependedCount > 0) {
+                            int shiftPx = Math.round(prependedCount * containerView.configManager.itemWidth);
                             int targetScrollX = oldScrollOffset + shiftPx;
                             containerView.klineView.notifyChanged();
                             containerView.klineView.setScrollX(targetScrollX);
+                            containerView.configManager.loadingMoreFromLeft = false;
                         } else {
                             containerView.klineView.notifyChanged();
                             if (wasAtEnd) {
                                 containerView.klineView.setScrollX(containerView.klineView.getMaxScrollX());
                             }
+                            // Don't reset loadingMoreFromLeft for live ticks —
+                            // the flag stays active until the actual prepend arrives.
                         }
-
-                        // Reset left-load flag so normal updates (e.g. live ticks on the right)
-                        // are not misinterpreted as "prepend" operations.
-                        containerView.configManager.loadingMoreFromLeft = false;
                     }
                 });
             }
