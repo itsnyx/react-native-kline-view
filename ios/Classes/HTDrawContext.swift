@@ -480,9 +480,16 @@ class HTDrawContext {
             let marginX: CGFloat = 4
             let centerY = viewPoint.y
 
+            var lineColor = drawItem.drawColor
+            if let lastCandle = configManager.modelArray.last {
+                lineColor = lastCandle.closePrice >= lastCandle.openPrice
+                    ? configManager.increaseColor
+                    : configManager.decreaseColor
+            }
+
             // 1) Draw the dashed line across the full width first (with reduced opacity).
             //    Labels drawn afterwards will paint their opaque backgrounds on top.
-            context.setStrokeColor(drawItem.drawColor.withAlphaComponent(0.3).cgColor)
+            context.setStrokeColor(lineColor.withAlphaComponent(0.3).cgColor)
             context.setLineWidth(drawItem.drawLineHeight)
             var dashList = [drawItem.drawDashWidth, drawItem.drawDashSpace]
             if drawItem.drawDashSpace == 0 {
@@ -502,7 +509,7 @@ class HTDrawContext {
 
             let priceAttributes: [NSAttributedString.Key: Any] = [
                 .font: font,
-                .foregroundColor: configManager.textColor
+                .foregroundColor: lineColor
             ]
             let leftAttributes: [NSAttributedString.Key: Any] = [
                 .font: font,
@@ -569,7 +576,7 @@ class HTDrawContext {
 
             // Solid border.
             context.setLineWidth(borderWidth)
-            context.setStrokeColor(drawItem.drawColor.cgColor)
+            context.setStrokeColor(lineColor.cgColor)
             context.addPath(pricePath.cgPath)
             context.drawPath(using: .stroke)
 

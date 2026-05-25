@@ -577,12 +577,12 @@ public class HTDrawContext {
             // Border
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(borderWidth);
-            paint.setColor(drawItem.drawColor);
+            paint.setColor(lineColor);
             canvas.drawRoundRect(priceRect, priceRadius, priceRadius, paint);
-            
-            // Text – use configManager.textColor to match yAxis panel colors (like iOS)
+
+            // Text – use lineColor so the price matches the last candle direction.
             paint.setStyle(Paint.Style.FILL);
-            paint.setColor(configManager.textColor);
+            paint.setColor(lineColor);
 
             canvas.drawText(priceText, rightRectLeft + paddingH, baseLineY, paint);
 
