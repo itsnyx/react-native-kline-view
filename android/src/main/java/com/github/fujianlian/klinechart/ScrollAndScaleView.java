@@ -234,6 +234,7 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
                 x = event.getX();
                 mDownX = event.getX();
                 mDownY = event.getY();
+                getParent().requestDisallowInterceptTouchEvent(true);
                 break;
             case MotionEvent.ACTION_MOVE:
                 //长按之后移动

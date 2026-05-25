@@ -35,6 +35,10 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
     // Nearest parent scroll view (e.g. RN vertical ScrollView) we temporarily disable during hover.
     private weak var parentScrollViewDuringLongPress: UIScrollView?
     private var parentWasScrollEnabledBeforeLongPress: Bool = true
+
+    // Disable the parent (vertical) scroll view while this chart is being scrolled horizontally.
+    private var parentWasScrollEnabledBeforeDrag: Bool = true
+    private var didDisableParentForDrag: Bool = false
     // When true, hover mode stays active after the user lifts their finger, so they can tap
     // the right-side price pill (+ icon) or inspect values without immediately returning to scroll mode.
     private var isHoverModeLocked: Bool = false
@@ -1527,6 +1531,35 @@ extension HTKLineView: UIScrollViewDelegate {
         selectedIndex = -1
         selectedY = .nan
         self.setNeedsDisplay()
+
+        // Disable the parent vertical scroll view while we are being dragged horizontally.
+        if !didDisableParentForDrag {
+            let parent = parentScrollViewDuringLongPress ?? nearestParentScrollView()
+            parentScrollViewDuringLongPress = parent
+            if let parent = parent {
+                parentWasScrollEnabledBeforeDrag = parent.isScrollEnabled
+                parent.isScrollEnabled = false
+                didDisableParentForDrag = true
+            }
+        }
+    }
+
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            restoreParentScrollAfterDrag()
+        }
+    }
+
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        restoreParentScrollAfterDrag()
+    }
+
+    private func restoreParentScrollAfterDrag() {
+        guard didDisableParentForDrag else { return }
+        didDisableParentForDrag = false
+        if let parent = parentScrollViewDuringLongPress {
+            parent.isScrollEnabled = parentWasScrollEnabledBeforeDrag
+        }
     }
 
     @objc
