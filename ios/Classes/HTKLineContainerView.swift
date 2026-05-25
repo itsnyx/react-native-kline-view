@@ -302,6 +302,7 @@ class HTKLineContainerView: UIView {
             drawItem.drawLineHeight = configManager.drawLineHeight
             drawItem.drawDashWidth = configManager.drawDashWidth
             drawItem.drawDashSpace = configManager.drawDashSpace
+            drawItem.drawIsLock = configManager.drawIsLock
             if (configManager.drawShouldTrash) {
                 configManager.shouldReloadDrawItemIndex = HTDrawState.showPencil.rawValue
                 klineView.drawContext.drawItemList.remove(at: reloadIndex)
@@ -385,10 +386,11 @@ class HTKLineContainerView: UIView {
                 } else {
                     drawItem.drawDashSpace = configManager.drawDashSpace
                 }
-                drawItem.drawIsLock = Self.parseDrawIsLock(
-                    item["drawIsLock"],
-                    fallback: configManager.drawIsLock
-                )
+                if let isLock = item["drawIsLock"] as? Bool {
+                    drawItem.drawIsLock = isLock
+                } else {
+                    drawItem.drawIsLock = configManager.drawIsLock
+                }
 
                 if let text = item["text"] as? String {
                     drawItem.text = text
@@ -436,19 +438,6 @@ class HTKLineContainerView: UIView {
         }
     }
     
-    private static func parseDrawIsLock(_ value: Any?, fallback: Bool) -> Bool {
-        if let isLock = value as? Bool {
-            return isLock
-        }
-        if let number = value as? NSNumber {
-            return number.boolValue
-        }
-        if let intValue = value as? Int {
-            return intValue != 0
-        }
-        return fallback
-    }
-
     private func convertLocation(_ location: CGPoint) -> CGPoint {
         var reloadLocation = location
         reloadLocation.x = max(min(reloadLocation.x, bounds.size.width), 0)
@@ -456,38 +445,6 @@ class HTKLineContainerView: UIView {
 //        reloadLocation.x += klineView.contentOffset.x
         reloadLocation = klineView.valuePointFromViewPoint(reloadLocation)
         return reloadLocation
-    }
-
-    /// Magnifier (top-left zoom preview) is hidden for locked drawings.
-    private func shouldShowShotMagnifier(at viewLocation: CGPoint?) -> Bool {
-        if configManager.drawType != .none {
-            if configManager.drawIsLock {
-                return false
-            }
-            if let viewLocation = viewLocation {
-                let valueLocation = convertLocation(viewLocation)
-                if let hit = HTDrawItem.canResponseLocation(
-                    klineView.drawContext.drawItemList,
-                    valueLocation,
-                    klineView
-                ), hit.drawIsLock {
-                    return false
-                }
-            }
-            return true
-        }
-        guard let viewLocation = viewLocation else {
-            return false
-        }
-        let valueLocation = convertLocation(viewLocation)
-        if let hit = HTDrawItem.canResponseLocation(
-            klineView.drawContext.drawItemList,
-            valueLocation,
-            klineView
-        ) {
-            return !hit.drawIsLock
-        }
-        return false
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -547,17 +504,9 @@ class HTKLineContainerView: UIView {
         previousLocation = convertLocation(previousLocation)
         
         let translation = CGPoint.init(x: location.x - previousLocation.x, y: location.y - previousLocation.y)
-
-        // Magnifier hit-test must run before draw gestures: canResponseLocation clears
-        // touchMoveIndexList, which would break drag if called after touchesGesture.
-        let viewLocation = touched.first?.location(in: self)
-        if state != .ended, shouldShowShotMagnifier(at: viewLocation) {
-            shotView.shotPoint = viewLocation
-        } else {
-            shotView.shotPoint = nil
-        }
-
+        
         klineView.drawContext.touchesGesture(location, translation, state)
+        shotView.shotPoint = state != .ended ? touched.first?.location(in: self) : nil
     }
 
     /// For a given X-value (timestamp), find the candle whose id is closest and

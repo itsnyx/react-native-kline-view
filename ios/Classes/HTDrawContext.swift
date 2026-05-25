@@ -53,9 +53,6 @@ class HTDrawContext {
         case .began:
             if (configManager.shouldReloadDrawItemIndex > HTDrawState.showContext.rawValue) {
                 let selectedDrawItem = drawItemList[configManager.shouldReloadDrawItemIndex]
-                if selectedDrawItem.drawIsLock {
-                    break
-                }
                 if (selectedDrawItem.pointList.count >= selectedDrawItem.drawType.count) {
                     if (HTDrawItem.canResponseLocation(drawItemList, location, klineView) != selectedDrawItem) {
                         configManager.onDrawItemDidTouch?(nil, HTDrawState.showPencil.rawValue)
@@ -137,7 +134,6 @@ class HTDrawContext {
                 drawItem.drawLineHeight = configManager.drawLineHeight
                 drawItem.drawDashWidth = configManager.drawDashWidth
                 drawItem.drawDashSpace = configManager.drawDashSpace
-                drawItem.drawIsLock = configManager.drawIsLock
                 drawItem.textColor = configManager.drawTextColor
                 drawItem.textBackgroundColor = configManager.drawTextBackgroundColor
                 drawItem.textCornerRadius = configManager.drawTextCornerRadius
@@ -438,7 +434,7 @@ class HTDrawContext {
 
             context.restoreGState()
 
-            if itemIndex == configManager.shouldReloadDrawItemIndex && !drawItem.drawIsLock {
+            if itemIndex == configManager.shouldReloadDrawItemIndex {
                 context.addArc(center: viewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
                 context.setFillColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
                 context.drawPath(using: .fill)
@@ -591,7 +587,7 @@ class HTDrawContext {
             )
             (priceText as NSString).draw(at: priceTextPoint, withAttributes: priceAttributes)
 
-            if itemIndex == configManager.shouldReloadDrawItemIndex && !drawItem.drawIsLock {
+            if itemIndex == configManager.shouldReloadDrawItemIndex {
                 context.addArc(center: viewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
                 context.setFillColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
                 context.drawPath(using: .fill)
@@ -754,7 +750,7 @@ class HTDrawContext {
             )
             (priceText as NSString).draw(at: priceTextPoint, withAttributes: priceAttributes)
 
-            if itemIndex == configManager.shouldReloadDrawItemIndex && !drawItem.drawIsLock {
+            if itemIndex == configManager.shouldReloadDrawItemIndex {
                 context.addArc(center: viewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
                 context.setFillColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
                 context.drawPath(using: .fill)
@@ -785,7 +781,7 @@ class HTDrawContext {
             context.drawPath(using: .stroke)
             context.restoreGState()
 
-            if itemIndex == configManager.shouldReloadDrawItemIndex && !drawItem.drawIsLock {
+            if itemIndex == configManager.shouldReloadDrawItemIndex {
                 context.addArc(center: viewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
                 context.setFillColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
                 context.drawPath(using: .fill)
@@ -981,7 +977,7 @@ class HTDrawContext {
             
             context.restoreGState()
             
-            if itemIndex == configManager.shouldReloadDrawItemIndex && !drawItem.drawIsLock {
+            if itemIndex == configManager.shouldReloadDrawItemIndex {
                 context.addArc(center: startViewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
                 context.setFillColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
                 context.drawPath(using: .fill)
@@ -1031,7 +1027,7 @@ class HTDrawContext {
                 text.draw(at: textPoint, withAttributes: attributes)
             }
 
-            if itemIndex == configManager.shouldReloadDrawItemIndex && !drawItem.drawIsLock {
+            if itemIndex == configManager.shouldReloadDrawItemIndex {
                 context.addArc(center: viewPoint, radius: 10, startAngle: 0, endAngle: CGFloat(Double.pi * 2.0), clockwise: true)
                 context.setFillColor(drawItem.drawColor.withAlphaComponent(0.5).cgColor)
                 context.drawPath(using: .fill)
@@ -1065,7 +1061,7 @@ class HTDrawContext {
             drawLine(context, drawItem, klineView.viewPointFromValuePoint(startPoint), klineView.viewPointFromValuePoint(endPoint))
         }
 
-        if itemIndex != configManager.shouldReloadDrawItemIndex || drawItem.drawIsLock {
+        if (itemIndex != configManager.shouldReloadDrawItemIndex) {
             return
         }
         

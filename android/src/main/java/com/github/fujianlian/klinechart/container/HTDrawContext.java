@@ -56,9 +56,6 @@ public class HTDrawContext {
             case MotionEvent.ACTION_DOWN: {
                 if (configManager.shouldReloadDrawItemIndex > HTDrawState.showContext) {
                     HTDrawItem selectedDrawItem = drawItemList.get(configManager.shouldReloadDrawItemIndex);
-                    if (Boolean.TRUE.equals(selectedDrawItem.drawIsLock)) {
-                        break;
-                    }
                     if (selectedDrawItem.pointList.size() >= selectedDrawItem.drawType.count()) {
                         if (HTDrawItem.canResponseLocation(drawItemList, location, klineView) != selectedDrawItem) {
                             configManager.onDrawItemDidTouch.invoke(null, HTDrawState.showPencil);
@@ -105,7 +102,6 @@ public class HTDrawContext {
                     drawItem.drawLineHeight = configManager.drawLineHeight;
                     drawItem.drawDashWidth = configManager.drawDashWidth;
                     drawItem.drawDashSpace = configManager.drawDashSpace;
-                    drawItem.drawIsLock = configManager.drawIsLock;
                     // Apply text defaults (used when drawType == text)
                     drawItem.textColor = configManager.drawTextColor;
                     drawItem.textBackgroundColor = configManager.drawTextBackgroundColor;
@@ -426,7 +422,7 @@ public class HTDrawContext {
             float textY = top + paddingV - fm.top;
             canvas.drawText(text, textX, textY, paint);
 
-            if (itemIndex == configManager.shouldReloadDrawItemIndex && !Boolean.TRUE.equals(drawItem.drawIsLock)) {
+            if (itemIndex == configManager.shouldReloadDrawItemIndex) {
                 Path highlight = new Path();
                 paint.setStyle(Paint.Style.FILL);
                 highlight.addCircle(viewPoint.x, viewPoint.y, 20, Path.Direction.CW);
@@ -590,7 +586,7 @@ public class HTDrawContext {
 
             canvas.drawText(priceText, rightRectLeft + paddingH, baseLineY, paint);
 
-            if (itemIndex == configManager.shouldReloadDrawItemIndex && !Boolean.TRUE.equals(drawItem.drawIsLock)) {
+            if (itemIndex == configManager.shouldReloadDrawItemIndex) {
                 Path highlight = new Path();
                 paint.setStyle(Paint.Style.FILL);
                 highlight.addCircle(viewPoint.x, viewPoint.y, 20, Path.Direction.CW);
@@ -760,7 +756,7 @@ public class HTDrawContext {
 
             canvas.drawText(priceText, rightRectLeft + paddingH, baseLineY, paint);
 
-            if (itemIndex == configManager.shouldReloadDrawItemIndex && !Boolean.TRUE.equals(drawItem.drawIsLock)) {
+            if (itemIndex == configManager.shouldReloadDrawItemIndex) {
                 Path highlight = new Path();
                 paint.setStyle(Paint.Style.FILL);
                 highlight.addCircle(viewPoint.x, viewPoint.y, 20, Path.Direction.CW);
@@ -794,7 +790,7 @@ public class HTDrawContext {
             path.lineTo(viewPoint.x, klineView.getHeight());
             canvas.drawPath(path, paint);
 
-            if (itemIndex == configManager.shouldReloadDrawItemIndex && !Boolean.TRUE.equals(drawItem.drawIsLock)) {
+            if (itemIndex == configManager.shouldReloadDrawItemIndex) {
                 Path highlight = new Path();
                 paint.setStyle(Paint.Style.FILL);
                 highlight.addCircle(viewPoint.x, viewPoint.y, 20, Path.Direction.CW);
@@ -977,7 +973,7 @@ public class HTDrawContext {
             canvas.drawText(priceText, textBoxLeft + paddingH, priceTextY, paint);
             canvas.drawText(timeString, textBoxLeft + paddingH, timeTextY, paint);
             
-            if (itemIndex == configManager.shouldReloadDrawItemIndex && !Boolean.TRUE.equals(drawItem.drawIsLock)) {
+            if (itemIndex == configManager.shouldReloadDrawItemIndex) {
                 Path highlight = new Path();
                 paint.setStyle(Paint.Style.FILL);
                 highlight.addCircle(startViewPoint.x, startViewPoint.y, 20, Path.Direction.CW);
@@ -1040,7 +1036,7 @@ public class HTDrawContext {
                 canvas.drawText(text, left + paddingH, viewPoint.y, paint);
             }
 
-            if (itemIndex == configManager.shouldReloadDrawItemIndex && !Boolean.TRUE.equals(drawItem.drawIsLock)) {
+            if (itemIndex == configManager.shouldReloadDrawItemIndex) {
                 Path path = new Path();
                 paint.setStyle(Paint.Style.FILL);
                 path.addCircle(viewPoint.x, viewPoint.y, 20, Path.Direction.CW);
@@ -1100,7 +1096,7 @@ public class HTDrawContext {
             drawLine(canvas, drawItem, klineView.viewPointFromValuePoint(startPoint), klineView.viewPointFromValuePoint(endPoint));
         }
 
-        if (itemIndex != configManager.shouldReloadDrawItemIndex || Boolean.TRUE.equals(drawItem.drawIsLock)) {
+        if (itemIndex != configManager.shouldReloadDrawItemIndex) {
             return;
         }
 

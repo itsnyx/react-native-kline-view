@@ -389,17 +389,13 @@ class HTDrawItem: NSObject {
     static func beganFillTouchMoveItem(_ drawItemList: [HTDrawItem], _ location: CGPoint, _ klineView: HTKLineView) {
         clearAllTouchMoveIndexList(drawItemList)
         for drawItem in drawItemList.reversed() {
-            if drawItem.drawIsLock {
-                continue
-            }
+            if drawItem.drawIsLock { continue }
             if (beganFillTouchMoveItemPointMapper(drawItem, location, klineView)) {
                 return
             }
         }
         for drawItem in drawItemList.reversed() {
-            if drawItem.drawIsLock {
-                continue
-            }
+            if drawItem.drawIsLock { continue }
             for (index, _) in drawItem.pointList.enumerated() {
                 if (beganFillTouchMoveItemMapper(drawItem, index, location, klineView)) {
                     return
@@ -412,8 +408,7 @@ class HTDrawItem: NSObject {
     static func canResponseTranslation(_ drawItemList: [HTDrawItem], _ translation: CGPoint) -> Bool {
         if let touchMoveItem = findTouchMoveItem(drawItemList) {
             if touchMoveItem.drawIsLock {
-                clearAllTouchMoveIndexList(drawItemList)
-                return false
+                return true
             }
             for touchMoveIndex in touchMoveItem.touchMoveIndexList {
                 touchMoveItem.pointList[touchMoveIndex].x += translation.x
