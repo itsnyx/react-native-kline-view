@@ -325,7 +325,7 @@ public class HTDrawItem {
         clearAllTouchMoveIndexList(drawItemList);
         for (int i = drawItemList.size() - 1; i >= 0; i --) {
             HTDrawItem drawItem = drawItemList.get(i);
-            if (drawItem.drawIsLock) {
+            if (Boolean.TRUE.equals(drawItem.drawIsLock)) {
                 continue;
             }
             if (beganFillTouchMoveItemPointMapper(drawItem, location, klineView)) {
@@ -334,7 +334,7 @@ public class HTDrawItem {
         }
         for (int i = drawItemList.size() - 1; i >= 0; i --) {
             HTDrawItem drawItem = drawItemList.get(i);
-            if (drawItem.drawIsLock) {
+            if (Boolean.TRUE.equals(drawItem.drawIsLock)) {
                 continue;
             }
             for (int index = 0; index < drawItem.pointList.size(); index ++ ) {
@@ -348,7 +348,7 @@ public class HTDrawItem {
     public static Boolean canResponseTranslation(List<HTDrawItem> drawItemList, HTPoint translation) {
         HTDrawItem touchMoveItem = findTouchMoveItem(drawItemList);
         if (touchMoveItem != null) {
-            if (touchMoveItem.drawIsLock) {
+            if (Boolean.TRUE.equals(touchMoveItem.drawIsLock)) {
                 clearAllTouchMoveIndexList(drawItemList);
                 return false;
             }

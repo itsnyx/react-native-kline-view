@@ -125,7 +125,7 @@ public class HTKLineContainerView extends RelativeLayout {
                     map.putDouble("drawLineHeight", drawItem.drawLineHeight);
                     map.putDouble("drawDashWidth", drawItem.drawDashWidth);
                     map.putDouble("drawDashSpace", drawItem.drawDashSpace);
-                    map.putBoolean("drawIsLock", drawItem.drawIsLock);
+                    map.putBoolean("drawIsLock", Boolean.TRUE.equals(drawItem.drawIsLock));
                     map.putInt("drawType", drawItem.drawType.rawValue());
                 }
                 // Expose the index and a stable id of the touched drawing item to React Native.
@@ -168,7 +168,7 @@ public class HTKLineContainerView extends RelativeLayout {
                     map.putDouble("drawLineHeight", drawItem.drawLineHeight);
                     map.putDouble("drawDashWidth", drawItem.drawDashWidth);
                     map.putDouble("drawDashSpace", drawItem.drawDashSpace);
-                    map.putBoolean("drawIsLock", drawItem.drawIsLock);
+                    map.putBoolean("drawIsLock", Boolean.TRUE.equals(drawItem.drawIsLock));
                     map.putString("text", drawItem.text);
                     map.putInt("textColor", drawItem.textColor);
                     map.putInt("textBackgroundColor", drawItem.textBackgroundColor);
@@ -276,7 +276,6 @@ public class HTKLineContainerView extends RelativeLayout {
             drawItem.drawLineHeight = configManager.drawLineHeight;
             drawItem.drawDashWidth = configManager.drawDashWidth;
             drawItem.drawDashSpace = configManager.drawDashSpace;
-            drawItem.drawIsLock = configManager.drawIsLock;
             if (configManager.drawShouldTrash) {
                 configManager.shouldReloadDrawItemIndex = HTDrawState.showPencil;
                 klineView.drawContext.drawItemList.remove(reloadIndex);
@@ -398,12 +397,7 @@ public class HTKLineContainerView extends RelativeLayout {
                 } else {
                     drawItem.drawDashSpace = configManager.drawDashSpace;
                 }
-                Object isLockObject = itemMap.get("drawIsLock");
-                if (isLockObject instanceof Boolean) {
-                    drawItem.drawIsLock = (Boolean) isLockObject;
-                } else {
-                    drawItem.drawIsLock = configManager.drawIsLock;
-                }
+                drawItem.drawIsLock = parseDrawIsLock(itemMap.get("drawIsLock"), configManager.drawIsLock);
 
                 Object textObject = itemMap.get("text");
                 if (textObject instanceof String) {
@@ -449,6 +443,16 @@ public class HTKLineContainerView extends RelativeLayout {
 
     }
 
+    private static boolean parseDrawIsLock(Object value, boolean fallback) {
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).intValue() != 0;
+        }
+        return fallback;
+    }
+
     private HTPoint convertLocation(HTPoint location) {
         HTPoint reloadLocation = new HTPoint(location.x, location.y);
         reloadLocation.x = Math.max(0, Math.min(reloadLocation.x, getWidth()));
@@ -466,34 +470,29 @@ public class HTKLineContainerView extends RelativeLayout {
         // When no drawing UI is active, always let KLineChartView handle touch events
         // so that normal scrolling and zooming work as expected.
         if (configManager.shouldReloadDrawItemIndex == HTDrawState.none) {
+            interceptDrawGesture = false;
             return false;
         }
 
         // If we are actively creating a drawing (line / rect / etc.), intercept all events
         // so the chart itself doesn't scroll while the user is drawing.
         if (configManager.drawType != HTDrawType.none) {
+            interceptDrawGesture = true;
             return true;
         }
 
-        // In "show" / manage-drawings mode (JS may pass drawType = -1 which maps to none
-        // on native), we want the user to be able to scroll the chart freely and only
-        // intercept gestures that actually hit an existing drawing.
-        HTPoint location = new HTPoint(event.getX(), event.getY());
-        location = convertLocation(location);
-        boolean hitExisting =
-                HTDrawItem.canResponseLocation(klineView.drawContext.drawItemList, location, klineView) != null;
-
         switch (action) {
-            case MotionEvent.ACTION_DOWN:
-                // Start handling the gesture only if the user touched a drawing item.
-                return hitExisting;
+            case MotionEvent.ACTION_DOWN: {
+                HTPoint location = new HTPoint(event.getX(), event.getY());
+                location = convertLocation(location);
+                interceptDrawGesture =
+                        HTDrawItem.canResponseLocation(klineView.drawContext.drawItemList, location, klineView) != null;
+                return interceptDrawGesture;
+            }
             case MotionEvent.ACTION_MOVE:
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                // For move/up, keep the same routing decision as for ACTION_DOWN:
-                // if the gesture started on a drawing, we keep intercepting; otherwise
-                // let KLineChartView continue handling it for scrolling.
-                return hitExisting;
+                return interceptDrawGesture;
             default:
                 return false;
         }
@@ -501,10 +500,15 @@ public class HTKLineContainerView extends RelativeLayout {
 
     private HTPoint lastLocation;
 
+    /** True when the current gesture started on a drawable (keep intercepting MOVE/UP). */
+    private boolean interceptDrawGesture = false;
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        handlerDraw(event);
+        // Magnifier hit-test must run before draw gestures: canResponseLocation clears
+        // touchMoveIndexList, which would break drag if called after handlerDraw.
         handlerShot(event);
+        handlerDraw(event);
         return true;
     }
 
@@ -533,7 +537,7 @@ public class HTKLineContainerView extends RelativeLayout {
      */
     private boolean shouldShowShotMagnifier(float viewX, float viewY) {
         if (configManager.drawType != HTDrawType.none) {
-            if (configManager.drawIsLock) {
+            if (Boolean.TRUE.equals(configManager.drawIsLock)) {
                 return false;
             }
             HTPoint valueLocation = convertLocation(new HTPoint(viewX, viewY));
@@ -542,7 +546,7 @@ public class HTKLineContainerView extends RelativeLayout {
                     valueLocation,
                     klineView
             );
-            return hit == null || !hit.drawIsLock;
+            return hit == null || !Boolean.TRUE.equals(hit.drawIsLock);
         }
         HTPoint valueLocation = convertLocation(new HTPoint(viewX, viewY));
         HTDrawItem hit = HTDrawItem.canResponseLocation(
@@ -550,7 +554,7 @@ public class HTKLineContainerView extends RelativeLayout {
                 valueLocation,
                 klineView
         );
-        return hit != null && !hit.drawIsLock;
+        return hit != null && !Boolean.TRUE.equals(hit.drawIsLock);
     }
 
     private void handlerShot(MotionEvent event) {
