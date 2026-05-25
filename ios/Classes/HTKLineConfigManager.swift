@@ -333,6 +333,47 @@ class HTKLineConfigManager: NSObject {
         }
     }
 
+    private static let intradayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MM-dd HH:mm"
+        f.timeZone = TimeZone(identifier: "UTC")
+        return f
+    }()
+    private static let dailyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone(identifier: "UTC")
+        return f
+    }()
+    private static let monthlyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM"
+        f.timeZone = TimeZone(identifier: "UTC")
+        return f
+    }()
+
+    // TimeConstants enum values from JS (matches constants.ts)
+    // oneDay=11, threeDay=12, oneWeek=13, oneMonth=14, minuteHour=-1
+    private static let timeOneDay = 11
+    private static let timeOneMonth = 14
+
+    /// Format a date based on the selected timeframe enum value.
+    /// - Parameter epochMs: epoch timestamp in milliseconds
+    /// - Returns: formatted date string
+    func formatBottomDate(epochMs: Double) -> String {
+        let date = Date(timeIntervalSince1970: epochMs / 1000.0)
+        if time >= Self.timeOneMonth {
+            // 1M and above → yyyy-MM
+            return Self.monthlyFormatter.string(from: date)
+        } else if time >= Self.timeOneDay {
+            // 1D, 3D, 1W → yyyy-MM-dd
+            return Self.dailyFormatter.string(from: date)
+        } else {
+            // Below 1D (Line, 1m..12h) → MM-dd HH:mm
+            return Self.intradayFormatter.string(from: date)
+        }
+    }
+
     static func packColorList(_ value: Any?) -> [UIColor] {
         var colorList = [UIColor]()
         guard let itemArray = value as? [Any] else {

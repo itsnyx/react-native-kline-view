@@ -937,7 +937,7 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
                 continue
             }
             let item = visibleModelArray[itemIndex]
-            let title = item.dateString
+            let title = configManager.formatBottomDate(epochMs: item.id)
             let width = mainDraw.textWidth(title: title, font: font)
             let height = mainDraw.textHeight(font: font)
             let y = childBaseY + childHeight + (configManager.paddingBottom - height) / 2
@@ -1413,7 +1413,8 @@ class HTKLineView: UIScrollView, UIGestureRecognizerDelegate {
         guard visibleRange.contains(selectedIndex) else {
             return
         }
-        let value = visibleModelArray[selectedIndex - visibleRange.lowerBound].dateString
+        let selectedModel = visibleModelArray[selectedIndex - visibleRange.lowerBound]
+        let value = configManager.formatBottomDate(epochMs: selectedModel.id)
         let x = (CGFloat(selectedIndex) + 0.5) * configManager.itemWidth - contentOffset.x
         let font = configManager.createFont(configManager.candleTextFontSize)
         let title = value

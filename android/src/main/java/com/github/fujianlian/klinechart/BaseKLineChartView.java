@@ -20,6 +20,7 @@ import com.github.fujianlian.klinechart.draw.PrimaryStatus;
 import com.github.fujianlian.klinechart.entity.IKLine;
 import com.github.fujianlian.klinechart.formatter.TimeFormatter;
 import com.github.fujianlian.klinechart.formatter.ValueFormatter;
+import com.github.fujianlian.klinechart.utils.DateUtil;
 import com.github.fujianlian.klinechart.utils.ViewUtil;
 
 import java.util.ArrayList;
@@ -929,14 +930,13 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         float startX = getItemMiddleScrollX(mStartIndex) - mPointWidth / 2;
         float stopX = getItemMiddleScrollX(mStopIndex) + mPointWidth / 2;
 
+        int timeframe = configManager != null ? configManager.time : 0;
         for (int i = 1; i < mGridColumns; i++) {
             float scrollX = viewXToScrollX(columnSpace * i);
             if (scrollX >= startX && scrollX <= stopX) {
                 int index = indexFromScrollX(scrollX);
-                String text = getItem(index).Date;
-                if (text == null || text.length() == 0) {
-                    continue;
-                }
+                KLineEntity entity = getItem(index);
+                String text = DateUtil.formatByTimeframe((long) entity.id, timeframe);
                 canvas.drawText(text, columnSpace * i - mTextPaint.measureText(text) / 2, y, mTextPaint);
             }
         }
@@ -947,17 +947,15 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
         float scrollX = viewXToScrollX(0);
         if (scrollX >= startX && scrollX <= stopX) {
-            String text = getItem(mStartIndex).Date;
-            if (text != null && text.length() > 0) {
-                canvas.drawText(text, -mTextPaint.measureText(text) / 2, y, mTextPaint);
-            }
+            KLineEntity entity = getItem(mStartIndex);
+            String text = DateUtil.formatByTimeframe((long) entity.id, timeframe);
+            canvas.drawText(text, -mTextPaint.measureText(text) / 2, y, mTextPaint);
         }
         scrollX = viewXToScrollX(mWidth);
         if (scrollX >= startX && scrollX <= stopX) {
-            String text = getItem(mStopIndex).Date;
-            if (text != null && text.length() > 0) {
-                canvas.drawText(text, mWidth - mTextPaint.measureText(text) / 2, y, mTextPaint);
-            }
+            KLineEntity entity = getItem(mStopIndex);
+            String text = DateUtil.formatByTimeframe((long) entity.id, timeframe);
+            canvas.drawText(text, mWidth - mTextPaint.measureText(text) / 2, y, mTextPaint);
         }
 
     }
@@ -1120,7 +1118,7 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
 
 
         // 画X值
-        String date = safeText(getItem(mSelectedIndex).Date);
+        String date = safeText(DateUtil.formatByTimeframe((long) getItem(mSelectedIndex).id, configManager != null ? configManager.time : 0));
         textWidth = mMaxMinPaint.measureText(date);
         r = textHeight / 2;
         x = scrollXtoViewX(getItemMiddleScrollX(mSelectedIndex));
