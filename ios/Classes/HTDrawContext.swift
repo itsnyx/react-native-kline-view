@@ -482,7 +482,7 @@ class HTDrawContext {
 
             var lineColor = drawItem.drawColor
             if let lastCandle = configManager.modelArray.last {
-                lineColor = lastCandle.closePrice >= lastCandle.openPrice
+                lineColor = lastCandle.close >= lastCandle.open
                     ? configManager.increaseColor
                     : configManager.decreaseColor
             }
