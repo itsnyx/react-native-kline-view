@@ -446,6 +446,38 @@ class HTKLineContainerView: UIView {
         reloadLocation = klineView.valuePointFromViewPoint(reloadLocation)
         return reloadLocation
     }
+
+    /// Magnifier (top-left zoom preview) is hidden for locked drawings.
+    private func shouldShowShotMagnifier(at viewLocation: CGPoint?) -> Bool {
+        if configManager.drawType != .none {
+            if configManager.drawIsLock {
+                return false
+            }
+            if let viewLocation = viewLocation {
+                let valueLocation = convertLocation(viewLocation)
+                if let hit = HTDrawItem.canResponseLocation(
+                    klineView.drawContext.drawItemList,
+                    valueLocation,
+                    klineView
+                ), hit.drawIsLock {
+                    return false
+                }
+            }
+            return true
+        }
+        guard let viewLocation = viewLocation else {
+            return false
+        }
+        let valueLocation = convertLocation(viewLocation)
+        if let hit = HTDrawItem.canResponseLocation(
+            klineView.drawContext.drawItemList,
+            valueLocation,
+            klineView
+        ) {
+            return !hit.drawIsLock
+        }
+        return false
+    }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let view = super.hitTest(point, with: event)
@@ -506,7 +538,12 @@ class HTKLineContainerView: UIView {
         let translation = CGPoint.init(x: location.x - previousLocation.x, y: location.y - previousLocation.y)
         
         klineView.drawContext.touchesGesture(location, translation, state)
-        shotView.shotPoint = state != .ended ? touched.first?.location(in: self) : nil
+        let viewLocation = touched.first?.location(in: self)
+        if state != .ended, shouldShowShotMagnifier(at: viewLocation) {
+            shotView.shotPoint = viewLocation
+        } else {
+            shotView.shotPoint = nil
+        }
     }
 
     /// For a given X-value (timestamp), find the candle whose id is closest and

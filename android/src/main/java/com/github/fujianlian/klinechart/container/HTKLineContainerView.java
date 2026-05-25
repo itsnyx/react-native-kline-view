@@ -528,6 +528,31 @@ public class HTKLineContainerView extends RelativeLayout {
         klineView.drawContext.touchesGesture(location, translation, state);
     }
 
+    /**
+     * Magnifier (top-left zoom preview) is hidden for locked drawings.
+     */
+    private boolean shouldShowShotMagnifier(float viewX, float viewY) {
+        if (configManager.drawType != HTDrawType.none) {
+            if (configManager.drawIsLock) {
+                return false;
+            }
+            HTPoint valueLocation = convertLocation(new HTPoint(viewX, viewY));
+            HTDrawItem hit = HTDrawItem.canResponseLocation(
+                    klineView.drawContext.drawItemList,
+                    valueLocation,
+                    klineView
+            );
+            return hit == null || !hit.drawIsLock;
+        }
+        HTPoint valueLocation = convertLocation(new HTPoint(viewX, viewY));
+        HTDrawItem hit = HTDrawItem.canResponseLocation(
+                klineView.drawContext.drawItemList,
+                valueLocation,
+                klineView
+        );
+        return hit != null && !hit.drawIsLock;
+    }
+
     private void handlerShot(MotionEvent event) {
         if (shotView == null) {
             return;
@@ -536,9 +561,12 @@ public class HTKLineContainerView extends RelativeLayout {
             shotView.setPoint(null);
             shotView.setVisibility(View.GONE);
             lastLocation = null;
-        } else {
+        } else if (shouldShowShotMagnifier(event.getX(), event.getY())) {
             shotView.setVisibility(View.VISIBLE);
             shotView.setPoint(new HTPoint(event.getX(), event.getY()));
+        } else {
+            shotView.setPoint(null);
+            shotView.setVisibility(View.GONE);
         }
     }
 

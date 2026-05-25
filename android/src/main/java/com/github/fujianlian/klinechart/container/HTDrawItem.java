@@ -325,12 +325,18 @@ public class HTDrawItem {
         clearAllTouchMoveIndexList(drawItemList);
         for (int i = drawItemList.size() - 1; i >= 0; i --) {
             HTDrawItem drawItem = drawItemList.get(i);
+            if (drawItem.drawIsLock) {
+                continue;
+            }
             if (beganFillTouchMoveItemPointMapper(drawItem, location, klineView)) {
                 return;
             }
         }
         for (int i = drawItemList.size() - 1; i >= 0; i --) {
             HTDrawItem drawItem = drawItemList.get(i);
+            if (drawItem.drawIsLock) {
+                continue;
+            }
             for (int index = 0; index < drawItem.pointList.size(); index ++ ) {
                 if (beganFillTouchMoveItemMapper(drawItem, index, location, klineView)) {
                     return;
@@ -343,7 +349,8 @@ public class HTDrawItem {
         HTDrawItem touchMoveItem = findTouchMoveItem(drawItemList);
         if (touchMoveItem != null) {
             if (touchMoveItem.drawIsLock) {
-                return true;
+                clearAllTouchMoveIndexList(drawItemList);
+                return false;
             }
             for (Integer touchMoveIndex: touchMoveItem.touchMoveIndexList) {
                 touchMoveItem.pointList.get(touchMoveIndex).x += translation.x;
