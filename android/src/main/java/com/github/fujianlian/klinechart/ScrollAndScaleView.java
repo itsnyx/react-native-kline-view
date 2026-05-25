@@ -215,6 +215,7 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
 
     protected abstract float getYAxisZoomFactor();
     protected abstract void setYAxisZoomFactor(float factor);
+    protected abstract boolean isYAxisScaleCandidate();
 
     float x;
 
@@ -242,6 +243,12 @@ public abstract class ScrollAndScaleView extends RelativeLayout implements
                     onLongPress(event);
                 }
                 if(Math.abs(event.getX() - mDownX) >= Math.abs(event.getY()-mDownY) || isLongPress) {
+                    shouldContinue = true;
+                    getParent().requestDisallowInterceptTouchEvent(true);
+                } else if (isYAxisScaleCandidate()) {
+                    // Y-axis scaling is still being determined — keep the parent blocked
+                    // so it doesn't steal the vertical drag before BaseKLineChartView
+                    // confirms the y-axis gesture.
                     shouldContinue = true;
                     getParent().requestDisallowInterceptTouchEvent(true);
                 } else {

@@ -1238,6 +1238,11 @@ public abstract class BaseKLineChartView extends ScrollAndScaleView implements D
         invalidate();
     }
 
+    @Override
+    protected boolean isYAxisScaleCandidate() {
+        return mIsYAxisScaleCandidate;
+    }
+
     private void startRightYAxisScaling(float startY) {
         mIsYAxisScaling = true;
         mYAxisScaleStartY = startY;
